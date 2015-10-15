@@ -1,0 +1,1070 @@
+<?php
+/**
+ * @file
+ * Provides entity support for donations.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function fundraiser_entity_menu() {
+  $items = array();
+
+  // Note: admin/springboard/reports/donations is defined by a default View.
+
+  // Donation Entity view/edit screens.
+  $items['admin/springboard/reports/donation-entity/%fundraiser_entity_donation'] = array(
+    'title callback' => 'fundraiser_entity_donation_label',
+    'title arguments' => array(4),
+    'page callback' => 'fundraiser_entity_donation_view',
+    'page arguments' => array(4),
+    'access callback' => 'entity_access',
+    'access arguments' => array('view', 'fundraiser_donation', 4),
+  );
+  $items['admin/springboard/reports/donation-entity/%fundraiser_entity_donation/view'] = array(
+    'title' => 'View',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+  );
+  $items['admin/springboard/reports/donation-entity/%fundraiser_entity_donation/edit'] = array(
+    'title' => 'Edit',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('fundraiser_entity_donation_entity_form', 4),
+    'access callback' => 'fundraiser_entity_donation_access',
+    'access arguments' => array('update', 4),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -5,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'file' => 'includes/fundraiser_entity.admin.inc',
+  );
+
+  // Donation Entity admin.
+  $items['admin/springboard/settings/donation-entity'] = array(
+    'title' => 'Donation Entity settings',
+    'description' => 'Configure general donation entity settings, fields, and displays.',
+    'page callback' => 'fundraiser_entity_donation_settings_overview',
+    'access arguments' => array('administer fundraiser entity settings'),
+  );
+  $items['admin/springboard/settings/donation-entity/settings'] = array(
+    'title' => 'Settings',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+
+  // Default map form.
+  $items['admin/springboard/settings/donation-entity/webform-map'] = array(
+    'title' => 'Default Webform Map',
+    'description' => 'Control what data goes where when a Donation Entity is created through a webform.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('fundraiser_entity_default_mapping_form'),
+    'access callback' => '_fundraiser_entity_mapping_access',
+    'file' => 'includes/fundraiser_entity.mapping.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 10,
+  );
+  $items['admin/springboard/settings/donation-entity/webform-map/reset'] = array(
+    'title' => 'Reset the Default Webform Map',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('fundraiser_entity_default_mapping_reset_confirm'),
+    'access callback' => '_fundraiser_entity_mapping_access',
+    'file' => 'includes/fundraiser_entity.mapping.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_menu_alter().
+ */
+function fundraiser_entity_menu_alter(&$items) {
+  // Transform the field UI tabs into contextual links.
+  $items['admin/springboard/settings/donation_entity/fields']['context'] = MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE;
+  $items['admin/springboard/settings/donation_entity/display']['context'] = MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE;
+}
+
+/**
+ * Implements hook_cron_queue_info().
+ */
+function fundraiser_entity_cron_queue_info() {
+  $queues['fundraiser_entity_post_process'] = array(
+    'worker callback' => '_fundraiser_entity_post_process_queue_worker',
+    'time' => 180,
+  );
+
+  return $queues;
+}
+
+/**
+ * Implements hook_views_api().
+ */
+function fundraiser_entity_views_api() {
+  return array('api' => 2);
+}
+
+/**
+ * Implements hook_action_info().
+ */
+function fundraiser_entity_action_info() {
+  return array(
+    'fundraiser_entity_fundraiser_donation_webform_map_action' => array(
+      'description' => t('Populate the entity fields using the webform map.'),
+      'label' => t('Map Field Values'),
+      'type' => 'fundraiser_donation',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),
+  );
+}
+
+/**
+ * Callback for the Donation Settings page.
+ */
+function fundraiser_entity_donation_settings_overview() {
+  return t('This Donation Entity is implemented by the Fundraiser Entity module.');
+}
+
+/**
+ * Implements hook_permission().
+ */
+function fundraiser_entity_permission() {
+  $permissions = array(
+    'administer fundraiser entity settings' => array(
+      'title' => t('Administer settings'),
+      'description' => t('Manage fields on the donation entity.'),
+      'restrict access' => TRUE,
+    ),
+    'administer fundraiser entity donations' => array(
+      'title' => t('Administer donations'),
+      'description' => t('Allows users full access to manage fundraiser donation.'),
+      'restrict access' => TRUE,
+    ),
+    'create fundraiser entity donations' => array(
+      'title' => t('Create donations'),
+      'description' => t('Allows users to create fundraiser donation.'),
+      'restrict access' => TRUE,
+    ),
+    'view fundraiser entity donations' => array(
+      'title' => t('View donations'),
+      'description' => t('Allows users to view fundraiser donation.'),
+      'restrict access' => TRUE,
+    ),
+    'edit fundraiser entity donations' => array(
+      'title' => t('Edit any donations'),
+      'description' => t('Allows users to edit any fundraiser donation.'),
+      'restrict access' => TRUE,
+    ),
+    'configure fundraiser entity donation webform map' => array(
+      'title' => t('Configure the default webform mapping'),
+      'description' => t('Allows users to configure the default webform mapping.'),
+      'restrict access' => TRUE,
+    ),
+  );
+
+  return $permissions;
+}
+
+/**
+ * Implements hook_entity_info().
+ */
+function fundraiser_entity_entity_info() {
+  return array(
+    'fundraiser_donation' => array(
+      'label' => t('Fundraiser Donation'),
+      'controller class' => 'FundraiserDonationEntityController',
+      'base table' => 'fundraiser_donation',
+      'load hook' => 'fundraiser_entity_donation_load',
+      'module' => 'fundraiser_entity',
+      'label callback' => 'fundraiser_entity_donation_label',
+      'uri callback' => 'fundraiser_entity_donation_uri',
+      'access callback' => 'fundraiser_entity_donation_access',
+      'entity keys' => array(
+        'id' => 'did',
+      ),
+      'fieldable' => TRUE,
+      'bundles' => array(
+        'fundraiser_donation' => array(
+          'label' => 'Fundraiser Donation',
+          'admin' => array(
+            'path' => 'admin/springboard/settings/donation-entity',
+            'real path' => 'admin/springboard/settings/donation-entity',
+            'bundle argument' => 'fundraiser_donation',
+            'access arguments' => array('administer fundraiser entity settings'),
+          ),
+        ),
+      ),
+      'view modes' => array(
+        'administrator' => array(
+          'label' => t('Administrator'),
+          'custom settings' => FALSE,
+        ),
+      ),
+    ),
+  );
+}
+
+/**
+ * Loads a donation by ID.
+ * @param $donation_id
+ *   A donation ID.
+ *
+ * @return
+ *   An single donation entity.
+ */
+function fundraiser_entity_donation_load($donation_id) {
+  $donations = fundraiser_entity_donation_entity_load_multiple(array($donation_id), array());
+  return $donations ? reset($donations) : FALSE;
+}
+
+/**
+ * Loads multiple orders by ID or based on a set of matching conditions.
+ *
+ * @see entity_load()
+ *
+ * @param $donation_ids
+ *   An array of donation IDs.
+ * @param $conditions
+ *   An array of conditions to filter loaded donations by on fundraiser_donation
+ *   table in the form 'field' => $value.
+ * @param $reset
+ *   Whether to reset the internal donation loading cache.
+ *
+ * @return
+ *   An array of order objects indexed by did.
+ */
+function fundraiser_entity_donation_entity_load_multiple($donation_ids = array(), $conditions = array(), $reset = FALSE) {
+  return entity_load('fundraiser_donation', $donation_ids, $conditions, $reset);
+}
+
+/**
+ * Generate an array for rendering the given order.
+ *
+ * @param $donation
+ *   A fully loaded donation object.
+ * @param $view_mode
+ *   The view mode for displaying the order: 'administrator'.
+ *
+ * @return
+ *   An array as expected by drupal_render().
+ */
+function fundraiser_entity_donation_view($fundraiser_donation, $view_mode = 'administrator') {
+  return entity_view('fundraiser_donation', array($fundraiser_donation->did => $fundraiser_donation), $view_mode, NULL, TRUE);
+}
+
+/**
+ * Entity uri callback.
+ */
+function fundraiser_entity_donation_uri($fundraiser_donation) {
+  // Only return a value if the user has permission to view the donation.
+  if (entity_access('view', 'fundraiser_donation', $fundraiser_donation)) {
+    return array(
+      'path' => 'admin/springboard/reports/donation-entity/' . $fundraiser_donation->did,
+    );
+  }
+
+  return NULL;
+}
+
+/**
+ * Entity label callback.
+ */
+function fundraiser_entity_donation_label($fundraiser_donation) {
+  return t('Donation @did', array('@did' => $fundraiser_donation->did));
+}
+
+/**
+ * Implements hook_field_extra_fields().
+ */
+function fundraiser_entity_field_extra_fields() {
+  $extra['fundraiser_donation']['fundraiser_donation'] = array(
+    'form' => array(
+      'amount' => array(
+        'label' => t('Amount'),
+        'description' => t('Donation amount.'),
+        'weight' => -10,
+      ),
+      'currency' => array(
+        'label' => t('Currency'),
+        'description' => t('Donation currency.'),
+        'weight' => -9,
+      ),
+      'uid' => array(
+        'label' => t('User'),
+        'description' => t('Account associated with this donation.'),
+        'weight' => -8,
+      ),
+      'nid' => array(
+        'label' => t('Node'),
+        'description' => t('Node associated with this donation.'),
+        'weight' => -7,
+      ),
+      'sid' => array(
+        'label' => t('Submission'),
+        'description' => t('Submission associated with this donation.'),
+        'weight' => -6,
+      ),
+      'status' => array(
+        'label' => t('Status'),
+        'description' => t('Payment status of the donation.'),
+        'weight' => -5,
+      ),
+      'gateway' => array(
+        'label' => t('Gateway'),
+        'description' => t('Payment gateway used to process this donation.'),
+        'weight' => -4,
+      ),
+      'txn_id' => array(
+        'label' => t('Transaction ID'),
+        'description' => t('Remote transaction id from the gateway.'),
+        'weight' => -3,
+      ),
+      'form_url' => array(
+        'label' => t('Form URL'),
+        'description' => t('URL of the form which created this donation.'),
+        'weight' => -2,
+      ),
+    ),
+    'display' => array(
+      'donation_information' => array(
+        'label' => t('Donation Information'),
+        'description' => t('User, form, submission info.'),
+        'weight' => -10,
+      ),
+      'amount' => array(
+        'label' => t('Amount'),
+        'description' => t('Donation amount with currency.'),
+        'weight' => -7,
+      ),
+      'status' => array(
+        'label' => t('Status'),
+        'description' => t('Payment status of the donation.'),
+        'weight' => -5,
+      ),
+      'gateway' => array(
+        'label' => t('Gateway'),
+        'description' => t('Payment gateway used to process this donation.'),
+        'weight' => -4,
+      ),
+      'txn_id' => array(
+        'label' => t('Transaction ID'),
+        'description' => t('Remote transaction id from the gateway.'),
+        'weight' => -3,
+      ),
+    ),
+  );
+
+  return $extra;
+}
+
+/**
+ * Implementation of hook_entity_property_info(). This depends on the EntityAPI.
+ *
+ * This defines the properties/attributes/"fields" of our Entity.
+ */
+function fundraiser_entity_entity_property_info_alter(&$info) {
+  $properties = &$info['fundraiser_donation']['properties'];
+
+  $verbatims = array(
+    'getter callback' => 'entity_property_verbatim_get',
+    'setter callback' => 'entity_property_verbatim_set',
+  );
+
+  $properties['amount'] = array(
+    'label' => t('Amount'),
+    'type' => 'decimal',
+    'schema field' => 'amount',
+    'description' => 'Donation Amount.',
+  ) + $verbatims;
+
+  $properties['currency'] = array(
+    'label' => t('Currency'),
+    'type' => 'text',
+    'description' => 'Donation Currency',
+  ) + $verbatims;
+
+  $properties['donor'] = array(
+    'label' => t('Donor'),
+    'description' => t('Account associated with this donation.'),
+    'type' => 'user',
+    'schema field' => 'uid',
+    'getter callback' => 'fundraiser_entity_donation_get_properties',
+    'setter callback' => 'entity_property_verbatim_set',
+  );
+
+  $properties['node'] = array(
+    'label' => t('Node'),
+    'description' => t('Node associated with this donation.'),
+    'type' => 'node',
+    'schema field' => 'nid',
+    'getter callback' => 'fundraiser_entity_donation_get_properties',
+    'setter callback' => 'entity_property_verbatim_set',
+  );
+
+  $properties['sid'] = array(
+    'label' => t('Submission'),
+    'description' => t('Submission associated with this donation.'),
+    'schema field' => 'sid',
+  ) + $verbatims;
+
+  $properties['status'] = array(
+    'label' => t('Status'),
+    'description' => t('Payment status of the donation.'),
+    'schema field' => 'status',
+   ) + $verbatims;
+
+  $properties['gateway'] = array(
+    'label' => t('Gateway'),
+    'type' => 'text',
+    'description' => 'ID of the payment processor.',
+    'schema field' => 'gateway',
+  ) + $verbatims;
+
+  $properties['txn_id'] = array(
+    'label' => t('Transaction ID'),
+    'type' => 'text',
+    'description' => 'Remote ID from the payment processor.',
+    'schema field' => 'txn_id',
+  ) + $verbatims;
+
+  $properties['form_url'] = array(
+    'label' => t('Form URL'),
+    'type' => 'text',
+    'description' => 'URL of the form used to initaite this donation.',
+    'schema field' => 'form_url',
+  ) + $verbatims;
+
+  return $info;
+}
+
+/**
+ * Callback for getting donation properties.
+ */
+function fundraiser_entity_donation_get_properties($fundraiser_donation, array $options, $name, $entity_type) {
+  switch ($name) {
+    case 'edit_url':
+      return url('admin/springboard/reports/donation-entity/' . $fundraiser_donation->did . '/edit', $options);
+
+    case 'donor':
+      return !empty($fundraiser_donation->uid) ? $fundraiser_donation->uid : drupal_anonymous_user();
+
+    case 'node':
+      return !empty($fundraiser_donation->nid) ? $fundraiser_donation->nid : NULL;
+  }
+}
+
+/**
+ * Access callback for Task.
+ */
+function fundraiser_entity_donation_access($op, $task, $account = NULL) {
+  global $user;
+
+  if (!isset($account)) {
+    $account = $user;
+  }
+
+  switch ($op) {
+    case 'create':
+      return user_access('administer fundraiser entity donations', $account)
+          || user_access('create fundraiser entity donations', $account);
+    case 'view':
+      return user_access('administer fundraiser entity donations', $account)
+          || user_access('view fundraiser entity donations', $account);
+    case 'update':
+      return user_access('administer fundraiser entity donations')
+          || user_access('edit fundraiser entity donations');
+  }
+}
+
+/**
+ * Menu item access callback: prevent access to the node mapping form.
+ *
+ * @param $node
+ *   The node object as loaded via the menu item wildcard.
+ *
+ * @return
+ *   Boolean indicating the user's access to view the page.
+ */
+function _fundraiser_entity_mapping_access($node = NULL) {
+  if (!module_exists('fundraiser_webform')) {
+    return FALSE;
+  }
+
+  if ($node && !fundraiser_is_donation_type($node->type)) {
+    return FALSE;
+  }
+
+  return user_access('configure fundraiser entity donation webform map');
+}
+
+/**
+ * Implements hook_field_ui_field_edit_form_alter_alter().
+ */
+function fundraiser_entity_form_field_ui_field_edit_form_alter(&$form, $form_state) {
+  if (
+    !empty($form['instance']['entity_type'])
+    && $form['instance']['entity_type']['#value'] == 'fundraiser_donation'
+  ) {
+    // Add a fieldset for settings related to fundraiser entity behavior
+    $form['instance']['settings']['fundraiser_entity'] = array(
+      '#type' => 'fieldset',
+      '#title' => 'Fundraiser Entity',
+      '#description' => t('These options control how this field interacts with the donation entity.'),
+      '#tree' => TRUE,
+    );
+
+    // Option to allow this field to be mapped on the webform map
+    $form['instance']['settings']['fundraiser_entity']['webform_map'] = array(
+      '#type' => 'checkbox',
+      '#title' => "Allow this field's value to be mapped on the webform map.",
+      '#return_value' => 1,
+      '#default_value' => !empty($form['#instance']['settings']['fundraiser_entity']['webform_map']),
+    );
+
+    // If the webform_key value is set retain that value
+    if (!empty($form['#instance']['settings']['fundraiser_entity']['webform_key'])) {
+      $form['instance']['settings']['fundraiser_entity']['webform_key'] = array(
+        '#type' => 'hidden',
+        '#default_value' => $form['#instance']['settings']['fundraiser_entity']['webform_key'],
+      );
+    }
+  }
+}
+
+/**
+ * Implements hook_springboard_admin_menu_items_alter().
+ */
+function fundraiser_entity_springboard_admin_admin_menu_items_alter(&$items) {
+  // Add the Donation entity management page.
+  $items['admin/springboard/settings']['_children']['admin/springboard/settings/config']['_children']['admin/springboard/settings/donation-entity'] = array(
+    'link_path' => 'admin/springboard/settings/donation-entity',
+    'link_title' => 'Donation Entity Management',
+    'menu_name' => 'springboard_admin_menu',
+    'expanded' => 0,
+    'customized' => 1,
+    'weight' => 0,
+  );
+}
+
+/**
+ * Implements hook_fundraiser_donation_create().
+ *
+ * Create and map the donation entity values when the donation is created.
+ */
+function fundraiser_entity_fundraiser_donation_create($donation) {
+  // First check if we should map the values during donation create.
+  $map_points = variable_get('fundraiser_entity_map_point', array());
+
+  // Map on donation create
+  if (!empty($map_points['create'])) {
+    // Create a new entity object.
+    $values = (array) $donation;
+    $fundraiser_donation = entity_create('fundraiser_donation', $values);
+
+    // Load the context and map the values.
+    $context = _fundraiser_entity_context_from_donation_object($donation);
+    _fundraiser_entity_map_values($fundraiser_donation, $context);
+
+    // Let the entity save function know the record has been written, avoids DB errors.
+    $fundraiser_donation->record_written = TRUE;
+
+    entity_save('fundraiser_donation', $fundraiser_donation);
+  }
+
+  // If this is a sustainer series donation and the cron process is checked, add this to the queue.
+  if (!empty($map_points['sustainer_series_cron']) && !empty($donation->recurring->master_did)) {
+    $queue = DrupalQueue::get('fundraiser_entity_post_process');
+
+    $item = array(
+      'did' => $donation->did,
+    );
+
+    $queue->createItem($item);
+  }
+}
+
+/**
+ * Implements hook_fundraiser_donation_create().
+ *
+ * Map the donation entity values when the donation is updated.
+ */
+function fundraiser_entity_fundraiser_donation_update($donation) {
+  // Check if we should map the values during donation update.
+  $map_points = variable_get('fundraiser_entity_map_point', array());
+  if (empty($map_points['update'])) {
+    return;
+  }
+
+  $fundraiser_donation = fundraiser_entity_donation_load($donation->did);
+
+  // Load the context and map the values.
+  $context = _fundraiser_entity_context_from_donation_object($donation);
+  _fundraiser_entity_map_values($fundraiser_donation, $context);
+
+  // Let the entity save function know the record has been written, avoids DB errors.
+  $fundraiser_donation->record_written = TRUE;
+
+  entity_save('fundraiser_donation', $fundraiser_donation);
+}
+
+/**
+ * Implements hook_fundraiser_donation_success().
+ *
+ * Map the donation entity values when the donation is successful.
+ */
+function fundraiser_entity_fundraiser_donation_success($donation) {
+  // Check if we should map the values during donation success.
+  $map_points = variable_get('fundraiser_entity_map_point', array());
+  if (empty($map_points['success'])) {
+    return;
+  }
+
+  $fundraiser_donation = fundraiser_entity_donation_load($donation->did);
+
+  // Load the context and map the values.
+  $context = _fundraiser_entity_context_from_donation_object($donation);
+  _fundraiser_entity_map_values($fundraiser_donation, $context);
+
+  // Let the entity save function know the record has been written, avoids DB errors.
+  $fundraiser_donation->record_written = TRUE;
+
+  entity_save('fundraiser_donation', $fundraiser_donation);
+}
+
+/**
+ * Implements hook_fundraiser_donation_decline().
+ *
+ * Map the donation entity values when the donation declines.
+ */
+function fundraiser_entity_fundraiser_donation_decline($donation) {
+ // First check if we should map the values during donation decline.
+  $map_points = variable_get('fundraiser_entity_map_point', array());
+  if (empty($map_points['decline'])) {
+    return;
+  }
+
+  $fundraiser_donation = fundraiser_entity_donation_load($donation->did);
+
+  // Load the context and map the values.
+  $context = _fundraiser_entity_context_from_donation_object($donation);
+  _fundraiser_entity_map_values($fundraiser_donation, $context);
+
+  // Let the entity save function know the record has been written, avoids DB errors.
+  $fundraiser_donation->record_written = TRUE;
+
+  entity_save('fundraiser_donation', $fundraiser_donation);
+}
+
+/**
+ * Implements hook_webform_component_insert().
+ *
+ * Add a field to the donation object when its added to a webform.
+ */
+function fundraiser_entity_webform_component_insert($component) {
+  // Make sure the component is being added to a fundraiser enabled type.
+  $node = node_load($component['nid']);
+  if (!fundraiser_is_donation_type($node->type)) {
+    return;
+  }
+
+  // Get the field types the system can handle.
+  $field_types = _fundraiser_entity_component_field_mapping();
+
+  // Only act on types we support.
+  if (empty($field_types[ $component['type'] ])) {
+    return;
+  }
+
+  // Don't autocreate fields that have been set to be ignored.
+  if (in_array($component['form_key'], variable_get('fundraiser_entity_webform_autocreate_ignore', array()))) {
+    return;
+  }
+
+  $field_type = $field_types[ $component['type'] ];
+
+  module_load_include('inc', 'field', 'field.crud');
+  module_load_include('inc', 'field', 'field.info');
+
+  // Create a field name from the component key.
+  $field_name = 'field_fde_' . substr($component['form_key'], 0 , 22);
+
+  $field_config = array(
+    'active' => 1,
+    'cardinality' => 1,
+    'deleted' => 0,
+    'entity_types' => array(),
+    'field_name' => $field_name,
+    'locked' => 0,
+    'module' => 'text',
+    'settings' => array(),
+    'translatable' => 0,
+    'type' => $field_type['field_type'],
+  );
+
+  // If the field doesn't exist create it.
+  if (!field_info_field($field_name)) {
+    field_create_field($field_config);
+  }
+
+  $field_instance = array(
+    'bundle' => 'fundraiser_donation',
+    'default_value' => NULL,
+    'deleted' => 0,
+    'description' => '',
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'settings' => array(),
+      ),
+    ),
+    'entity_type' => 'fundraiser_donation',
+    'field_name' => $field_name,
+    'label' => $component['name'],
+    'required' => 0,
+    'widget' => array(
+      'active' => 1,
+      'module' => 'text',
+      'settings' => array(
+        'rows' => 5,
+      ),
+      'type' => $field_type['widget_type'],
+    ),
+    // Add some values so we know where this field came from.
+    'settings' => array(
+      'fundraiser_entity' => array(
+        'webform_key' => $component['form_key'],
+        'webform_map' => TRUE,
+      ),
+    ),
+  );
+
+  // Before adding the field check that it does not exist on the entity.
+  if (!field_info_instance('fundraiser_donation', $field_name, 'fundraiser_donation')) {
+    field_create_instance($field_instance);
+
+    // Save the new field to the map and set a default token value.
+    $map = variable_get('fundraiser_entity_default_map', array());
+
+    // Construct the token.
+    $token = 'webform-tokens:val-' . $component['form_key'];
+    $token .= $component['type'] == 'select' ? ':first' : ''; 
+
+    $map[$field_name] = array(
+      'source' => 'other',
+      'other' => '[' . $token . ']',
+    );
+
+    $map = variable_set('fundraiser_entity_default_map', $map);
+  }
+}
+
+/**
+ * Returns an array of webform component field types mapped to a type
+ * of entity field. If there is no match in this
+ * array an entity field should not be created for the component.
+ *
+ * Only basic types are supported.
+ */
+function _fundraiser_entity_component_field_mapping() {
+  $types = array(
+    'textfield' => array(
+      'field_type' => 'text_long',
+      'widget_type' => 'text_textarea',
+    ),
+    'textarea' => array(
+      'field_type' => 'text_long',
+      'widget_type' => 'text_textarea',
+    ),
+    'select' => array(
+      'field_type' => 'text',
+      'widget_type' => 'text_default',
+    ),
+    'email'=> array(
+      'field_type' => 'text',
+      'widget_type' => 'text_default',
+    ),
+    'hidden' => array(
+      'field_type' => 'text_long',
+      'widget_type' => 'text_textarea',
+    ),
+  );
+
+  return $types;
+}
+
+/**
+ * Return a simple array of entity field names and labels.
+ */
+function _fundraiser_entity_get_entity_fields($entity_type = 'fundraiser_donation', $bundle = 'fundraiser_donation') {
+  $properties = _fundraiser_entity_get_entity_properties($entity_type, $bundle);
+
+  // Flatten the field list.
+  $field_names = array();
+  foreach ($properties as $key => $value) {
+    if (is_array($value)) {
+      // When an array, $key is the user-friendly name rather than machine name.
+      // The $sub_key value contains both the machine name of the field and the
+      // field's attribute as "field:attribute", for example, "body:text". The
+      // $value is the attribute's user friendly name, for example, "Text".
+      foreach ($value as $sub_key => $sub_value) {
+        $field_names[$sub_key] = $key . ': ' . $sub_value;
+      }
+    }
+    else {
+      // Otherwise, $key is the machine name and $value is the user friendly
+      // name.
+      $field_names[$key] = $value;
+    }
+  }
+
+  return $field_names;
+}
+
+/**
+ * Return a simple array of property data for an entity.
+ */
+function _fundraiser_entity_get_entity_properties($entity_type = 'fundraiser_donation', $bundle = 'fundraiser_donation') {
+  $info = entity_get_property_info($entity_type);
+
+  $properties = $info['properties'];
+  if (isset($bundle)) {
+    $info = entity_get_property_info($entity_type);
+    $properties = $info['properties'];
+    if (isset($info['bundles'][$bundle])) {
+      $properties += $info['bundles'][$bundle]['properties'];
+    }
+  }
+  else {
+    $properties = entity_get_all_property_info($entity_type);
+  }
+
+  $simple_array = array();
+  foreach ($properties as $key => $property) {
+    $type = isset($property['type']) ? entity_property_extract_innermost_type($property['type']) : 'text';
+    $is_entity = ($type == 'entity') || (bool) entity_get_info($type);
+    // Leave entities out of this.
+    if (!$is_entity) {
+      if (isset($property['field']) && $property['field'] && !empty($property['property info'])) {
+        foreach ($property['property info'] as $sub_key => $sub_prop) {
+          $simple_array[$property['label']][$key . ':' . $sub_key] = $sub_prop['label'];
+        }
+      }
+      else {
+        $simple_array[$key] = $property['label'];
+      }
+    }
+  }
+
+  return $simple_array;
+}
+
+/**
+ * Set the values on a donation entity type,
+ *
+ * @param $donation_entity Object
+ *    Fully loaded donation entity.
+ * @param $context Array
+ *    Array of objects that will be used to pull data from to populate the donation entity.
+ * @param $map Array
+ *    Array of entity fields to their data sources.
+ */
+function _fundraiser_entity_map_values($donation_entity, $context, $map = array()) {
+  $donation_fields = _fundraiser_entity_get_entity_fields();
+  $donation_wrapper = entity_metadata_wrapper('fundraiser_donation', $donation_entity);
+
+  // If no map has been passed use the default map.
+  if (empty($map)) {
+    $map = variable_get('fundraiser_entity_default_map', array());
+  }
+
+  // For the token set the key names must be changed.
+  foreach($context as $type => $data) {
+    $token_set[ str_replace('_', '-', $type) ] = $data;
+  }
+
+  // Loop through the fields on the donation and set their values.
+  foreach ($donation_fields as $field_name => $label) {
+    if (empty($map[$field_name])) {
+      continue;
+    }
+
+    // Determine the value.
+    $value = NULL;
+    // A source value of other allows for token replacement.
+    if ($map[$field_name]['source'] == 'other') {
+      $token_replaced = token_replace($map[$field_name]['other'], $token_set, array('clear' => TRUE));
+      if (!empty($token_replaced)) {
+        $value = $token_replaced;
+      }
+    }
+    else {
+      // The entity name and field name are in the source value.
+      list($entity_type, $entity_field) = explode('--', $map[$field_name]['source']);
+
+      if (!empty($context[$entity_type])) {
+        $entity = $context[$entity_type];
+        $entity_wrapper = entity_metadata_wrapper($entity_type, $entity);
+        $value = _fundraiser_entity_get_field_value($entity_wrapper, $entity_field);
+      }
+    }
+
+    // Set the value on the field.
+    _fundraiser_entity_set_field_value($donation_wrapper, $field_name, $value);
+  }
+
+  $donation_wrapper->save();
+}
+
+/**
+ * Get the value of an entity field.
+ *
+ * @param $entity_wrapper
+ *    Fully loaded entity metadata wrapper object.
+ * @param $field_name
+ *    Name of the field to pull the data from.
+ */
+function _fundraiser_entity_get_field_value($entity_wrapper, $field_name) {
+  // If the fieldname contains a subfield break that apart.
+  $sub_key = FALSE;
+  if (strpos($field_name, ':') !== FALSE) {
+    list($field_name, $sub_key) = explode(':', $field_name);
+  }
+
+  // Get the target field, or sub_key if it exists.
+  if (!$sub_key && $entity_wrapper->__isset($field_name)) {
+    $field = $entity_wrapper->$field_name;
+  }
+  elseif ($sub_key && $entity_wrapper->$field_name->__isset($sub_key)) {
+    $field = $entity_wrapper->$field_name->$sub_key;
+  }
+  // Field was not found on the entity return NULL.
+  else {
+    return NULL;
+  }
+
+  return $field->raw();
+}
+
+/**
+ * Set the value of an entity field.
+ *
+ * @param $entity_wrapper
+ *    Fully loaded entity metadata wrapper.
+ * @param $field_name
+ *    Name of the field to set the value on.
+ * @param $value
+ *    Value to set on the field.
+ */
+function _fundraiser_entity_set_field_value($entity_wrapper, $field_name, $value) {
+  // If the fieldname contains a subfield break that apart.
+  $sub_key = FALSE;
+  if (strpos($field_name, ':') !== FALSE) {
+    list($field_name, $sub_key) = explode(':', $field_name);
+  }
+
+  $field = NULL;
+
+  // Get the target field, or sub_key if it exists.
+  if (!$sub_key && $entity_wrapper->__isset($field_name)) {
+    $field = $entity_wrapper->$field_name;
+  }
+  elseif ($sub_key && $entity_wrapper->$field_name->__isset($sub_key)) {
+    $field = $entity_wrapper->$field_name->$sub_key;
+  }
+  // Field not found on the entity do nothing.
+  else {
+    return;
+  }
+
+  // Exception handling for added protection during a donation submit,
+  try {
+    // Need to check if the field has multiple values before adding to array.
+    if (strpos($field->type(), 'list') === 0) {
+      $field[0]->set($value);
+    }
+    else {
+      $field->set($value);
+    }
+  }
+  catch(Exception $e) {
+    // Let the admin know a value is not saving correctly.
+    watchdog(
+      'fundraiser_entity',
+      'The value for @field_name could not be saved, error was %error.',
+      array('@field_name' => $field_name, '%error' => $e->getMessage()),
+      WATCHDOG_ERROR
+    );
+  }
+}
+
+/**
+ * Load an array of context for mapping a donation to an entity.
+ *
+ * @param $donation
+ *    Object loaded from fundraiser_donation_get_donation().
+ *
+ * @return Array
+ *    Array of objects derived from the donation object.
+ */
+function _fundraiser_entity_context_from_donation_object($donation) {
+  // Load the webform submission.
+  module_load_include('inc', 'webform', 'includes/webform.submissions');
+  $submission = webform_get_submission($donation->nid, $donation->sid);
+
+  // Load the commerce order.
+  $order = commerce_order_load($donation->did);
+  $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+
+  // Use the latest transaction.
+  $transactions = commerce_payment_transaction_load_multiple(array(), array('order_id' => $order->order_id));
+  $transaction = reset($transactions);
+
+  return array(
+    'donation' => $donation,
+    'webform_submission' => $submission,
+    'node' => !empty($donation->nid) ? node_load($donation->nid) : NULL,
+    'user' => !empty($donation->uid) ? user_load($donation->uid) : NULL,
+    'commerce_order' => $order,
+    'commerce_payment_transaction' => $transaction,
+    'commerce_customer_profile' => $order_wrapper->commerce_customer_billing->value(),
+  );
+}
+
+/**
+ * Worker callback for the cron queue job.
+ *
+ * Loads a standard donation object and maps the values to the entity.
+ */
+function _fundraiser_entity_post_process_queue_worker($item) {
+  // Load the standard donation object
+  $donation = fundraiser_donation_get_donation($item['did']);
+
+  if ($donation) {
+    // Load the context from the standard donation object
+    $context = _fundraiser_entity_context_from_donation_object($donation);
+
+    // Load the entity and map the values.
+    $fundraiser_donation = fundraiser_entity_donation_load($donation->did);
+    _fundraiser_entity_map_values($fundraiser_donation, $context);
+
+    entity_save('fundraiser_donation', $fundraiser_donation);
+  }
+}
+
+/**
+ * Action callback to map donation values through the webform map.
+ */
+function fundraiser_entity_fundraiser_donation_webform_map_action($item) {
+  // Load the standard donation object
+  $donation = fundraiser_donation_get_donation($item->did);
+
+  if ($donation) {
+    // Load the context from the standard donation object
+    $context = _fundraiser_entity_context_from_donation_object($donation);
+
+    // Load the entity and map the values.
+    $fundraiser_donation = fundraiser_entity_donation_load($donation->did);
+    _fundraiser_entity_map_values($fundraiser_donation, $context);
+
+    entity_save('fundraiser_donation', $fundraiser_donation);
+  }
+}
