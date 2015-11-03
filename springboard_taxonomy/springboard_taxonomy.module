@@ -49,6 +49,19 @@ function springboard_taxonomy_menu() {
     'file' => 'springboard_taxonomy.admin.inc',
   );
 
+  // Custom path for user permissions
+  $items['admin/springboard/taxonomy/%springboard_taxonomy_vocab_name/permissions'] = array(
+    'title' => 'Taxonomy Permissions',
+    'description' => 'Permissions for springboard taxonomy.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('user_admin_permissions'),
+    'access arguments' => array('administer permissions'),
+    'file path' => drupal_get_path('module', 'user'),
+    'file' => 'user.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 10,
+  );
+
   return $items;
 }
 
@@ -70,7 +83,7 @@ function springboard_taxonomy_permission() {
     'administer organization issues' => array(
       'title' => t('View term listing and add new organization issues'),
     ),
-    'administer springboard_taxonomy settings' => array(
+    'administer springboard taxonomy settings' => array(
       'title' => t('Assign or remove the organization issues taxonomy to/from content types.'),
     ),
   );
@@ -90,6 +103,7 @@ function springboard_taxonomy_form_alter(&$form, &$form_state, $form_id) {
       springboard_taxonomy_taxonomy_form($form, $form_state, $form_id);
     }
   }
+
   if($form_id == 'taxonomy_overview_terms' && arg(1) == 'springboard' && arg(3) == 'sba_organization_issues') {
     if (isset($form['actions']['reset_alphabetical'])) {
       $form['actions']['reset_alphabetical']['#access'] = FALSE;
@@ -118,6 +132,12 @@ function springboard_taxonomy_form_alter(&$form, &$form_state, $form_id) {
       $form['path_wrapper']['path'] = $path;
     }
   }
+
+  // Add javascript to hide non-taxonomy permissions on the permissions form.
+  if ($form_id == 'user_admin_permissions' && arg(1) == 'springboard' && arg(2) == 'taxonomy') {
+    $form['#attached']['js'][] = drupal_get_path('module', 'springboard_taxonomy')
+      . '/js/springboard_taxonomy_permissions.js';
+  }
 }
 
 /**
@@ -138,10 +158,10 @@ function springboard_taxonomy_taxonomy_form(&$form, &$form_state, $form_id) {
     $form['springboard_taxonomy_options']['#weight'] = -10;
   }
   // Include JS to layout long lists of checkboxes in columns.
-  drupal_add_js(drupal_get_path('module', 'springboard_taxonomy') . '/js/jquery.columnizer.min.js');
-  drupal_add_js(drupal_get_path('module', 'springboard_taxonomy') . '/js/springboard-taxonomy-edit-form.js');
+  $form['#attached']['js'][] = drupal_get_path('module', 'springboard_taxonomy') . '/js/jquery.columnizer.min.js';
+  $form['#attached']['js'][] = drupal_get_path('module', 'springboard_taxonomy') . '/js/springboard-taxonomy-edit-form.js';
   // Include CSS for special layout.
-  drupal_add_css(drupal_get_path('module', 'springboard_taxonomy') . '/css/springboard-taxonomy-edit-form.css');
+  $form['#attached']['css'][] = drupal_get_path('module', 'springboard_taxonomy') . '/css/springboard-taxonomy-edit-form.css';
 
   // Organization Issues selection.
   if (isset($form['field_sba_organization_issues']) && !empty($form['field_sba_organization_issues'][$language])) {

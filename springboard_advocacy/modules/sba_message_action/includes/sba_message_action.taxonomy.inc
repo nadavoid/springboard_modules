@@ -40,7 +40,8 @@ function sba_message_action_taxonomy_form(&$form, &$form_state, $form_id) {
       '#collapsed' => FALSE,
       '#weight' => -1,
     );
-    $form['field_sba_legislative_issues'][$language]['#title'] = '';
+    $form['field_sba_legislative_issues'][$language]['#title'] = 'You must select at least one legislative issue';
+    $form['field_sba_legislative_issues'][$form['language']['#value']]['#required'] = TRUE;
     $form['springboard_taxonomy_options']['legislative_issues']['field_sba_legislative_issues']
       = $form['field_sba_legislative_issues'];
     unset($form['field_sba_legislative_issues']);

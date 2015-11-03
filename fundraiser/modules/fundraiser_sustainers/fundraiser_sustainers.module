@@ -2031,6 +2031,18 @@ function fundraiser_sustainers_update_billing_info_create_new_donations($master_
   // parentage with the new billing.
   $master_donation->donation = array_merge($master_donation->donation, $submission_fields);
 
+  // If the source donation was charged on a different day to the master
+  // donation, update the next charge date to reflect that.
+  $master_date = new DateTime();
+  $master_date->setTimestamp($master_donation->recurring->next_charge);
+  $source_day = date('d', $source_donation->recurring->next_charge);
+
+  if ($master_date->format('d') != $source_day) {
+    $master_date->setDate($master_date->format('Y'), $master_date->format('m'), $source_day);
+  }
+
+  $next_charge = $master_date->getTimestamp();
+
   // Create new orders based on expiration date as needed.
   // But we need to retrieve the month / year values from gateway form.
   if (isset($master_donation->gateway)) {
@@ -2040,7 +2052,7 @@ function fundraiser_sustainers_update_billing_info_create_new_donations($master_
       // updated amounts we get the right one.
       $master_donation->donation['amount'] = $source_donation->donation['amount'];
       // Create new orders.
-      _fundraiser_sustainers_create_future_orders($master_donation, $expires['month'], $expires['year'], $source_donation, $master_donation->recurring->next_charge);
+      _fundraiser_sustainers_create_future_orders($master_donation, $expires['month'], $expires['year'], $source_donation, $next_charge);
     }
 
     // If a custom charge date was set by an admin, update the charge dates.

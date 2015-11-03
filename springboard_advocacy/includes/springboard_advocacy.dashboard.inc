@@ -182,9 +182,10 @@ function springboard_advocacy_dashboard($path, $arg = NULL) {
           $message = array_pop($messages);
           $subject_editable = field_get_items('sba_message', $message, 'field_sba_subject_editable');
           $user_editable = field_get_items('sba_message', $message, 'field_sba_user_editable');
-          if ($subject_editable[0]['value'] != 'Not editable' || !empty($user_editable)) {
+          $multi_flow = field_get_items('node', $node, 'field_sba_action_flow');
+          if ($multi_flow[0]['value'] != 'multi' && ($subject_editable[0]['value'] != 'Not editable' || !empty($user_editable))) {
             $no_create = TRUE;
-            drupal_set_message(t("This action's current message is user-editable, additional messages may not be created for this action until user editing is disabled."), 'warning', FALSE);
+            drupal_set_message(t("This single-step action's current message is user-editable, please disable user editing or use the multi-step action flow to create additional messages."), 'error', FALSE);
           }
         }
       }

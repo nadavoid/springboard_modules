@@ -353,6 +353,11 @@ function fundraiser_commerce_commerce_order_status_info() {
       'title' => 'Partially Refunded',
       'state' => 'completed',
     ),
+    'authorized' => array(
+      'name' => 'authorized',
+      'title' => 'Authorized',
+      'state' => 'pending',
+    ),
   );
   return $fundraiser_statuses;
 }
@@ -387,6 +392,7 @@ function _fundraiser_commerce_commerce_order_statuses_used() {
     'payment_received',
     'skipped',
     'void',
+    'authorized',
   );
 }
 
