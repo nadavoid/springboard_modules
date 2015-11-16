@@ -226,6 +226,32 @@ function fundraiser_offline_node_load($nodes, $types) {
   }
 }
 
+/**
+ * Implements hook_commerce_payflow_api_request_alter().
+ */
+function fundraiser_offline_commerce_payflow_api_request_alter(&$nvp, $order, $payment_method) {
+  // Use email from submitted donation data instead of order if offline.
+  if (!empty($_GET['offline'])) {
+    $donation = fundraiser_donation_get_donation($order->order_id);
+    if (!empty($donation->submission_data['mail'])) {
+      $nvp['EMAIL'] = $donation->submission_data['mail'];
+    }
+  }
+}
+
+/**
+ * Implements hook_commerce_authnet_aim_request_alter().
+ */
+function fundraiser_offline_commerce_authnet_aim_request_alter(&$nvp) {
+  // Use email from submitted donation data instead of order if offline.
+  if (!empty($_GET['offline'])) {
+    $donation = fundraiser_donation_get_donation($nvp['x_invoice_num']);
+    if (!empty($donation->submission_data['mail'])) {
+      $nvp['x_email'] = $donation->submission_data['mail'];
+    }
+  }
+}
+
 // Implements hook_fundraiser_field_info_alter();
 function fundraiser_offline_fundraiser_field_info_alter(&$fields) {
   if (arg(0) == 'node' && is_numeric(arg(1))) {
