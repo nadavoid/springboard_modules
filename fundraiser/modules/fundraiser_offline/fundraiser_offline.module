@@ -91,7 +91,10 @@ function fundraiser_offline_form_alter(&$form, $form_state, $form_id) {
     $node = $form['#node'];
     // .. that is also a Fundraiser donation form ...
     if (fundraiser_is_donation_type($node->type)) {
-      $offline_mode = !empty($_GET['offline']) ? $_GET['offline'] : FALSE;
+      $offline_mode = FALSE;
+      if (!empty($_GET['offline']) || !empty($form_state['values']['offline_mode'])) {
+        $offline_mode = TRUE;
+      }
       // .. and Offline mode is enabled.
       if ($offline_mode && user_access('submit donations offline')) {
         $form['offline_mode'] = array(
@@ -197,42 +200,14 @@ function fundraiser_offline_donation_form_validate(&$form, &$form_state) {
   if ($form_state['values']['offline_mode']) {
     $form_state['webform_user_skip_user_check'] = TRUE;
   }
+
   $fields = _webform_user_flatten_tree($form_state['values']['submitted'], $form['#node']->nid);
   if (!isset($fields['mail'])) {
     $mail = sprintf('%s@%s', time(), 'sb-offline-donation.com');
-    _fundraiser_offline_set_submission_value('mail', $mail, $form_state['values']['submitted']);
-  }
-}
 
-/**
- * Crawl form_state to find a given field and set it's value.
- *
- * @param string $field_key
- *   Array key associated with the target field.
- *
- * @param mixed $value
- *   Value to set.
- *
- * @param array $form_state
- *   Form submission array.
- *
- * @return bool
- */
-function _fundraiser_offline_set_submission_value($field_key, $value, &$form_state) {
-  $keys = array_keys($form_state);
-  if (in_array($field_key, $keys)) {
-    $form_state[$field_key] = $value;
-    return TRUE;
-  }
-  else {
-    foreach ($keys as $key) {
-      if (is_array($form_state[$key])) {
-        $success = _fundraiser_offline_set_submission_value($field_key, $value, $form_state[$key]);
-        if ($success) {
-          return TRUE;
-        }
-      }
-    }
+    // Set the value on the field's form_state key.
+    $mail_field = _fundraiser_webform_find_field($form, _fundraiser_webform_parse_component($form['#node']->nid, 'mail'));
+    drupal_array_set_nested_value($form_state['values'], $mail_field['#parents'], $mail);
   }
 }
 
