@@ -252,6 +252,16 @@ function fundraiser_offline_commerce_authnet_aim_request_alter(&$nvp) {
   }
 }
 
+function fundraiser_offline_sage_payment_request_sale_alter(&$request_parameters, $context) {
+  // Use email from submitted donation data instead of order if offline.
+  if (!empty($_GET['offline'])) {
+    $donation = fundraiser_donation_get_donation($request_parameters['T_ORDERNUM']);
+    if (!empty($donation->submission_data['mail'])) {
+      $request_parameters['C_EMAIL'] = $donation->submission_data['mail'];
+    }
+  }
+}
+
 // Implements hook_fundraiser_field_info_alter();
 function fundraiser_offline_fundraiser_field_info_alter(&$fields) {
   if (arg(0) == 'node' && is_numeric(arg(1))) {
