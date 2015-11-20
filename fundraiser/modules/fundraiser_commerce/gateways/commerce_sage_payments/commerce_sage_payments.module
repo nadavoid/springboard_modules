@@ -656,6 +656,10 @@ function commerce_sage_payments_eft_submit_form_submit($payment_method, $pane_fo
   // Save the transaction information to get transaction id.
   commerce_payment_transaction_save($transaction);
 
+  // This method can alter the $request_parameters, so we run it before logging
+  // the payment request.
+  $transaction_response = _commerce_sage_payments_request_sale($payment_method, $request_parameters);
+
   // Log the request if specified.
   if ($payment_method['settings']['log']['request'] === 'request') {
     // Mask secure data.
@@ -669,8 +673,6 @@ function commerce_sage_payments_eft_submit_form_submit($payment_method, $pane_fo
     }
     watchdog('commerce_sage_payments', 'Sage Payments request: !param', array('!param' => '<pre>' . check_plain(print_r($log_request_parameters, TRUE)) . '</pre>'), WATCHDOG_DEBUG);
   }
-
-  $transaction_response = _commerce_sage_payments_request_sale($payment_method, $request_parameters);
 
   // Log the response if specified.
   if ($payment_method['settings']['log']['response'] === 'response') {
