@@ -53,6 +53,18 @@ function fundraiser_sustainers_requirements($phase) {
 }
 
 /**
+ * Implements hook_update_dependencies().
+ */
+function fundraiser_sustainers_update_dependencies() {
+  // We need the NPSP module to create the series table.
+  $dependencies['fundraiser_sustainers'][7013] = array(
+    'salesforce_npsp' => 7001,
+  );
+
+  return $dependencies;
+}
+
+/**
  * Implements hook_schema().
  */
 function fundraiser_sustainers_schema() {
@@ -251,6 +263,54 @@ function fundraiser_sustainers_schema() {
     'primary key' => array('master_did'),
   );
 
+  $schema['fundraiser_sustainers_series'] = array(
+    'description' => 'Stores the initial record in a series of recurring donations.',
+    'fields' => array(
+      'did' => array(
+        'description' => 'The ID of the initial donation in the series.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'uid' => array(
+        'description' => 'The ID of the user making the donation.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'amount' => array(
+        'description' => 'The donation amount.',
+        'type' => 'float',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'installments' => array(
+        'description' => 'The number of donation payments to make.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'created' => array(
+        'description' => 'The timestamp when this donation series was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'updated' => array(
+        'description' => 'The timestamp when this donation series was last updated.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('did'),
+    'indexes' => array(
+      'fundraiser_sustainers_series_uid' => array('uid'),
+      'fundraiser_sustainers_series_created' => array('created'),
+      'fundraiser_sustainers_series_updated' => array('updated'),
+    ),
+  );
+
   return $schema;
 }
 
@@ -276,77 +336,152 @@ function fundraiser_sustainers_install() {
       variable_del('fundraiser_port_recurring_done');
     }
   }
+
+  // Set up default Salesforce mappings.
+  _fundraiser_sustainers_create_sustainers_series_mapping();
 }
 
 /**
- * Implements hook_enable().
+ * Implements hook_enable()
  */
 function fundraiser_sustainers_enable() {
-  // Create default SF map insert into table.
-  if (function_exists('salesforce_genmap_save_map')) {
-    _fundraiser_sustainers_install_default_sf_map();
-  }
+  // Create default Salesforce mapping.
+  _fundraiser_sustainers_create_sustainers_series_mapping();
 }
 
 /**
- * Implements hook_modules_enabled().
+ * Creates a mapping between the fundraiser sustainers series entity and the
+ * Opportunity object in Salesforce.
  */
-function fundraiser_sustainers_modules_enabled($modules) {
-  if (in_array('salesforce_genmap', $modules)) {
-    // Create default SF map insert into table.
-    if (function_exists('salesforce_genmap_save_map')) {
-      _fundraiser_sustainers_install_default_sf_map();
+function _fundraiser_sustainers_create_sustainers_series_mapping() {
+  $default_map_sustainers_series = '{
+  "type" : "salesforce_mapping",
+  "name" : "fundraiser_sustainers_series",
+  "label" : "Fundraiser Sustainers Series",
+  "sync_triggers" : "3",
+  "salesforce_object_type" : "Opportunity",
+  "salesforce_record_type" : "",
+  "drupal_entity_type" : "fundraiser_sustainers_series",
+  "drupal_bundle" : "fundraiser_sustainers_series",
+  "field_mappings" : [
+    {
+      "drupal_field" : { "fieldmap_type" : "property", "fieldmap_value" : "amount" },
+      "salesforce_field" : {
+        "autoNumber" : false,
+        "byteLength" : 0,
+        "calculated" : false,
+        "calculatedFormula" : null,
+        "cascadeDelete" : false,
+        "caseSensitive" : false,
+        "controllerName" : null,
+        "createable" : true,
+        "custom" : false,
+        "defaultValue" : null,
+        "defaultValueFormula" : null,
+        "defaultedOnCreate" : false,
+        "dependentPicklist" : false,
+        "deprecatedAndHidden" : false,
+        "digits" : 0,
+        "displayLocationInDecimal" : false,
+        "externalId" : false,
+        "filterable" : true,
+        "groupable" : false,
+        "htmlFormatted" : false,
+        "idLookup" : false,
+        "inlineHelpText" : null,
+        "label" : "Amount",
+        "length" : 0,
+        "name" : "Amount",
+        "nameField" : false,
+        "namePointing" : false,
+        "nillable" : true,
+        "permissionable" : true,
+        "picklistValues" : [],
+        "precision" : 18,
+        "referenceTo" : [],
+        "relationshipName" : null,
+        "relationshipOrder" : null,
+        "restrictedDelete" : false,
+        "restrictedPicklist" : false,
+        "scale" : 2,
+        "soapType" : "xsd:double",
+        "sortable" : true,
+        "type" : "currency",
+        "unique" : false,
+        "updateable" : true,
+        "writeRequiresMasterRead" : false
+      },
+      "key" : false,
+      "direction" : "drupal_sf",
+      "drupal_sf" : "always",
+      "sf_drupal" : "always"
+    },
+    {
+      "drupal_field" : { "fieldmap_type" : "property", "fieldmap_value" : "amount" },
+      "salesforce_field" : {
+        "autoNumber" : false,
+        "byteLength" : 0,
+        "calculated" : false,
+        "calculatedFormula" : null,
+        "cascadeDelete" : false,
+        "caseSensitive" : false,
+        "controllerName" : null,
+        "createable" : true,
+        "custom" : false,
+        "defaultValue" : null,
+        "defaultValueFormula" : null,
+        "defaultedOnCreate" : false,
+        "dependentPicklist" : false,
+        "deprecatedAndHidden" : false,
+        "digits" : 0,
+        "displayLocationInDecimal" : false,
+        "externalId" : false,
+        "filterable" : true,
+        "groupable" : false,
+        "htmlFormatted" : false,
+        "idLookup" : false,
+        "inlineHelpText" : null,
+        "label" : "Amount",
+        "length" : 0,
+        "name" : "Amount",
+        "nameField" : false,
+        "namePointing" : false,
+        "nillable" : true,
+        "permissionable" : true,
+        "picklistValues" : [],
+        "precision" : 18,
+        "referenceTo" : [],
+        "relationshipName" : null,
+        "relationshipOrder" : null,
+        "restrictedDelete" : false,
+        "restrictedPicklist" : false,
+        "scale" : 2,
+        "soapType" : "xsd:double",
+        "sortable" : true,
+        "type" : "currency",
+        "unique" : false,
+        "updateable" : true,
+        "writeRequiresMasterRead" : false
+      },
+      "key" : false,
+      "direction" : "sf_drupal",
+      "drupal_sf" : "always",
+      "sf_drupal" : "always"
     }
-  }
-}
+  ],
+  "push_async" : "0",
+  "push_batch" : "0",
+  "created" : "1436462781",
+  "updated" : "1436462781",
+  "weight" : "0",
+  "locked" : "0",
+  "rdf_mapping" : []
+  }';
 
-/**
- * Helper function, adding default salesforce map if needed.
- */
-function _fundraiser_sustainers_install_default_sf_map() {
-  if (module_exists('salesforce_genmap')) {
-    $map = salesforce_genmap_load_map(-1, 'fundraiser_sustainers');
-    if (empty($map)) {
-      $map = array();
-      $map = entity_create('salesforce_genmap_map', $map);
-      $map->nid = -1;
-      $map->map_handler = 'fundraiser_sustainers';
-      $map->salesforce_object_type = 'npe03__Recurring_Donation__c';
-      $object_type = '';
-      //module_load_include('inc', 'salesforce_genmap', 'includes/salesforce_genmap.map');
-      //if (function_exists('salesforce_get_api')) {
-      //  $sfapi = salesforce_get_api();
-      //  if ($sfapi->isAuthorized()) {
-      //    if (function_exists('_sfw_salesforce_record_type_list')) {
-      //      $sf_records = _sfw_salesforce_record_type_list($sfapi, 'npe03__Recurring_Donation__c');
-      //      $sf_records = array_flip($sf_records);
-      //      $object_type = $sf_records['Donation'];
-      //    }
-      //  }
-      //}
-      // There seems to be no subtype record type for recurring donations, so leaving this out.
-      $map->salesforce_record_type = $object_type;
-      $map->field_map = array(
-        'fundraiser_sustainers_map' => array(
-          'full_name' => 'Name',
-          'amount' => 'npe03__Amount__c',
-          'contact' => 'npe03__Contact__c',
-          'installment_period' => 'npe03__Installment_Period__c',
-          'schedule_type' => 'npe03__Schedule_Type__c',
-          'installments' => 'npe03__Installments__c',
-          'last_payment_date' => 'npe03__Last_Payment_Date__c',
-          'next_payment_date' => 'npe03__Next_Payment_Date__c',
-        ),
-      );
-      $map->sync_options = array(
-        'insert' => 'insert',
-        'update' => 'update',
-        'delete' => 'delete',
-      );
-      $map->status = 1;
-      $map->module = 'fundraiser_sustainers';
-      salesforce_genmap_save_map($map, 'fundraiser_sustainers');
-    }
+  $sustainers_mapping = salesforce_mapping_load('fundraiser_sustainers_series');
+  if (empty($sustainers_mapping)) {
+    $mapping = entity_import('salesforce_mapping', $default_map_sustainers_series);
+    entity_save('salesforce_mapping', $mapping);
   }
 }
 
@@ -607,4 +742,121 @@ function fundraiser_sustainers_update_7011() {
   db_add_index('fundraiser_sustainers_log', 'fundraiser_sustainers_log_next_charge', array('next_charge'));
   db_add_index('fundraiser_sustainers_log', 'fundraiser_sustainers_log_old_state', array('old_state'));
   db_add_index('fundraiser_sustainers_log', 'fundraiser_sustainers_log_new_state', array('new_state'));
+}
+
+/**
+ * Creates new sustainers series table.
+ */
+function fundraiser_sustainers_update_7012() {
+  $fundraiser_sustainers_series_schema = array(
+    'description' => 'Stores the initial record in a series of recurring donations.',
+    'fields' => array(
+      'did' => array(
+        'description' => 'The ID of the initial donation in the series.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'uid' => array(
+        'description' => 'The ID of the user making the donation.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'amount' => array(
+        'description' => 'The donation amount.',
+        'type' => 'float',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'installments' => array(
+        'description' => 'The number of donation payments to make.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'created' => array(
+        'description' => 'The timestamp when this donation series was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'updated' => array(
+        'description' => 'The timestamp when this donation series was last updated.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('did'),
+    'indexes' => array(
+      'fundraiser_sustainers_series_uid' => array('uid'),
+      'fundraiser_sustainers_series_created' => array('created'),
+      'fundraiser_sustainers_series_updated' => array('updated'),
+    ),
+  );
+
+  db_create_table('fundraiser_sustainers_series', $fundraiser_sustainers_series_schema);
+
+  _fundraiser_sustainers_create_sustainers_series_mapping();
+
+  cache_clear_all('schema', 'cache', TRUE);
+}
+
+/**
+ * Migrates recurring donations to fundraiser sustainer series entities.
+ */
+function fundraiser_sustainers_update_7013(&$sandbox) {
+  if (!isset($sandbox['progress'])) {
+    // Force schema cache refresh for fundraiser_sustainers_series table.
+    drupal_get_schema('fundraiser_sustainers_series', TRUE);
+
+    $sandbox['progress'] = 0;
+    $sandbox['current_did'] = 0;
+    $sandbox['max'] = db_query('SELECT COUNT(did) FROM {fundraiser_sustainers} WHERE `master_did` = `did`')->fetchField();
+  }
+
+  // Get fundraiser sustainers records that have matching master donation ID
+  // and donation ID fields.
+  $results = db_query('SELECT `master_did` FROM {fundraiser_sustainers} WHERE `master_did` = `did` AND `master_did` > :current_did ORDER BY `master_did` ASC LIMIT 0, 100',
+      array(
+        ':current_did' => $sandbox['current_did'],
+      ))->fetchAll();
+
+  foreach ($results as $row) {
+    // Get the donation user ID and amount.
+    $donation = db_query('SELECT `did`, `uid`, `amount` FROM {fundraiser_donation} WHERE `did` = :master_did',
+        array(
+          ':master_did' => $row->master_did,
+        ))->fetchAssoc();
+
+    $installments = db_query('SELECT COUNT(did) FROM {fundraiser_sustainers} WHERE `master_did` != `did` AND `master_did` = :master_did',
+        array(
+          ':master_did' => $row->master_did,
+          ))->fetchField();
+
+    // Create a new fundraiser sustainers series entity.
+    $time = time();
+    $fundraiser_sustainers_series_data = array(
+      'did' => $donation['did'],
+      'uid' => $donation['uid'],
+      'amount' => $donation['amount'],
+      'installments' => $installments,
+      'created' => $time,
+      'updated' => $time,
+      );
+
+    db_insert('fundraiser_sustainers_series')
+       ->fields($fundraiser_sustainers_series_data)
+       ->execute();
+
+    $sandbox['progress']++;
+    $sandbox['current_did'] = $row->master_did;
+  }
+
+  $sandbox['#finished'] = empty($sandbox['max']) ? 1 : ($sandbox['progress'] / $sandbox['max']);
+
+  if ($sandbox['#finished'] >= 1) {
+    return t('Fundraiser sustainers donations have been migrated to fundraiser sustainers series entities.');
+  }
 }

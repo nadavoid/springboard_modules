@@ -148,9 +148,10 @@ function _fundraiser_tickets_validate_webform_field($element, &$form_state) {
     }
     if (!empty($form_state['complete form']['#node']->fr_tickets_donation_addon_form[LANGUAGE_NONE][0]['target_id'])) {
       $add_on = node_load($form_state['complete form']['#node']->fr_tickets_donation_addon_form[LANGUAGE_NONE][0]['target_id']);
-      $min = intval($add_on->minimum_donation_amount);
-      if(intval($ticket_values['fundraiser-tickets-extra-donation']) < $min) {
-        form_set_error('fundraiser-tickets-extra-donation', t('Additional donation is a minimum of $@amount', array('@amount' => $min)));
+      $min = $add_on->minimum_donation_amount;
+      if ($ticket_values['fundraiser-tickets-extra-donation'] < $min) {
+        form_set_error('fundraiser-tickets-extra-donation', t('Additional donation is a minimum of $@amount',
+          array('@amount' => number_format($min, 2))));
       }
     }
     unset($ticket_values['fundraiser-tickets-extra-donation']);

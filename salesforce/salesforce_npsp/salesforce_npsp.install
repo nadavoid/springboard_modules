@@ -1,0 +1,752 @@
+<?php
+
+/**
+ * @file
+ * Install hooks for the Salesforce NPSP module.
+ */
+
+/**
+ * Implements hook_update_dependencies()
+ */
+function salesforce_npsp_update_dependencies() {
+  // Fundraiser Sustainers Series entity must exist before adding properties.
+  $dependencies['salesforce_npsp'][7001] = array(
+    'fundraiser_sustainers' => 7012,
+  );
+
+  // Base Fundraiser Sustainers Series migration must be complete.
+  $dependencies['salesforce_npsp'][7002] = array(
+    'fundraiser_sustainers' => 7013,
+  );
+
+  return $dependencies;
+}
+
+/**
+ * Implements hook_install()
+ */
+function salesforce_npsp_install() {
+  // Add NPSP fields to fundraiser sustainers series module.
+  salesforce_npsp_create_extra_fundraiser_series_fields();
+
+  // Create default sustainers series to NPSP Recurring Donation mapping.
+  $sustainers_mapping_result = salesforce_npsp_create_sustainers_series_mapping();
+  if ($sustainers_mapping_result !== FALSE) {
+    drupal_set_message(t('Fundraiser sustainers series entity has been mapped to NPSP Recurring Donation object.'));
+  }
+
+  // Remove default recurring donation mapping provided by Springboard.
+  salesforce_genmap_delete_map(-1, 'npe03__Recurring_Donation__c');
+
+  $mapping = salesforce_mapping_load('fundraiser_sustainers_series');
+  if (!empty($mapping)) {
+    entity_delete('salesforce_mapping', $mapping->salesforce_mapping_id);
+  }
+}
+
+/**
+ * Implements hook_uninstall()
+ */
+function salesforce_npsp_uninstall() {
+  // Drop NPSP-specific fields from the fundraiser sustainers series table.
+  $fields = array(
+    'npsp_last_payment_date',
+    'npsp_next_payment_date',
+    'npsp_installment_period',
+    'npsp_schedule_type',
+  );
+
+  foreach ($fields as $field_name) {
+    db_drop_field('fundraiser_sustainers_series', $field_name);
+  }
+
+  // Remove NPSP Salesforce mapping for fundraiser sustainers series.
+  $sustainers_series_mapping = salesforce_mapping_load('fundraiser_sustainers_series_npsp');
+  if (!empty($sustainers_series_mapping)) {
+    entity_delete('salesforce_mapping', $sustainers_series_mapping->salesforce_mapping_id);
+  }
+}
+
+/**
+ * Adds NPSP-specific fields to the fundraiser sustainers series table.
+ */
+function salesforce_npsp_create_extra_fundraiser_series_fields() {
+  $fields = array(
+    'npsp_last_payment_date' => array(
+      'description' => 'The date of the last payment in this donation series.',
+      'type' => 'date',
+      'mysql_type' => 'date',
+    ),
+    'npsp_next_payment_date' => array(
+      'description' => 'The date of the next payment in this donation series.',
+      'type' => 'date',
+      'mysql_type' => 'date',
+    ),
+    'npsp_installment_period' => array(
+      'description' => 'The installment period used for this donation series.',
+      'type' => 'varchar',
+      'length' => 255,
+    ),
+    'npsp_schedule_type' => array(
+      'description' => 'The schedule type used for this donation series.',
+      'type' => 'varchar',
+      'length' => 255,
+    ),
+  );
+
+  foreach ($fields as $field_name => $field) {
+    db_add_field('fundraiser_sustainers_series', $field_name, $field);
+  }
+}
+
+/**
+ * Creates a mapping between the fundraiser sustainers series entity and the
+ * NPSP Recurring Donation object in Salesforce.
+ */
+function salesforce_npsp_create_sustainers_series_mapping() {
+  $default_map_sustainers_series = '{
+  "type" : "salesforce_mapping",
+  "name" : "fundraiser_sustainers_series_npsp",
+  "label" : "Fundraiser Sustainers Series (NPSP)",
+  "sync_triggers" : "3",
+  "salesforce_object_type" : "npe03__Recurring_Donation__c",
+  "salesforce_record_type" : "default",
+  "drupal_entity_type" : "fundraiser_sustainers_series",
+  "drupal_bundle" : "fundraiser_sustainers_series",
+  "field_mappings" : [
+    {
+      "drupal_field" : { "fieldmap_type" : "property", "fieldmap_value" : "amount" },
+      "salesforce_field" : {
+        "autoNumber" : false,
+        "byteLength" : 0,
+        "calculated" : false,
+        "calculatedFormula" : null,
+        "cascadeDelete" : false,
+        "caseSensitive" : false,
+        "controllerName" : null,
+        "createable" : true,
+        "custom" : true,
+        "defaultValue" : null,
+        "defaultValueFormula" : null,
+        "defaultedOnCreate" : false,
+        "dependentPicklist" : false,
+        "deprecatedAndHidden" : false,
+        "digits" : 0,
+        "displayLocationInDecimal" : false,
+        "externalId" : false,
+        "filterable" : true,
+        "groupable" : false,
+        "htmlFormatted" : false,
+        "idLookup" : false,
+        "inlineHelpText" : "",
+        "label" : "Recurring Amount",
+        "length" : 0,
+        "name" : "npe03__Amount__c",
+        "nameField" : false,
+        "namePointing" : false,
+        "nillable" : true,
+        "permissionable" : true,
+        "picklistValues" : [],
+        "precision" : 18,
+        "referenceTo" : [],
+        "relationshipName" : null,
+        "relationshipOrder" : null,
+        "restrictedDelete" : false,
+        "restrictedPicklist" : false,
+        "scale" : 2,
+        "soapType" : "xsd:double",
+        "sortable" : true,
+        "type" : "currency",
+        "unique" : false,
+        "updateable" : true,
+        "writeRequiresMasterRead" : false
+      },
+      "key" : false,
+      "direction" : "drupal_sf",
+      "drupal_sf" : "always",
+      "sf_drupal" : "always"
+    },
+    {
+      "drupal_field" : { "fieldmap_type" : "property", "fieldmap_value" : "amount" },
+      "salesforce_field" : {
+        "autoNumber" : false,
+        "byteLength" : 0,
+        "calculated" : false,
+        "calculatedFormula" : null,
+        "cascadeDelete" : false,
+        "caseSensitive" : false,
+        "controllerName" : null,
+        "createable" : true,
+        "custom" : true,
+        "defaultValue" : null,
+        "defaultValueFormula" : null,
+        "defaultedOnCreate" : false,
+        "dependentPicklist" : false,
+        "deprecatedAndHidden" : false,
+        "digits" : 0,
+        "displayLocationInDecimal" : false,
+        "externalId" : false,
+        "filterable" : true,
+        "groupable" : false,
+        "htmlFormatted" : false,
+        "idLookup" : false,
+        "inlineHelpText" : "",
+        "label" : "Recurring Amount",
+        "length" : 0,
+        "name" : "npe03__Amount__c",
+        "nameField" : false,
+        "namePointing" : false,
+        "nillable" : true,
+        "permissionable" : true,
+        "picklistValues" : [],
+        "precision" : 18,
+        "referenceTo" : [],
+        "relationshipName" : null,
+        "relationshipOrder" : null,
+        "restrictedDelete" : false,
+        "restrictedPicklist" : false,
+        "scale" : 2,
+        "soapType" : "xsd:double",
+        "sortable" : true,
+        "type" : "currency",
+        "unique" : false,
+        "updateable" : true,
+        "writeRequiresMasterRead" : false
+      },
+      "key" : false,
+      "direction" : "sf_drupal",
+      "drupal_sf" : "always",
+      "sf_drupal" : "always"
+    },
+    {
+      "drupal_field" : { "fieldmap_type" : "property", "fieldmap_value" : "npsp_installment_period" },
+      "salesforce_field" : {
+        "autoNumber" : false,
+        "byteLength" : 0,
+        "calculated" : false,
+        "calculatedFormula" : null,
+        "cascadeDelete" : false,
+        "caseSensitive" : false,
+        "controllerName" : null,
+        "createable" : true,
+        "custom" : true,
+        "defaultValue" : null,
+        "defaultValueFormula" : null,
+        "defaultedOnCreate" : false,
+        "dependentPicklist" : false,
+        "deprecatedAndHidden" : false,
+        "digits" : 0,
+        "displayLocationInDecimal" : false,
+        "externalId" : false,
+        "filterable" : true,
+        "groupable" : false,
+        "htmlFormatted" : false,
+        "idLookup" : false,
+        "inlineHelpText" : "",
+        "label" : "Installment Period",
+        "length" : 0,
+        "name" : "npe03__Installment_Period__c",
+        "nameField" : false,
+        "namePointing" : false,
+        "nillable" : true,
+        "permissionable" : true,
+        "picklistValues" : [],
+        "precision" : 18,
+        "referenceTo" : [],
+        "relationshipName" : null,
+        "relationshipOrder" : null,
+        "restrictedDelete" : false,
+        "restrictedPicklist" : false,
+        "scale" : 2,
+        "soapType" : "xsd:double",
+        "sortable" : true,
+        "type" : "currency",
+        "unique" : false,
+        "updateable" : true,
+        "writeRequiresMasterRead" : false
+      },
+      "key" : false,
+      "direction" : "drupal_sf",
+      "drupal_sf" : "always",
+      "sf_drupal" : "always"
+    },
+    {
+      "drupal_field" : { "fieldmap_type" : "property", "fieldmap_value" : "npsp_installment_period" },
+      "salesforce_field" : {
+        "autoNumber" : false,
+        "byteLength" : 0,
+        "calculated" : false,
+        "calculatedFormula" : null,
+        "cascadeDelete" : false,
+        "caseSensitive" : false,
+        "controllerName" : null,
+        "createable" : true,
+        "custom" : true,
+        "defaultValue" : null,
+        "defaultValueFormula" : null,
+        "defaultedOnCreate" : false,
+        "dependentPicklist" : false,
+        "deprecatedAndHidden" : false,
+        "digits" : 0,
+        "displayLocationInDecimal" : false,
+        "externalId" : false,
+        "filterable" : true,
+        "groupable" : false,
+        "htmlFormatted" : false,
+        "idLookup" : false,
+        "inlineHelpText" : "",
+        "label" : "Installment Period",
+        "length" : 0,
+        "name" : "npe03__Installment_Period__c",
+        "nameField" : false,
+        "namePointing" : false,
+        "nillable" : true,
+        "permissionable" : true,
+        "picklistValues" : [],
+        "precision" : 18,
+        "referenceTo" : [],
+        "relationshipName" : null,
+        "relationshipOrder" : null,
+        "restrictedDelete" : false,
+        "restrictedPicklist" : false,
+        "scale" : 2,
+        "soapType" : "xsd:double",
+        "sortable" : true,
+        "type" : "currency",
+        "unique" : false,
+        "updateable" : true,
+        "writeRequiresMasterRead" : false
+      },
+      "key" : false,
+      "direction" : "sf_drupal",
+      "drupal_sf" : "always",
+      "sf_drupal" : "always"
+    },
+    {
+      "drupal_field" : { "fieldmap_type" : "property", "fieldmap_value" : "installments" },
+      "salesforce_field" : {
+        "autoNumber" : false,
+        "byteLength" : 0,
+        "calculated" : false,
+        "calculatedFormula" : null,
+        "cascadeDelete" : false,
+        "caseSensitive" : false,
+        "controllerName" : null,
+        "createable" : true,
+        "custom" : true,
+        "defaultValue" : null,
+        "defaultValueFormula" : null,
+        "defaultedOnCreate" : false,
+        "dependentPicklist" : false,
+        "deprecatedAndHidden" : false,
+        "digits" : 0,
+        "displayLocationInDecimal" : false,
+        "externalId" : false,
+        "filterable" : true,
+        "groupable" : false,
+        "htmlFormatted" : false,
+        "idLookup" : false,
+        "inlineHelpText" : "",
+        "label" : "Installments",
+        "length" : 0,
+        "name" : "npe03__Installments__c",
+        "nameField" : false,
+        "namePointing" : false,
+        "nillable" : true,
+        "permissionable" : true,
+        "picklistValues" : [],
+        "precision" : 18,
+        "referenceTo" : [],
+        "relationshipName" : null,
+        "relationshipOrder" : null,
+        "restrictedDelete" : false,
+        "restrictedPicklist" : false,
+        "scale" : 2,
+        "soapType" : "xsd:double",
+        "sortable" : true,
+        "type" : "currency",
+        "unique" : false,
+        "updateable" : true,
+        "writeRequiresMasterRead" : false
+      },
+      "key" : false,
+      "direction" : "drupal_sf",
+      "drupal_sf" : "always",
+      "sf_drupal" : "always"
+    },
+    {
+      "drupal_field" : { "fieldmap_type" : "property", "fieldmap_value" : "installments" },
+      "salesforce_field" : {
+        "autoNumber" : false,
+        "byteLength" : 0,
+        "calculated" : false,
+        "calculatedFormula" : null,
+        "cascadeDelete" : false,
+        "caseSensitive" : false,
+        "controllerName" : null,
+        "createable" : true,
+        "custom" : true,
+        "defaultValue" : null,
+        "defaultValueFormula" : null,
+        "defaultedOnCreate" : false,
+        "dependentPicklist" : false,
+        "deprecatedAndHidden" : false,
+        "digits" : 0,
+        "displayLocationInDecimal" : false,
+        "externalId" : false,
+        "filterable" : true,
+        "groupable" : false,
+        "htmlFormatted" : false,
+        "idLookup" : false,
+        "inlineHelpText" : "",
+        "label" : "Installments",
+        "length" : 0,
+        "name" : "npe03__Installments__c",
+        "nameField" : false,
+        "namePointing" : false,
+        "nillable" : true,
+        "permissionable" : true,
+        "picklistValues" : [],
+        "precision" : 18,
+        "referenceTo" : [],
+        "relationshipName" : null,
+        "relationshipOrder" : null,
+        "restrictedDelete" : false,
+        "restrictedPicklist" : false,
+        "scale" : 2,
+        "soapType" : "xsd:double",
+        "sortable" : true,
+        "type" : "currency",
+        "unique" : false,
+        "updateable" : true,
+        "writeRequiresMasterRead" : false
+      },
+      "key" : false,
+      "direction" : "sf_drupal",
+      "drupal_sf" : "always",
+      "sf_drupal" : "always"
+    },
+    {
+      "drupal_field" : { "fieldmap_type" : "property", "fieldmap_value" : "npsp_last_payment_date" },
+      "salesforce_field" : {
+        "autoNumber" : false,
+        "byteLength" : 0,
+        "calculated" : false,
+        "calculatedFormula" : null,
+        "cascadeDelete" : false,
+        "caseSensitive" : false,
+        "controllerName" : null,
+        "createable" : true,
+        "custom" : true,
+        "defaultValue" : null,
+        "defaultValueFormula" : null,
+        "defaultedOnCreate" : false,
+        "dependentPicklist" : false,
+        "deprecatedAndHidden" : false,
+        "digits" : 0,
+        "displayLocationInDecimal" : false,
+        "externalId" : false,
+        "filterable" : true,
+        "groupable" : true,
+        "htmlFormatted" : false,
+        "idLookup" : false,
+        "inlineHelpText" : null,
+        "label" : "Last Payment Date",
+        "length" : 0,
+        "name" : "npe03__Last_Payment_Date__c",
+        "nameField" : false,
+        "namePointing" : false,
+        "nillable" : false,
+        "permissionable" : false,
+        "picklistValues" : [],
+        "precision" : 0,
+        "referenceTo" : [],
+        "relationshipName" : null,
+        "relationshipOrder" : null,
+        "restrictedDelete" : false,
+        "restrictedPicklist" : false,
+        "scale" : 0,
+        "soapType" : "xsd:date",
+        "sortable" : true,
+        "type" : "date",
+        "unique" : false,
+        "updateable" : true,
+        "writeRequiresMasterRead" : false
+      },
+      "key" : false,
+      "direction" : "drupal_sf",
+      "drupal_sf" : "always",
+      "sf_drupal" : "always"
+    },
+    {
+      "drupal_field" : { "fieldmap_type" : "property", "fieldmap_value" : "npsp_last_payment_date" },
+      "salesforce_field" : {
+        "autoNumber" : false,
+        "byteLength" : 0,
+        "calculated" : false,
+        "calculatedFormula" : null,
+        "cascadeDelete" : false,
+        "caseSensitive" : false,
+        "controllerName" : null,
+        "createable" : true,
+        "custom" : true,
+        "defaultValue" : null,
+        "defaultValueFormula" : null,
+        "defaultedOnCreate" : false,
+        "dependentPicklist" : false,
+        "deprecatedAndHidden" : false,
+        "digits" : 0,
+        "displayLocationInDecimal" : false,
+        "externalId" : false,
+        "filterable" : true,
+        "groupable" : true,
+        "htmlFormatted" : false,
+        "idLookup" : false,
+        "inlineHelpText" : null,
+        "label" : "Last Payment Date",
+        "length" : 0,
+        "name" : "npe03__Last_Payment_Date__c",
+        "nameField" : false,
+        "namePointing" : false,
+        "nillable" : false,
+        "permissionable" : false,
+        "picklistValues" : [],
+        "precision" : 0,
+        "referenceTo" : [],
+        "relationshipName" : null,
+        "relationshipOrder" : null,
+        "restrictedDelete" : false,
+        "restrictedPicklist" : false,
+        "scale" : 0,
+        "soapType" : "xsd:date",
+        "sortable" : true,
+        "type" : "date",
+        "unique" : false,
+        "updateable" : true,
+        "writeRequiresMasterRead" : false
+      },
+      "key" : false,
+      "direction" : "sf_drupal",
+      "drupal_sf" : "always",
+      "sf_drupal" : "always"
+    },
+    {
+      "drupal_field" : { "fieldmap_type" : "property", "fieldmap_value" : "npsp_next_payment_date" },
+      "salesforce_field" : {
+        "autoNumber" : false,
+        "byteLength" : 0,
+        "calculated" : false,
+        "calculatedFormula" : null,
+        "cascadeDelete" : false,
+        "caseSensitive" : false,
+        "controllerName" : null,
+        "createable" : true,
+        "custom" : true,
+        "defaultValue" : null,
+        "defaultValueFormula" : null,
+        "defaultedOnCreate" : false,
+        "dependentPicklist" : false,
+        "deprecatedAndHidden" : false,
+        "digits" : 0,
+        "displayLocationInDecimal" : false,
+        "externalId" : false,
+        "filterable" : true,
+        "groupable" : true,
+        "htmlFormatted" : false,
+        "idLookup" : false,
+        "inlineHelpText" : null,
+        "label" : "Next Payment Date",
+        "length" : 0,
+        "name" : "npe03__Next_Payment_Date__c",
+        "nameField" : false,
+        "namePointing" : false,
+        "nillable" : false,
+        "permissionable" : false,
+        "picklistValues" : [],
+        "precision" : 0,
+        "referenceTo" : [],
+        "relationshipName" : null,
+        "relationshipOrder" : null,
+        "restrictedDelete" : false,
+        "restrictedPicklist" : false,
+        "scale" : 0,
+        "soapType" : "xsd:date",
+        "sortable" : true,
+        "type" : "date",
+        "unique" : false,
+        "updateable" : true,
+        "writeRequiresMasterRead" : false
+      },
+      "key" : false,
+      "direction" : "drupal_sf",
+      "drupal_sf" : "always",
+      "sf_drupal" : "always"
+    },
+    {
+      "drupal_field" : { "fieldmap_type" : "property", "fieldmap_value" : "npsp_next_payment_date" },
+      "salesforce_field" : {
+        "autoNumber" : false,
+        "byteLength" : 0,
+        "calculated" : false,
+        "calculatedFormula" : null,
+        "cascadeDelete" : false,
+        "caseSensitive" : false,
+        "controllerName" : null,
+        "createable" : true,
+        "custom" : true,
+        "defaultValue" : null,
+        "defaultValueFormula" : null,
+        "defaultedOnCreate" : false,
+        "dependentPicklist" : false,
+        "deprecatedAndHidden" : false,
+        "digits" : 0,
+        "displayLocationInDecimal" : false,
+        "externalId" : false,
+        "filterable" : true,
+        "groupable" : true,
+        "htmlFormatted" : false,
+        "idLookup" : false,
+        "inlineHelpText" : null,
+        "label" : "Next Payment Date",
+        "length" : 0,
+        "name" : "npe03__Next_Payment_Date__c",
+        "nameField" : false,
+        "namePointing" : false,
+        "nillable" : false,
+        "permissionable" : false,
+        "picklistValues" : [],
+        "precision" : 0,
+        "referenceTo" : [],
+        "relationshipName" : null,
+        "relationshipOrder" : null,
+        "restrictedDelete" : false,
+        "restrictedPicklist" : false,
+        "scale" : 0,
+        "soapType" : "xsd:date",
+        "sortable" : true,
+        "type" : "date",
+        "unique" : false,
+        "updateable" : true,
+        "writeRequiresMasterRead" : false
+      },
+      "key" : false,
+      "direction" : "sf_drupal",
+      "drupal_sf" : "always",
+      "sf_drupal" : "always"
+    }
+  ],
+  "push_async" : "0",
+  "push_batch" : "0",
+  "created" : "1436547671",
+  "updated" : "1436816899",
+  "weight" : "0",
+  "locked" : "0",
+  "rdf_mapping" : []
+  }';
+
+  $mapping = entity_import('salesforce_mapping', $default_map_sustainers_series);
+  return entity_save('salesforce_mapping', $mapping);
+}
+
+/**
+ * Creates new fundraiser sustainers series mapping.
+ * Removes default recurring donation mapping provided by Springboard.
+ */
+function salesforce_npsp_update_7001() {
+  // Add NPSP fields to fundraiser sustainers series module.
+  salesforce_npsp_create_extra_fundraiser_series_fields();
+
+  // Create default sustainers series to NPSP Recurring Donation mapping.
+  $sustainers_mapping_result = salesforce_npsp_create_sustainers_series_mapping();
+  if ($sustainers_mapping_result !== FALSE) {
+    drupal_set_message(t('Fundraiser sustainers series entity has been mapped to NPSP Recurring Donation object.'));
+  }
+
+  // Remove default recurring donation mapping provided by Springboard.
+  salesforce_genmap_delete_map(-1, 'npe03__Recurring_Donation__c');
+
+  $mapping = salesforce_mapping_load('fundraiser_sustainers_series');
+  if (!empty($mapping)) {
+    entity_delete('salesforce_mapping', $mapping->salesforce_mapping_id);
+  }
+}
+
+/**
+ * Migrates NPSP-specific data to fundraiser sustainer series entities.
+ */
+function salesforce_npsp_update_7002(&$sandbox) {
+  if (!isset($sandbox['progress'])) {
+    $sandbox['progress'] = 0;
+    $sandbox['current_did'] = 0;
+    $sandbox['max'] = db_query('SELECT COUNT(did) FROM {fundraiser_sustainers_series}')->fetchField();
+  }
+
+  $results = db_query('SELECT `did` FROM {fundraiser_sustainers_series} WHERE `did` > :current_did ORDER BY `did` ASC LIMIT 0, 100', array(
+    ':current_did' => $sandbox['current_did'],
+    ))->fetchAll();
+
+  foreach ($results as $row) {
+    // Get the next charge date.
+    $next_charge = db_query('SELECT `next_charge` from {fundraiser_sustainers} WHERE `master_did` = :master_did AND `attempts` = 0 AND `gateway_resp` IS NULL ORDER BY `did` ASC LIMIT 1', array(
+      ':master_did' => $row->did,
+      ))->fetchField();
+
+    // If no unattempted sustainer charges, default to most recent date.
+    if (empty($next_charge)) {
+      $next_charge = db_query('SELECT `next_charge` from {fundraiser_sustainers} WHERE `master_did` = :master_did ORDER BY `did` DESC LIMIT 1', array(
+        ':master_did' => $row->did,
+        ))->fetchField();
+    }
+
+    // Get the last charge date.
+    $last_charge = db_query('SELECT `next_charge` from {fundraiser_sustainers} WHERE `master_did` = :master_did AND `attempts` > 0 ORDER BY `did` DESC LIMIT 1', array(
+      ':master_did' => $row->did,
+      ))->fetchField();
+
+    // If no sustainer charges, default to the master donation creation date.
+    if (empty($last_charge)) {
+      $last_charge = db_query('SELECT `created` from {fundraiser_donation} WHERE `did` = :did', array(
+        ':did' => $row->did,
+        ))->fetchField();
+    }
+
+    // Update existing fundraiser sustainers series entity.
+    $fundraiser_sustainers_series_data = array(
+      // Last payment date is the last logged date or sustainer creation date.
+      'npsp_last_payment_date' => date('Y-m-d H:i:s', $last_charge),
+      'npsp_next_payment_date' => date('Y-m-d H:i:s', $next_charge),
+      'npsp_installment_period' => 'Monthly',
+      'npsp_schedule_type' => 'Multiply By',
+    );
+
+    db_update('fundraiser_sustainers_series')
+        ->fields($fundraiser_sustainers_series_data)
+        ->condition('did', $row->did, '=')
+        ->execute();
+
+    $sandbox['progress'] ++;
+    $sandbox['current_did'] = $row->did;
+  }
+
+  $sandbox['#finished'] = empty($sandbox['max']) ? 1 : ($sandbox['progress'] / $sandbox['max']);
+
+  if ($sandbox['#finished'] >= 1) {
+    return t('Fundraiser sustainers series entities have been updated with NPSP-specific data.');
+  }
+}
+
+/**
+ * Updates npe03__Recurring_Donation__c Salesforce sync map records.
+ */
+function salesforce_npsp_update_7003() {
+  $salesforce_sync_map_data = array(
+    'delta' => 'fundraiser_sustainers_series',
+  );
+
+  db_update('salesforce_sync_map')
+      ->fields($salesforce_sync_map_data)
+      ->condition('object_type', 'npe03__Recurring_Donation__c', '=')
+      ->execute();
+
+  return t('Salesforce sync map records for npe03__Recurring_Donation__c objects have been updated.');
+}

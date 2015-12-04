@@ -34,7 +34,8 @@ function fundraiser_webform_webform_goals_list_metrics($selected_context, $form_
           ),
           'display_threshold' => array(
             'title' => t('Minimum total donation amount required to show progress'),
-            'description' => t('The goal progress bar will be hidden until total donations reach this amount.'),
+            'description' => t('The goal progress bar will be hidden until total donations reach this amount.') . ' ' .
+              t('If a starter message exists, it will be shown in the template\'s place.'),
           ),
         ),
       );

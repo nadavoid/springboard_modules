@@ -155,7 +155,8 @@ function webform_goals_webform_goals_list_metrics($selected_context, $form_state
           ),
           'display_threshold' => array(
             'title' => t('Minimum total values required to show progress'),
-            'description' => t('The goal progress bar will be hidden until the total values in the selected field reach this number.'),
+            'description' => t('The goal progress bar will be hidden until the total values in the selected field reach this number.') . ' ' .
+              t('If a starter message exists, it will be shown in the template\'s place.'),
           ),
         ),
       );

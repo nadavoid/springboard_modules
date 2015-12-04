@@ -276,7 +276,7 @@ function secure_prepopulate_form_webform_client_form_alter(&$form, $form_state) 
   }
 
   // Clear out any other form fields that might be populated by another module.
-  $dynamic_gift_string_field_ids = array('amount', 'other_amount');
+  $dynamic_gift_string_field_ids = array('amount', 'other_amount', 'payment_method');
   foreach ($component_hierarchy as $form_key => $value) {
     if (!in_array($form_key, $dynamic_gift_string_field_ids)
       && !array_key_exists($form_key, $prepopulate_data)) { // the key is not in the prepopuldate data, so lets clear it out

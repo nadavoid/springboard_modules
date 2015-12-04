@@ -1,0 +1,194 @@
+<?php
+
+/**
+ * @file
+ * Provides Blackbaud Luminate integration for Salesforce.
+ */
+define('LUMINATE_INSTALLMENT_PERIOD', 'recursMonthly');
+
+/**
+ * Implements hook_schema_alter()
+ */
+function salesforce_luminate_schema_alter(&$schema) {
+  if (isset($schema['fundraiser_sustainers_series'])) {
+    $schema['fundraiser_sustainers_series']['fields']['luminate_start_date'] = array(
+      'description' => 'The date when this donation series starts.',
+      'type' => 'date',
+      'mysql_type' => 'date',
+    );
+
+    $schema['fundraiser_sustainers_series']['fields']['luminate_gift_status'] = array(
+      'description' => 'The gift status of this donation series.',
+      'type' => 'varchar',
+      'length' => 255,
+    );
+
+    $schema['fundraiser_sustainers_series']['fields']['luminate_campaign_id'] = array(
+      'description' => 'The campaign ID of this donation series.',
+      'type' => 'varchar',
+      'length' => 255,
+    );
+
+    $schema['fundraiser_sustainers_series']['fields']['luminate_donation_type'] = array(
+      'description' => 'The type of donation this series represents.',
+      'type' => 'varchar',
+      'length' => 255,
+    );
+
+    $schema['fundraiser_sustainers_series']['fields']['luminate_recurring_amount_rounded'] = array(
+      'description' => 'The donation amount (rounded.)',
+      'type' => 'int',
+      'not null' => TRUE,
+      'default' => 0,
+    );
+
+    $schema['fundraiser_sustainers_series']['fields']['luminate_installment_period'] = array(
+      'description' => 'The period of time per each donation.',
+      'type' => 'varchar',
+      'length' => 255,
+    );
+
+    $schema['fundraiser_sustainers_series']['fields']['luminate_day_of_month'] = array(
+      'description' => 'The month day when donations occur.',
+      'type' => 'int',
+      'not null' => TRUE,
+      'default' => 0,
+    );
+  }
+}
+
+/**
+ * Implements hook_salesforce_queue_create_item_alter()
+ */
+function salesforce_luminate_salesforce_queue_create_item_alter(&$item) {
+  if ($item['delta'] == 'fundraiser_sustainers_series') {
+    $fundraiser_sustainers_series = entity_load_single('fundraiser_sustainers_series', $item['drupal_id']);
+    if (!empty($fundraiser_sustainers_series)) {
+      $item['sobject']->fields['cv__Contact__c'] = '[Contact:user:' . $fundraiser_sustainers_series->uid . ']';
+      // Add internal fields required by luminate.
+      // The cv__RecurrenceInterval__c seems to be required to set the recurrence schedule correctly.
+      $item['sobject']->fields['cv__RecurrenceInterval__c'] = 1;
+    }
+  }
+}
+
+/**
+ * Implements hook_salesforce_queue_postprocess_batch().
+ */
+function salesforce_luminate_salesforce_queue_postprocess_batch($batch, $results, $queue) {
+  if (!isset($batch['sobjects']) || empty($batch['sobjects'])) {
+    // Some batches do not have sobjects, such as delete.
+    return;
+  }
+
+  // Prune some information off the first item in the batch since this info is
+  // not available at the batch level.
+  $module = $batch['items'][0]->module;
+  $delta = $batch['items'][0]->delta;
+  $object_type = $batch['items'][0]->object_type;
+  $operation = $batch['operation'];
+
+  // Array to hold the Salesforce ids of every exported contact. We'll
+  // use this array to retreive all their account ids. The responses are
+  // in the same exact order as the items in the batch so we can safely
+  // assume that $batch['items'][10] corresponds directly to $results[10].
+  $sfids = array();
+
+  // Check that the batch contained users being exported to contacts.
+  if ($object_type == 'Contact' && $delta == 'user') {
+    // Loop over the results array because that will indicate successes
+    // and failures.
+    $count = count($results);
+    for ($i = 0; $i < $count; $i++) {
+      if ($results[$i]->success) {
+        $sfids[$batch['items'][$i]->drupal_id] = $results[$i]->id;
+      }
+    }
+
+    // Get the account ids for each contact in the batch.
+    $account_ids = salesforce_luminate_get_contact_account_ids($sfids);
+
+    // Save the account ids.
+    salesforce_luminate_save_account_ids($account_ids);
+  }
+}
+
+/**
+ * Implements hook_salesforce_genmap_map_fields_alter().
+ */
+function salesforce_luminate_salesforce_genmap_map_fields_alter(&$fields, $context) {
+  if ($context['module'] == 'salesforce_donation') {
+    $donation = $context['object'];
+    // Add a field if this is a recurring object.
+    if ($donation->donation['recurs_monthly'] == TRUE && !empty($donation->master_did)) {
+      $fields['cv__Recurring_Gift__c'] = sprintf('[cv__Recurring_Gift__c:fundraiser_sustainers_series:%d]', $donation->master_did);
+    }
+    if ($donation->donation['recurs_monthly'] == TRUE && empty($donation->master_did)) {
+      $fields['cv__Recurring_Gift__c'] = sprintf('[cv__Recurring_Gift__c:fundraiser_sustainers_series:%d]', $donation->did);
+    }
+  }
+}
+
+/**
+ * Implements hook_fundraiser_donation_success()
+ */
+function salesforce_luminate_fundraiser_donation_success($donation) {
+  $fundraiser_sustainers_series = entity_load_single('fundraiser_sustainers_series', $donation->did);
+
+  if (!empty($fundraiser_sustainers_series)) {
+    $fundraiser_sustainers_series->luminate_start_date = date('Y-m-d');
+    $fundraiser_sustainers_series->luminate_campaign_id = $donation->donation['cid'];
+    $fundraiser_sustainers_series->luminate_recurring_amount_rounded = round($donation->donation['amount']);
+    $fundraiser_sustainers_series->luminate_installment_period = LUMINATE_INSTALLMENT_PERIOD;
+    $fundraiser_sustainers_series->luminate_day_of_month = date('d');
+
+    $fundraiser_sustainers_series->save();
+  }
+}
+
+/**
+ * Retreives the 1:1 acccount id for an array of contacts.
+ *
+ * @param array $sfids
+ *   The array of Salesforce contact ids whose account ids
+ *   are to be retreived.
+ *
+ * @return array
+ *   An array in the format of uid => accountid.
+ */
+function salesforce_luminate_get_contact_account_ids($sfids) {
+  $sync = new SalesforceSync();
+  $drupal_ids = array_keys($sfids);
+  $account_ids = array();
+
+  // Retrieve the account id for each contact.
+  $response = $sync->fetchByIds('Contact', array('AccountId'), $sfids);
+
+  // Associate the account id with each Drupal user id.
+  $count = count($sfids);
+  for ($i = 0; $i < $count; $i++) {
+    $account_ids[$drupal_ids[$i]] = $response[$i]->fields->AccountId;
+  }
+
+  return $account_ids;
+}
+
+/**
+ * Saves a user's account id.
+ *
+ * @param array $account_ids
+ *   The account ids to save.
+ */
+function salesforce_luminate_save_account_ids($account_ids) {
+  foreach ($account_ids as $drupal_id => $account_id) {
+    $record = array(
+      'sfid' => $account_id,
+      'drupal_id' => $drupal_id,
+      'module' => 'user',
+      'delta' => 'user',
+      'object_type' => 'Account',
+    );
+
+    salesforce_sync_save_map($record);
+  }
+}

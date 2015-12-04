@@ -456,73 +456,31 @@ function fundraiser_sustainers_mail($key, &$message, $params) {
  */
 
 /**
- * Implements hook_salesforce_genmap_map_fields().
+ * Implements hook_salesforce_queue_create_item_alter()
  */
-function fundraiser_sustainers_salesforce_genmap_map_fields(stdClass $donation, Entity $map, $node, $op) {
-  // Donation properties map.
-  if (isset($map->field_map['fundraiser_sustainers_map'])) {
-    if (isset($map->field_map['fundraiser_sustainers_map']['full_name'])) {
-      $sf_field = $map->field_map['fundraiser_sustainers_map']['full_name'];
+function fundraiser_sustainers_salesforce_queue_create_item_alter(&$item) {
+  if ($item['delta'] == 'fundraiser_sustainers_series') {
+    $fundraiser_sustainers_series = entity_load_single('fundraiser_sustainers_series', $item['drupal_id']);
+    if (!empty($fundraiser_sustainers_series)) {
+      $user = user_load($fundraiser_sustainers_series->uid);
+      $user_wrapper = entity_metadata_wrapper('user', $user);
       $date = strtotime('now');
-      if (!empty($donation->transaction_date)) {
-        $date = strtotime($donation->transaction_date);
-      }
-      $fields[$sf_field] =  t('Recurring Donation - !first !last (!date)',
+
+      // Set the Name field value.
+      $item['sobject']->fields['Name'] = t('Recurring Donation - !first !last (!date)',
         array(
-        '!first' => $donation->donation['first_name'],
-        '!last' => $donation->donation['last_name'],
+        '!first' => $user_wrapper->sbp_first_name->value(),
+        '!last' => $user_wrapper->sbp_last_name->value(),
         '!date' => gmdate('Y-m-d H:i:s\Z', $date),
       ));
-    }
-    if (isset($map->field_map['fundraiser_sustainers_map']['amount'])) {
-      $sf_field = $map->field_map['fundraiser_sustainers_map']['amount'];
-      $fields[$sf_field] = $donation->donation['amount'];
-    }
-    if (isset($map->field_map['fundraiser_sustainers_map']['contact'])) {
-      $sf_field = $map->field_map['fundraiser_sustainers_map']['contact'];
-      $fields[$sf_field] = '[Contact:user:' . $donation->uid . ']';
-    }
-    if (isset($map->field_map['fundraiser_sustainers_map']['installment_period'])) {
-      $sf_field = $map->field_map['fundraiser_sustainers_map']['installment_period'];
-      $fields[$sf_field] = 'Monthly';
-    }
-    if (isset($map->field_map['fundraiser_sustainers_map']['schedule_type'])) {
-      $sf_field = $map->field_map['fundraiser_sustainers_map']['schedule_type'];
-      $fields[$sf_field] = 'Multiply By';
-    }
-    if (isset($map->field_map['fundraiser_sustainers_map']['installments'])) {
-      $info = _fundraiser_get_donation_gateway($donation->did);
-      $months = 0;
-      if ($op == 'update') {
-        // This created donation is the master, so passing it in to create the set.
-        // We can't predict the form key for these values, so ask the gateway to provide.
-        if (isset($info['expire callback'])) {
-          $expiration_func = $info['expire callback'];
-          $expires = $expiration_func($donation->donation);
-          $month = $expires['month'];
-          $year = $expires['year'];
-          $start = strtotime("now");
-          $stop = mktime(0, 0, 0, $month, 1, $year);
-          $months = ((idate('Y', $stop) * 12) + idate('m', $stop)) - ((idate('Y', $start) * 12) + idate('m', $start));
-          $create_limit = variable_get('fundraiser_sustainers_create_limit', 50);
-          if ($months > $create_limit) {
-            $months = $create_limit;
-          }
-        }
+
+      if (empty(_salesforce_sync_get_rmid($item))) {
+        // Set installments to zero for unsynced objects to prevent NPSP
+        // creating two sets of related opportunities.
+        $item['sobject']->fields['npe03__Installments__c'] = 0;
       }
-      $sf_field = $map->field_map['fundraiser_sustainers_map']['installments'];
-      $fields[$sf_field] = $months;
-    }
-    if (isset($map->field_map['fundraiser_sustainers_map']['last_payment_date'])) {
-      $sf_field = $map->field_map['fundraiser_sustainers_map']['last_payment_date'];
-      $fields[$sf_field] = date('Y-m-d H:i:s');
-    }
-    if (isset($map->field_map['fundraiser_sustainers_map']['next_payment_date'])) {
-      $sf_field = $map->field_map['fundraiser_sustainers_map']['next_payment_date'];
-      $fields[$sf_field] = date('Y-m-d H:i:s', $donation->recurring->next_charge);
     }
   }
-  return $fields;
 }
 
 /**
@@ -563,14 +521,6 @@ function fundraiser_sustainers_salesforce_genmap_map_fields_alter(&$fields, $con
           $sf_field = $map->field_map['salesforce_donation_map']['transaction_date'];
           unset($fields[$sf_field]);
         }
-      }
-      // Lastly, add a field iff recurring object.
-      if ($donation->donation['recurs_monthly'] == TRUE && !empty($donation->master_did) ) {
-        $fields['npe03__Recurring_Donation__c'] = '[npe03__Recurring_Donation__c:recurring_donation:' . $donation->master_did . ']';
-      }
-      // Lastly, add a field iff recurring object.
-      if ($donation->donation['recurs_monthly'] == TRUE && empty($donation->master_did) ) {
-        $fields['npe03__Recurring_Donation__c'] = '[npe03__Recurring_Donation__c:recurring_donation:' . $donation->did . ']';
       }
 
       // If we're dealing with a sustainer charge, only send a subset of data so that other fields
@@ -639,9 +589,9 @@ function fundraiser_sustainers_form_node_form_alter(&$form, &$form_state, $form_
       '#type' => 'select',
       '#title' => t('Display setting'),
       '#options' => array(
-        'user_choice' => t('Recurring is an option on this form, but users may opt out.'),
-        'always' => t('Recurring is an option on this form, and users cannot opt out.'),
-        'never' => t('Recurring is not an option on this form.'),
+        'user_choice' => t('Donor chooses one-time or recurring'),
+        'always' => t('Recurring only'),
+        'never' => t('One-time only'),
       ),
       '#default_value' => isset($form['#node']->recurring_setting) ? $form['#node']->recurring_setting : 'user_choice',
     );
@@ -733,6 +683,13 @@ function fundraiser_sustainers_salesforce_sync_complete_item($item, $result) {
         $donation = fundraiser_donation_get_donation($item->drupal_id, TRUE);
         salesforce_genmap_send_object_to_queue('fundraiser_sustainers', 'update',
           $donation->node, $donation->did, $donation, 'recurring_donation');
+
+        // Re-queue the fundraiser sustainers series entity for this donation
+        // to send the correct installments value to Salesforce.
+        $fundraiser_sustainers_series = entity_load_single('fundraiser_sustainers_series', $item->drupal_id);
+        if (!empty($fundraiser_sustainers_series)) {
+          salesforce_mapping_send_entity_to_queue($fundraiser_sustainers_series, 'fundraiser_sustainers_series', 'UPDATE');
+        }
       }
     }
   }
@@ -2444,14 +2401,19 @@ function fundraiser_sustainers_fundraiser_donation_success($donation) {
         // Update the recurring table and saves to the log.
         _fundraiser_sustainers_create_recurring($recurring_donation);
 
+        // Create the fundraiser sustainers series entity.
+        $fundraiser_sustainers_series_data = array(
+          'did' => $donation->did,
+          'uid' => $donation->uid,
+          'amount' => $donation->donation['amount'],
+          'installments' => _fundraiser_sustainers_calculate_installments($donation),
+        );
+
+        $fundraiser_sustainers_series = entity_create('fundraiser_sustainers_series', $fundraiser_sustainers_series_data);
+        $fundraiser_sustainers_series->save();
+
         // Now handle the recurring object, and the rest of the orders.
         if (!_fundraiser_sustainers_offsite_recurring($info['offsite_recurring'], $donation->donation['payment_method'])) { // Is not an offline recurring
-          // Load the newly created recurring donation into salesforce.
-          if (module_exists('salesforce_genmap')) {
-            $sf_donation = fundraiser_donation_get_donation($donation->did, TRUE);
-            salesforce_genmap_send_object_to_queue('fundraiser_sustainers', 'insert',
-              $sf_donation->node, $sf_donation->did, $sf_donation, 'recurring_donation');
-          }
           $info = _fundraiser_get_donation_gateway($donation->did);
           // This created donation is the master, so passing it in to create the set.
           // We can't predict the form key for these values, so ask the gateway to provide.
@@ -3203,6 +3165,19 @@ function fundraiser_sustainers_entity_info() {
       'module' => 'fundraiser_sustainers',
       'views controller class' => 'FundraiserSustainerRecordViewsController',
     ),
+    'fundraiser_sustainers_series' => array(
+      'label' => t('Fundraiser Sustainers Series'),
+      'entity class' => 'Entity',
+      'controller class' => 'FundraiserSustainersSeriesEntityController',
+      'metadata controller class' => 'EntityDefaultMetadataController',
+      'base table' => 'fundraiser_sustainers_series',
+      'entity keys' => array(
+        'id' => 'did',
+      ),
+      'fieldable' => FALSE,
+      'exportable' => FALSE,
+      'module' => 'fundraiser_sustainers',
+    ),
   );
 
   return $return;
@@ -3390,4 +3365,32 @@ function fundraiser_sustainers_unlock_sustainer_action(&$sustainer_record, $cont
       break;
   }
 
+}
+
+/**
+ * Calculates monthly donation installments.
+ *
+ * @param object $donation
+ *   The donation to calculate installments for.
+ *
+ * @return int The number of monthly installments.
+ */
+function _fundraiser_sustainers_calculate_installments($donation) {
+  $info = _fundraiser_get_donation_gateway($donation->did);
+  $installments = 0;
+  if (isset($info['expire callback'])) {
+    $expiration_func = $info['expire callback'];
+    $expires = $expiration_func($donation->donation);
+    $month = $expires['month'];
+    $year = $expires['year'];
+    $start = strtotime("now");
+    $stop = mktime(0, 0, 0, $month, 1, $year);
+    $installments = ((idate('Y', $stop) * 12) + idate('m', $stop)) - ((idate('Y', $start) * 12) + idate('m', $start));
+    $create_limit = variable_get('fundraiser_sustainers_create_limit', 50);
+    if ($installments > $create_limit) {
+      $installments = $create_limit;
+    }
+  }
+
+  return $installments;
 }

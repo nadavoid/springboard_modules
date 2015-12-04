@@ -26,6 +26,8 @@ files[] = includes/FundraiserSustainersForecast.php
 files[] = includes/FundraiserSustainersHistoricalReport.php
 files[] = includes/FundraiserSustainersInsights.php
 
+files[] = includes/FundraiserSustainersSeriesController.php
+
 ; Testing files
 files[] = tests/fundraiser_sustainers.setup.test
 files[] = tests/fundraiser_sustainers.test

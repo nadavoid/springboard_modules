@@ -80,6 +80,35 @@ function salesforce_npsp_user_view($account) {
 }
 
 /**
+ * Implements hook_salesforce_queue_create_item_alter()
+ */
+function salesforce_npsp_salesforce_queue_create_item_alter(&$item) {
+  if ($item['delta'] == 'fundraiser_sustainers_series') {
+    $fundraiser_sustainers_series = entity_load_single('fundraiser_sustainers_series', $item['drupal_id']);
+    if (!empty($fundraiser_sustainers_series)) {
+      $item['sobject']->fields['npe03__Contact__c'] = '[Contact:user:' . $fundraiser_sustainers_series->uid . ']';
+    }
+  }
+}
+
+/**
+ * Implements hook_salesforce_genmap_map_fields_alter().
+ */
+function salesforce_npsp_salesforce_genmap_map_fields_alter(&$fields, $context) {
+  // Alter donations based on recurring status.
+  if ($context['module'] == 'salesforce_donation') {
+    $donation = $context['object'];
+    // Add a field if this is a recurring object.
+    if ($donation->donation['recurs_monthly'] == TRUE && !empty($donation->master_did) ) {
+      $fields['npe03__Recurring_Donation__c'] = '[npe03__Recurring_Donation__c:fundraiser_sustainers_series:' . $donation->master_did . ']';
+    }
+    if ($donation->donation['recurs_monthly'] == TRUE && empty($donation->master_did) ) {
+      $fields['npe03__Recurring_Donation__c'] = '[npe03__Recurring_Donation__c:fundraiser_sustainers_series:' . $donation->did . ']';
+    }
+  }
+}
+
+/**
  * Implements hook_salesforce_queue_postprocess_batch().
  */
 function salesforce_npsp_salesforce_queue_postprocess_batch($batch, $results, $queue) {
@@ -117,6 +146,58 @@ function salesforce_npsp_salesforce_queue_postprocess_batch($batch, $results, $q
 
     // Save the account ids.
     salesforce_npsp_save_account_ids($account_ids);
+  }
+}
+
+/**
+ * Implements hook_schema_alter()
+ */
+function salesforce_npsp_schema_alter(&$schema) {
+  if (isset($schema['fundraiser_sustainers_series'])) {
+    $schema['fundraiser_sustainers_series']['fields']['npsp_last_payment_date'] = array(
+      'description' => 'The date of the last payment in this donation series.',
+      'type' => 'date',
+      'mysql_type' => 'date',
+    );
+
+    $schema['fundraiser_sustainers_series']['fields']['npsp_next_payment_date'] = array(
+      'description' => 'The date of the next payment in this donation series.',
+      'type' => 'date',
+      'mysql_type' => 'date',
+    );
+
+    $schema['fundraiser_sustainers_series']['fields']['npsp_installment_period'] = array(
+      'description' => 'The installment period used for this donation series.',
+      'type' => 'varchar',
+      'length' => 255,
+    );
+
+    $schema['fundraiser_sustainers_series']['fields']['npsp_schedule_type'] = array(
+      'description' => 'The schedule type used for this donation series.',
+      'type' => 'varchar',
+      'length' => 255,
+    );
+  }
+}
+
+/**
+ * Implements hook_fundraiser_donation_success()
+ */
+function salesforce_npsp_fundraiser_donation_success($donation) {
+  $donation = fundraiser_donation_get_donation($donation->did);
+  $fundraiser_sustainers_series = entity_load_single('fundraiser_sustainers_series', $donation->did);
+
+  if (!empty($fundraiser_sustainers_series)) {
+    $next_charge = db_query('SELECT `next_charge` FROM {fundraiser_sustainers} WHERE `master_did` = :did AND `attempts` = 0 ORDER BY `did` ASC LIMIT 1', array(
+      ':did' => $donation->did,
+        ))->fetchField();
+
+    $fundraiser_sustainers_series->npsp_last_payment_date = date('Y-m-d H:i:s');
+    $fundraiser_sustainers_series->npsp_next_payment_date = date('Y-m-d H:i:s', $next_charge);
+    $fundraiser_sustainers_series->npsp_installment_period = 'Monthly';
+    $fundraiser_sustainers_series->npsp_schedule_type = 'Multiply By';
+
+    $fundraiser_sustainers_series->save();
   }
 }
 

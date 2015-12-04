@@ -665,7 +665,7 @@ function fundraiser_upsell_salesforce_get_donation_sfid($did) {
 function fundraiser_upsell_salesforce_get_recurring_donation_sfid($did) {
   $map = salesforce_sync_load_map(array(
       'module' => 'fundraiser_sustainers',
-      'delta' => 'recurring_donation',
+      'delta' => 'fundraiser_sustainers_series',
       'drupal_id' => $did,
       'object_type' => 'npe03__Recurring_Donation__c',
     ));

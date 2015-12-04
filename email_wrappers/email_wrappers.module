@@ -66,7 +66,6 @@ function email_wrappers_preview_modal() {
   ctools_include('modal');
   module_load_include('inc', 'ctools', 'includes/modal');
   $title = 'Template Preview';
-  $values = $_POST['template_wrapper'];
 
   $template = $_POST['email_wrappers_email_template'];
 
@@ -79,6 +78,7 @@ function email_wrappers_preview_modal() {
   $output['HTML'] = _email_wrappers_preview('html', $_POST['email_wrappers_html_message'], $template);
   $output['text'] = _email_wrappers_preview('text', $_POST['email_wrappers_text_message'], $template);
   $keys = array_keys($output);
+  $preview = '';
   foreach ($keys as $key) {
     if (is_array($output[$key])) {
       $preview .= '<fieldset id="field-' . $key . '"><label for="field-' . $key . '" style="font-weight:bold">' . ucfirst($key) . '</label>';

@@ -50,6 +50,7 @@ function salesforce_donation_install() {
       'card_number' => 'CC_Last_4__c',
       'card_expiration_month' => 'CC_Exp_Month__c',
       'card_expiration_year' => 'CC_Exp_Year__c',
+      'card_type' => 'CC_Type__c',
     ),
     'salesforce_webform_map' => array(
       'cid' => 'CampaignId',

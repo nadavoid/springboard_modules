@@ -226,6 +226,18 @@ function salesforce_donation_salesforce_queue_refresh_queue_item($item) {
     }
     return FALSE;
   }
+  // Recurring Donation items
+  else if ($item->module == 'fundraiser_sustainers' && $item->delta == 'recurring_donation') {
+    $did = $item->drupal_id;
+    if ($donation = fundraiser_donation_get_donation($did)) {
+      salesforce_genmap_send_object_to_queue(
+        'fundraiser_sustainers', 'insert',
+        $donation->node, $donation->did, $donation, 'recurring_donation'
+      );
+      return TRUE;
+    }
+    return FALSE;
+  }
 }
 
 /**

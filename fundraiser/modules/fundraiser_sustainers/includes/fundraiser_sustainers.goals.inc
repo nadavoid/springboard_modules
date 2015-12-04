@@ -28,7 +28,8 @@ function fundraiser_sustainers_webform_goals_list_metrics($selected_context, $fo
           ),
           'display_threshold' => array(
             'title' => t('Minimum total sustainer conversions required to show progress'),
-            'description' => t('The goal progress bar will be hidden until the total sustainer conversions reach this number.'),
+            'description' => t('The goal progress bar will be hidden until the total sustainer conversions reach this number.') . ' ' .
+              t('If a starter message exists, it will be shown in the template\'s place.'),
           ),
         ),
       );
