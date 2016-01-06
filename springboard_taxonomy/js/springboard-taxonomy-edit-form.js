@@ -43,13 +43,18 @@
             // Columnize the Organization Issues list
             if(optionContainer.has('.field-name-field-sba-organization-issues').length === 1) {
                 labelWidthsTotal = labelCount = 0;
+
+                if (hiddenOnLoad == true) {
+                    optionContainer.css({'visibility': 'hidden', 'display': 'block'})
+                }
+
                 optionContainer.find('.field-name-field-sba-organization-issues .form-type-checkbox').each(function () {
                     labelWidthsTotal += $(this).find('label').width();
                     labelCount++;
                 });
 
-                if (hiddenOnLoad == true && labelCount != 0) {
-                    optionContainer.css({'visibility': 'hidden', 'display': 'block'})
+                if (hiddenOnLoad == true && labelCount == 0) {
+                    optionContainer.css({'visibility': 'visible', 'display': 'none'})
                 }
 
                 var checkboxWidth =

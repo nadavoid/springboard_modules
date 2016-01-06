@@ -147,11 +147,9 @@ function springboard_advocacy_user_can_create_advocacy_type() {
  * Limit access to the legislative issues taxonomy admin.
  */
 function springboard_advocacy_menu_alter(&$items) {
-  if (isset($items['admin/structure/taxonomy/sba_legislative_issues'])) {
-    $items['admin/structure/taxonomy/sba_legislative_issues/add']['access callback'] = 'springboard_advocacy_taxonomy_access';
-    $items['admin/structure/taxonomy/sba_legislative_issues/edit']['access callback'] = 'springboard_advocacy_taxonomy_access';
-    $items['admin/structure/taxonomy/sba_legislative_issues']['access callback'] = 'springboard_advocacy_taxonomy_access';
-  }
+  $items['admin/structure/taxonomy/sba_legislative_issues/add']['access callback'] = 'springboard_advocacy_taxonomy_access';
+  $items['admin/structure/taxonomy/sba_legislative_issues/edit']['access callback'] = 'springboard_advocacy_taxonomy_access';
+  $items['admin/structure/taxonomy/sba_legislative_issues']['access callback'] = 'springboard_advocacy_taxonomy_access';
 }
 
 /**

@@ -211,11 +211,13 @@ function theme_social_action_messages_wrapper($vars) {
  * @return string
  */
 function theme_social_action_webform_wrapper($vars) {
-  $fieldset_title_field = field_get_items('node', $vars['element']['#node'], 'field_sba_social_fieldset_title');
-  $fieldset_title = field_view_value('node', $vars['element']['#node'], 'field_sba_social_fieldset_title', $fieldset_title_field[0]);
-  $title = drupal_render($fieldset_title);
-  $title = !empty($title) ? $title : t('Send a Social Message');
+  if(!empty($vars['element']['#node'])) {
+    $fieldset_title_field = field_get_items('node', $vars['element']['#node'], 'field_sba_social_fieldset_title');
+    $fieldset_title = field_view_value('node', $vars['element']['#node'], 'field_sba_social_fieldset_title', $fieldset_title_field[0]);
+    $title = drupal_render($fieldset_title);
+    $title = !empty($title) ? $title : t('Send a Social Message');
 
-  return ' <div class="row-fluid"><fieldset id="take-action-wrapper" class = "form-wrapper"><legend>' . $title . '</legend>' . $vars['element']['#children']  . '</fieldset></div>';
+    return ' <div class="row-fluid"><fieldset id="take-action-wrapper" class = "form-wrapper"><legend>' . $title . '</legend>' . $vars['element']['#children'] . '</fieldset></div>';
+  }
 }
 

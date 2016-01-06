@@ -38,15 +38,29 @@ function commerce_litle_fundraiser_donation_form_config_check($node) {
       $gateway_config = _fundraiser_gateway_info($gateway['id']);
 
       // Check the credit payment method.
-      if ($gateway_config['gateway_details']['method_id'] == 'commerce_litle_cc' &&
-        $gateway_config['gateway_details']['settings']['commerce_litle_settings_sandbox']) {
-        $messages[] = t('The Litle credit card payment method is currently in sandbox mode and will not process live transactions.');
+      if ($gateway_config['gateway_details']['method_id'] == 'commerce_litle_cc') {
+        // Check for sandbox mode.
+        if ($gateway_config['gateway_details']['settings']['commerce_litle_settings_sandbox']) {
+          $messages[] = t('The Litle credit card payment method is currently in sandbox mode and will not process live transactions.');
+        }
+        // Check for a URL configured to use the pre-live environment.
+        if (isset($gateway_config['gateway_details']['settings']['commerce_litle_settings_url'])
+            && (stripos($gateway_config['gateway_details']['settings']['commerce_litle_settings_url'], 'prelive.') !== FALSE)) {
+          $messages[] = t('The Litle credit card payment method is configured to use the pre-live environment and will not process live transactions.');
+        }
       }
 
       // Check the echeck payment method.
-      if ($gateway_config['gateway_details']['method_id'] == 'commerce_litle_echeck' &&
-        $gateway_config['gateway_details']['settings']['commerce_litle_settings_sandbox']) {
-        $messages[] = t('The Litle echeck payment method is currently in sandbox mode and will not process live transactions.');
+      if ($gateway_config['gateway_details']['method_id'] == 'commerce_litle_echeck') {
+        // Check for sandbox mode.
+        if ($gateway_config['gateway_details']['settings']['commerce_litle_settings_sandbox']) {
+          $messages[] = t('The Litle echeck payment method is currently in sandbox mode and will not process live transactions.');
+        }
+        // Check for a URL configured to use the pre-live environment.
+        if (isset($gateway_config['gateway_details']['settings']['commerce_litle_settings_url'])
+            && (stripos($gateway_config['gateway_details']['settings']['commerce_litle_settings_url'], 'prelive.') !== FALSE)) {
+          $messages[] = t('The Litle echeck payment method is configured to use the pre-live environment and will not process live transactions.');
+        }
       }
     }
   }

@@ -4,4 +4,6 @@ package = Webform Extra
 core = 7.x
 dependencies[] = webform
 dependencies[] = views_bulk_operations
+dependencies[] = date_views
+
 files[] = views/webform_ui_bulk_operations_handler_field_operations.inc

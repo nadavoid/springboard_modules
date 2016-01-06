@@ -103,6 +103,7 @@ function webform_ui_views_default_views() {
   $handler->display->display_options['fields']['submitted']['table'] = 'webform_submissions';
   $handler->display->display_options['fields']['submitted']['field'] = 'submitted';
   $handler->display->display_options['fields']['submitted']['date_format'] = 'short';
+  $handler->display->display_options['fields']['submitted']['custom_date_format'] = 'm/j/y';
   $handler->display->display_options['fields']['submitted']['second_date_format'] = 'long';
   /* Field: User: Name */
   $handler->display->display_options['fields']['name']['id'] = 'name';
@@ -136,6 +137,7 @@ function webform_ui_views_default_views() {
   $handler->display->display_options['fields']['views_bulk_operations']['field'] = 'views_bulk_operations';
   $handler->display->display_options['fields']['views_bulk_operations']['vbo_settings']['display_type'] = '0';
   $handler->display->display_options['fields']['views_bulk_operations']['vbo_settings']['enable_select_all_pages'] = 1;
+  $handler->display->display_options['fields']['views_bulk_operations']['vbo_settings']['row_clickable'] = 1;
   $handler->display->display_options['fields']['views_bulk_operations']['vbo_settings']['force_single'] = 0;
   $handler->display->display_options['fields']['views_bulk_operations']['vbo_settings']['entity_load_capacity'] = '10';
   $handler->display->display_options['fields']['views_bulk_operations']['vbo_operations'] = array(
@@ -145,9 +147,6 @@ function webform_ui_views_default_views() {
       'skip_confirmation' => 0,
       'override_label' => 0,
       'label' => '',
-      'settings' => array(
-        'field' => '8',
-      ),
     ),
   );
   /* Sort criterion: Webform submissions: Sid */
@@ -217,24 +216,25 @@ function webform_ui_views_default_views() {
     4 => 0,
     5 => 0,
   );
-  /* Filter criterion: Webform submissions: Submitted */
-  $handler->display->display_options['filters']['submitted']['id'] = 'submitted';
-  $handler->display->display_options['filters']['submitted']['table'] = 'webform_submissions';
-  $handler->display->display_options['filters']['submitted']['field'] = 'submitted';
-  $handler->display->display_options['filters']['submitted']['operator'] = 'between';
-  $handler->display->display_options['filters']['submitted']['group'] = 1;
-  $handler->display->display_options['filters']['submitted']['exposed'] = TRUE;
-  $handler->display->display_options['filters']['submitted']['expose']['operator_id'] = 'submitted_op';
-  $handler->display->display_options['filters']['submitted']['expose']['label'] = 'Submitted between';
-  $handler->display->display_options['filters']['submitted']['expose']['description'] = 'Dates in any machine readable format.';
-  $handler->display->display_options['filters']['submitted']['expose']['operator'] = 'submitted_op';
-  $handler->display->display_options['filters']['submitted']['expose']['identifier'] = 'submitted';
-  $handler->display->display_options['filters']['submitted']['expose']['remember_roles'] = array(
+  /* Filter criterion: Date: Date (webform_submissions) */
+  $handler->display->display_options['filters']['date_filter']['id'] = 'date_filter';
+  $handler->display->display_options['filters']['date_filter']['table'] = 'webform_submissions';
+  $handler->display->display_options['filters']['date_filter']['field'] = 'date_filter';
+  $handler->display->display_options['filters']['date_filter']['operator'] = 'between';
+  $handler->display->display_options['filters']['date_filter']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['date_filter']['expose']['operator_id'] = 'date_filter_op';
+  $handler->display->display_options['filters']['date_filter']['expose']['operator'] = 'date_filter_op';
+  $handler->display->display_options['filters']['date_filter']['expose']['identifier'] = 'date_filter';
+  $handler->display->display_options['filters']['date_filter']['expose']['remember_roles'] = array(
     2 => '2',
     1 => 0,
     3 => 0,
     4 => 0,
     5 => 0,
+  );
+  $handler->display->display_options['filters']['date_filter']['form_type'] = 'date_popup';
+  $handler->display->display_options['filters']['date_filter']['date_fields'] = array(
+    'webform_submissions.submitted' => 'webform_submissions.submitted',
   );
 
   /* Display: Block */
