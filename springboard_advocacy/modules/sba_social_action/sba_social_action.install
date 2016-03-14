@@ -274,3 +274,10 @@ function sba_social_action_update_7009() {
   );
   field_update_field($field);
 }
+
+/**
+ * Update action id field fix for staging sites.
+ */
+function sba_social_action_update_7010() {
+  sba_social_action_update_7009();
+}

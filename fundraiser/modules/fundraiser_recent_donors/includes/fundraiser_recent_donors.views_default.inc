@@ -90,6 +90,14 @@ function fundraiser_recent_donors_views_default_views() {
   $handler->display->display_options['arguments']['nid']['summary']['number_of_records'] = '0';
   $handler->display->display_options['arguments']['nid']['summary']['format'] = 'default_summary';
   $handler->display->display_options['arguments']['nid']['summary_options']['items_per_page'] = '25';
+  /* Filter criterion: Commerce Order: Order status */
+  $handler->display->display_options['filters']['status']['id'] = 'status';
+  $handler->display->display_options['filters']['status']['table'] = 'commerce_order';
+  $handler->display->display_options['filters']['status']['field'] = 'status';
+  $handler->display->display_options['filters']['status']['relationship'] = 'did';
+  $handler->display->display_options['filters']['status']['value'] = array(
+    'payment_received' => 'payment_received',
+  );
 
   /* Display: Block */
   $handler = $view->new_display('block', 'Block', 'block');

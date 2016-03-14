@@ -83,6 +83,8 @@ function _sba_social_action_create_example_social_action() {
       $node->webform['emails'][1]['email'] = $cid;
     }
   }
+  // One last save.
+  node_save($node);
   if ($email_nid != NULL) {
     $settings = array(
       'nid' => $node->nid,
@@ -94,10 +96,8 @@ function _sba_social_action_create_example_social_action() {
       'text_message' => 'Thank you for your participation!',
       'extra' => serialize(array()),
     );
+    email_wrappers_save_settings($node->nid, 1, $settings);
   }
-  // One last save.
-  node_save($node);
-  email_wrappers_save_settings($node->nid, 1, $settings);
   drupal_set_message(t('An example social action form has been created.'));
 }
 

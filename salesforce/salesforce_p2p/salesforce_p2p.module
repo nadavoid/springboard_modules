@@ -66,3 +66,32 @@ function salesforce_p2p_salesforce_queue_create_item_alter(&$item) {
 
   }
 }
+
+/**
+ * Implements hook_salesforce_genmap_map_item_alter.
+ *
+ * This approach is a little unorthadox in terms of altering the item being queued.
+ * Typically hook_salesforce_queue_create_item_alter would be used but there is a timing
+ * issue here where the springboard_p2p_personal_campaign_action has not yet been saved
+ * and therefore we are unable to retrieve the id of the p2p personal campaign like we
+ * do for donations.
+ *
+ * Since the p2p_pcid is saved in a webform component during submission we can grab it
+ * from there for actions. The downside is a query has to be run to determine the component
+ * id of the p2p_pcid field. Once we have the cid we can look in the drupal_object (in this
+ * case a webform submisssion) and retreive the id of the p2p personal campaign.
+ */
+function salesforce_p2p_salesforce_genmap_map_item_alter(&$item, $drupal_object) {
+  if ($item['module'] == 'webform' && $item['object_type'] == 'sb_Actions_Taken__c') {
+    // Check to see if this form has a p2p_pcid field.
+    $p2p_cid_component_id = db_query("SELECT cid FROM {webform_component} WHERE nid = :nid and form_key = 'p2p_pcid'", array(':nid' => $item['delta']))->fetchField();
+    if ($p2p_cid_component_id) {
+      // We have the component id for the p2p personal campaign id. We can use that to get the
+      // value out of the webform submission array.
+      if (array_key_exists($p2p_cid_component_id, $drupal_object->data) && !empty($drupal_object->data[$p2p_cid_component_id]['value'][0])) {
+        $p2p_pcid = $drupal_object->data[$p2p_cid_component_id]['value'][0];
+        $item['sobject']->fields['P2P_Personal_Campaign__c'] = sprintf('[P2P_Personal_Campaign__c:p2p_personal_campaign:%d]', $p2p_pcid);
+      }
+    }
+  }
+}

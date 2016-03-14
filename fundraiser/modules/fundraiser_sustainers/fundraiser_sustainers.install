@@ -53,18 +53,6 @@ function fundraiser_sustainers_requirements($phase) {
 }
 
 /**
- * Implements hook_update_dependencies().
- */
-function fundraiser_sustainers_update_dependencies() {
-  // We need the NPSP module to create the series table.
-  $dependencies['fundraiser_sustainers'][7013] = array(
-    'salesforce_npsp' => 7001,
-  );
-
-  return $dependencies;
-}
-
-/**
  * Implements hook_schema().
  */
 function fundraiser_sustainers_schema() {

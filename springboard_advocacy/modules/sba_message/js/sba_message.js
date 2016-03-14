@@ -1345,6 +1345,7 @@
           .replace(/%20/g, ' ')
           .replace(/%2C/g, ', ')
           .replace(/%28/g, '(')
+          .replace(/%27/g, '\'')
           .replace(/%29/g, ')')
           .replace(/%3A/g, ':')
           .replace('Republicans', 'R')

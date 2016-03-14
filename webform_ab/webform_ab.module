@@ -429,7 +429,7 @@ function webform_ab_node_presave($node) {
     }
     foreach ($node->win_thresholds as $plugin_key => $config) {
       // For enabled plugins, check if they have a save prep function
-      if ($config['enable'] > 0) {
+      if (isset($config['enable']) && ($config['enable'] > 0)) {
         // The options for each plugin come in as a sub-array ('options'),
         // which we actually want a level up
         if (is_array($node->win_thresholds[$plugin_key]['options'])) {
@@ -602,7 +602,9 @@ function webform_ab_load($nodes) {
       'GROUP BY webform_nid', array(':test_nid' => $node->nid));
     foreach ($result as $row) {
       $row = (array) $row;
-      $included_webforms[$row['webform_nid']]['hits'] = $row['hits'];
+      if (isset($included_webforms[$row['webform_nid']])) {
+        $included_webforms[$row['webform_nid']]['hits'] = $row['hits'];
+      }
     }
 
     $result = db_query('SELECT webform_nid, COUNT(*) as conversions ' .
@@ -611,7 +613,9 @@ function webform_ab_load($nodes) {
       'GROUP BY webform_nid', array(':test_nid' => $node->nid));
     foreach ($result as $row) {
       $row = (array) $row;
-      $included_webforms[$row['webform_nid']]['conversions'] = $row['conversions'];
+      if (isset($included_webforms[$row['webform_nid']])) {
+        $included_webforms[$row['webform_nid']]['conversions'] = $row['conversions'];
+      }
     }
 
     $load->included_webforms = $included_webforms;
@@ -656,7 +660,7 @@ function webform_ab_view(&$node, $view_mode) {
   if (node_access('update', $node) && (empty($_GET['view_webform']) || $_GET['view_webform'] != 1)) {
     $type = node_type_get_type($node);
     $node->content['description'] = array(
-      '#markup' => 'This is the admin overview of the A/B Test. If an unpriveleged or anonymous user visits this same URL, ' .
+      '#markup' => 'This is the admin overview of the A/B Test. If an unprivileged or anonymous user visits this same URL, ' .
         'they will be redirected to one of the webforms within the test.',
       '#weight' => -10,
       '#prefix' => '<p>',
@@ -1259,6 +1263,12 @@ function webform_ab_should_log_hits() {
   global $user;
   $ips = variable_get('webform_ab_ignore_hits_from_ips', '');
   $roles = variable_get('webform_ab_ignore_hits_from_roles', '');
+  $ignore_bots = variable_get('webform_ab_ignore_search_bot_hits', '1');
+
+  // Check for search engine bots.
+  if ($ignore_bots && webform_ab_detect_search_bot(filter_input(INPUT_SERVER, 'HTTP_USER_AGENT'))) {
+    return FALSE;
+  }
 
   // Check the user roles
   if ($roles != '') {
@@ -1386,4 +1396,38 @@ function webform_ab_ctools_plugin_win_conditions() {
     'use hooks' => TRUE,
     'cache' => TRUE,
   );
+}
+
+/**
+ * Determines if a given user agent belongs to a search engine bot.
+ *
+ * @param string $user_agent
+ *   The user agent string to test.
+ *
+ * @return bool
+ *   TRUE if a search engine bot is detected.
+ */
+function webform_ab_detect_search_bot($user_agent) {
+  $bot_user_agents_cache = cache_get('webform_ab_search_bot_user_agents');
+
+  if (!empty($bot_user_agents_cache)) {
+    $bot_user_agents = $bot_user_agents_cache->data;
+  }
+  else {
+    $file_path = drupal_get_path('module', 'webform_ab') . '/includes/search_bot_user_agent_fragments.txt';
+    $bot_user_agents = file($file_path);
+    cache_set('webform_ab_search_bot_user_agents', $bot_user_agents);
+  }
+
+  reset($bot_user_agents);
+
+  if (!empty($user_agent)) {
+    foreach ($bot_user_agents as $user_agent_string) {
+      if (stripos($user_agent, trim($user_agent_string)) !== FALSE) {
+        return TRUE;
+      }
+    }
+  }
+
+  return FALSE;
 }

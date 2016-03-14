@@ -17,7 +17,12 @@ donation.
 
 -- CONFIGURATION --
 
-* Visit admin/springboard/options/fundraiser/fundraiser_upsell
+* Visit springboard/settings/config/upsell
+
+-- MISC --
+
+* When testing, ensure the credit card expiration date is beyond the current
+month; otherwise, the modal will not display.
 
 -- CONTACT --
 

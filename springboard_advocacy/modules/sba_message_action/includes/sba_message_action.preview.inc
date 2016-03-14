@@ -227,7 +227,7 @@ function sba_message_action_preview_form($form, $form_state, $node) {
   // Add submit button
   $submit_field = field_get_items('node', $node, 'field_sba_action_step_two_submit');
   $submit_value = field_view_value('node', $node, 'field_sba_action_step_two_submit', $submit_field[0]);
-  $markup = isset($submit_value['#markup']) ? $submit_value['#markup'] : t('Send Now');
+  $markup = !empty($submit_value['#markup']) ? $submit_value['#markup'] : t('Send Now');
   $form['submit'] = array(
     '#prefix' => '<div id="edit-actions">',
     '#suffix' => '</div>',

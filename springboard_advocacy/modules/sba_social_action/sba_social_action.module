@@ -82,16 +82,14 @@ function sba_social_action_menu() {
  */
 function sba_social_action_preview_access($nid) {
   $node = node_load($nid);
+  $access = FALSE;
   if (isset($node->type) &&  $node->type == 'sba_social_action') {
     $session_nid = isset($_SESSION['social_action_sid']['nid']) ? $_SESSION['social_action_sid']['nid'] : FALSE;
-    if ($session_nid && $session_nid != $nid) {
-      return FALSE;
-    }
-    if (!$session_nid) {
-      return FALSE;
+    if ($session_nid && $session_nid == $nid) {
+      $access = TRUE;
     }
   }
-  return TRUE;
+  return $access;
 }
 
 /**
@@ -843,29 +841,27 @@ function sba_social_action_token_info() {
 function sba_social_action_tokens($type, $tokens, $data = array(), $options = array()) {
   $replacements = array();
 
-  if (isset($data['node'])) {
-    $node = $data['node'];
-  }
-  elseif(arg(0) == 'node' && is_numeric(arg(1))) {
-    $node = node_load(arg(1));
-  }
-
-  if (isset($node->webform['redirect_url']) && $node->webform['redirect_url'] != '<confirmation>') {
-    $redirect = $node->webform['redirect_url'];
-  }
-  else {
-    $redirect = request_uri();
-  }
-  module_load_include('inc', 'sba_social_action', 'includes/sba_social_action.oauth_cache');
-  $twitter_user_cache = sba_social_action_cache_get('sba_twitter');
-
   if ($type == 'social_action') {
+
+    if (isset($data['node'])) {
+      $node = $data['node'];
+    }
+    elseif(arg(0) == 'node' && is_numeric(arg(1))) {
+      $node = node_load(arg(1));
+    }
+    $redirect = request_uri();
+    if (!empty($node) && isset($node->webform['redirect_url']) && $node->webform['redirect_url'] != '<confirmation>') {
+      $redirect = $node->webform['redirect_url'];
+    }
+
+    module_load_include('inc', 'sba_social_action', 'includes/sba_social_action.oauth_cache');
+    $twitter_user_cache = sba_social_action_cache_get('sba_twitter');
     foreach ($tokens as $name => $original) {
 
       switch ($name) {
         case 'twitter_timeline':
           $widget = '';
-          if (!empty($twitter_user_cache)) {
+          if (!empty($twitter_user_cache) && !empty($node)) {
             $widget = theme('sba_social_action_twitter_timeline', array(
               'sba_twitter' => $twitter_user_cache,
               'node' => $node
@@ -964,8 +960,8 @@ function sba_social_action_save_twitter_profile($data, $uid) {
       $save_data = array(
         'sbp_twitter_screen_name' => $response['screen_name'],
         'sbp_twitter_id_str' => $response['id_str'],
-        'sbp_twitter_following_count' => $response['followers_count'],
-        'sbp_twitter_followers_count' => $response['friends_count'],
+        'sbp_twitter_following_count' => $response['friends_count'],
+        'sbp_twitter_followers_count' => $response['followers_count'],
         'sbp_twitter_status_count' => $response['statuses_count'],
         'sbp_twitter_created_at' => strtotime($response['created_at']),
       );

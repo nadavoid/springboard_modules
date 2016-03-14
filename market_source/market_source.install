@@ -118,7 +118,7 @@ function market_source_update_7002(&$sandbox) {
   $result = db_select('webform_component', 'w')
       ->distinct(TRUE)
       ->fields('w', array('nid'))
-      ->range(0, 3)
+      ->range($sandbox['progress'], 3)
       ->orderBy('nid', 'ASC')
       ->execute();
 
@@ -146,10 +146,10 @@ function market_source_update_7002(&$sandbox) {
       );
 
       webform_component_insert($component);
-
-      $sandbox['progress']++;
-      $sandbox['current_nid'] = $record['nid'];
     }
+
+    $sandbox['progress']++;
+    $sandbox['current_nid'] = $record['nid'];
   }
 
   $sandbox['#finished'] = empty($sandbox['max']) ? 1 : ($sandbox['progress'] / $sandbox['max']);

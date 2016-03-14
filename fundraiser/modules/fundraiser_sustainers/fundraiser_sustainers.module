@@ -1430,7 +1430,7 @@ function fundraiser_sustainers_edit_form($did) {
       }
 
       if (user_access('fastforward recurring donations')) {
-        if (isset($this_donation->status_charged) && !$this_donation->status_charged) {
+        if (isset($this_donation->status_charged) && !$this_donation->status_charged && ($this_donation->status != 'auto_canceled')) {
           // Add a button to fastforward this particular donation
           $donations_row['ffwd'] = l(t('advance charge'), 'fundraiser_sustainers/ffwd/' . $this_donation->did,
             array('query' => drupal_get_destination()) );
@@ -1440,7 +1440,7 @@ function fundraiser_sustainers_edit_form($did) {
         }
       }
       if (user_access('skip recurring donations')) {
-        if (isset($this_donation->status_charged) && !$this_donation->status_charged) {
+        if (isset($this_donation->status_charged) && !$this_donation->status_charged && ($this_donation->status != 'auto_canceled')) {
           // Add a button to fastforward this particular donation
           $donations_row['skip'] = l(t('skip charge'), 'fundraiser_sustainers/' . $did . '/skip/' . $this_donation->did,
             array('query' => drupal_get_destination()));

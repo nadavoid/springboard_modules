@@ -44,8 +44,8 @@ function sba_message_action_uninstall() {
   module_load_include('inc', 'sba_message_action', 'includes/install/sba_message_action.install');
   module_load_include('inc', 'sba_message_action', 'includes/install/sba_message_action.install_fields');
 
-  _sba_message_action_delete_message_entity_fields();
   _sba_message_action_delete_nodes();
+  _sba_message_action_delete_message_entity_fields();
   // Remove fields implemented by this module.
   // _sba_message_action_delete_fields();
   // Delete the message action content type.
@@ -600,6 +600,17 @@ function sba_message_action_update_7029() {
     $field['label'] = t(
       'Subject editable by advocate? (for single message actions only).'
     );
+    field_update_instance($field);
+  }
+}
+
+/**
+ * Update action_flow field widget weight.
+ */
+function sba_message_action_update_7030() {
+  $field = field_info_instance('node', 'field_sba_action_flow', 'sba_message_action');
+  if ($field) {
+    $field['widget']['weight'] = 4;
     field_update_instance($field);
   }
 }

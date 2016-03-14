@@ -256,6 +256,13 @@ function springboard_p2p_user_register_validate(&$form, &$form_state) {
   $mail = trim($form_state['values']['mail']);
   form_set_value($form['mail'], $mail, $form_state);
 
+  if (isset($form_state['values']['signature'])) {
+    // Move text format for user signature into 'signature_format'.
+    $form_state['values']['signature_format'] = $form_state['values']['signature']['format'];
+    // Move text value for user signature into 'signature'.
+    $form_state['values']['signature'] = $form_state['values']['signature']['value'];
+  }
+
   // Validate the e-mail address.
   if ($error = user_validate_mail($mail)) {
     form_set_error('mail', $error);

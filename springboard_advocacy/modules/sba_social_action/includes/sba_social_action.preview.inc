@@ -196,7 +196,8 @@ function sba_social_action_preview_form($form, $form_state, $node, $messages, $r
   );
   // Used to send our second step form through the same helper functions as the first step form.
   module_load_include('inc', 'sba_social_action', 'includes/sba_social_action.form');
-
+  static $id = 0;
+  static $n = 0;
   foreach ($messages as $key => $message) {
 
     // What type of message is this.
@@ -229,6 +230,7 @@ function sba_social_action_preview_form($form, $form_state, $node, $messages, $r
     $count++;
 
     $prepend = !empty($this_message['prepend']['#value']) ? '.' : '';
+    $send_tweet ='';
     if (isset($this_message['body_show'])) {
       $message_alt = field_get_items('sba_message', $message_entity, 'field_sba_twitter_message');
       $alternatives = array();
@@ -239,11 +241,14 @@ function sba_social_action_preview_form($form, $form_state, $node, $messages, $r
         }
       }
 
+      // Reset $n if there are multiple messages.
+      if ($id != $message_entity->sba_message_id) {
+        $n = 0;
+      }
       // $random_array is defined in the build function so that it does not
       // change after the form ajax reload.
       if (isset($random_array[$message_entity->sba_message_id])) {
         $rand_count = count($random_array[$message_entity->sba_message_id]);
-        static $n = 0;
         $rand_mess = $random_array[$message_entity->sba_message_id];
         $tweet = $alternatives[$rand_mess[$n]];
       }
@@ -259,6 +264,7 @@ function sba_social_action_preview_form($form, $form_state, $node, $messages, $r
       else {
         $n = 0;
       }
+      $id = $message_entity->sba_message_id;
     }
 
 
@@ -389,7 +395,7 @@ function sba_social_action_preview_form($form, $form_state, $node, $messages, $r
   $form['#submit'][] = 'sba_social_action_preview_form_submit';
 
   $submit_field = field_get_items('node', $node, 'field_sba_social_step_two_submit');
-  $markup = isset($submit_field[0]['value']) ? $submit_field[0]['value'] : t("I'm done");
+  $markup = !empty($submit_field[0]['value']) ? $submit_field[0]['value'] : t("I'm done");
   // Add submit button
   $form['form_container']['submit'] = array(
     '#prefix' => '<div id="edit-actions">',

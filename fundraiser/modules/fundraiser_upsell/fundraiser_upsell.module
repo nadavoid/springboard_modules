@@ -121,7 +121,11 @@ function fundraiser_upsell_permission() {
   return array(
     'administer fundraiser upsells' => array(
       'title' => t('Administer fundraiser upsell feature'),
-      'description' => t('Perform administration tasks for fundraiser upsell.'),
+      'description' => t('Manage all site-wide and node-specific fundraiser upsell settings.'),
+    ),
+    'administer fundraiser upsell node settings' => array(
+      'title' => t('Administer fundraiser upsell node settings'),
+      'description' => t('Manage node-specific fundraiser upsells settings.'),
     ),
   );
 }
@@ -173,6 +177,7 @@ function fundraiser_upsell_add_node_settings(&$form) {
     '#collapsed' => TRUE,
     '#group' => 'additional_settings',
     '#tree' => TRUE,
+    '#access' => user_access('administer fundraiser upsells') || user_access('administer fundraiser upsell node settings'),
   );
   $form['fundraiser_upsell']['enabled'] = array(
     '#type' => 'checkbox',
@@ -1104,7 +1109,11 @@ function fundraiser_upsell_modal($node, $did, $ajax) {
  * the upsell permission.
  */
 function fundraiser_upsell_preview_access($node) {
-  return fundraiser_upsell_is_enabled($node) && user_access('administer fundraiser upsells');
+  return (
+    fundraiser_upsell_is_enabled($node) && (
+      user_access('administer fundraiser upsells') || user_access('administer fundraiser upsell node settings')
+    )
+  );
 }
 
 /**

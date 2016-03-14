@@ -353,6 +353,7 @@ function springboard_advocacy_views_default_views() {
   $handler->display->display_options['filters']['type']['field'] = 'type';
   $handler->display->display_options['filters']['type']['value'] = array(
     'sba_message_action' => 'sba_message_action',
+    'springboard_petition' => 'springboard_petition',
     'sba_social_action' => 'sba_social_action',
   );
   /* Filter criterion: Content: Published or admin */
@@ -454,6 +455,7 @@ function springboard_advocacy_views_default_views() {
   $handler->display->display_options['filters']['type']['field'] = 'type';
   $handler->display->display_options['filters']['type']['value'] = array(
     'sba_message_action' => 'sba_message_action',
+    'springboard_petition' => 'springboard_petition',
     'sba_social_action' => 'sba_social_action',
   );
   /* Filter criterion: Content: Published or admin */

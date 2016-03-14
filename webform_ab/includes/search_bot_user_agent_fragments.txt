@@ -1,0 +1,13 @@
+http://www.google.com/bot.html
+http://www.googlebot.com/bot.html
+http://www.bing.com/bingbot.htm
+http://www.google.com/adsbot.html
+Googlebot-News
+Googlebot-Image/1.0
+Googlebot-Video/1.0
+Mediapartners-Google
+http://search.msn.com/msnbot.htm
+BingPreview/1.0b
+http://help.yahoo.com/help/us/ysearch/slurp
+http://www.google.com/bot.html
+http://www.bing.com/bingbot.htm

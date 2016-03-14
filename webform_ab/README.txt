@@ -12,7 +12,7 @@ This fieldset includes basic information about the Test.
 
 * Test Name: This is the title of the Test node, so it will be used in content lists and shown on the admin overview for the test.
 * Admin Description: A brief description of the Test. This is only shown to admin users who have permission to edit Webform A/B Test nodes.
-* Public Teaser: Teaser text to show to unpriveleged users when the node is shown in teaser mode, such as a list of nodes or if it's promoted to the home page.
+* Public Teaser: Teaser text to show to unprivileged users when the node is shown in teaser mode, such as a list of nodes or if it's promoted to the home page.
 * Which types of webforms will this test use: A Test can only be run with a single type of webform. By default, this list only includes Standard Webforms, but other modules can define other types of webforms to use in Tests. For example, the Fundraiser A/B Test module (not yet released in contrib) allows Fundraiser forms to be used for a Test.
 
 ### Winning Thresholds

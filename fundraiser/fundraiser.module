@@ -754,14 +754,41 @@ function _fundraiser_donation_settings_form(&$form, &$form_state) {
     '#type' => 'value',
     '#value' => isset($node->receipt_email_message) ? $node->receipt_email_message : '',
   );
-  // Add CSS and JS on after build.
+
+  // Share the "Display" fieldset with related modules (e.g., Form Layouts).
+  if (empty($form['springboard_display'])) {
+    $form['springboard_display'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Display settings'),
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+      '#group' => 'additional_settings',
+    );
+  }
+
+  // Add CSS and JS + hide "Display settings" if it is empty during after build:
   $form['#after_build'][] = '_fundraiser_node_form_after_build';
 }
 
 /**
  * Afterbuild for node type form, to avoid AJAX losing js, css.
+ *
+ * Also, this hides the "Display settings" fieldset Fundraiser provides
+ * if another module has not altered the form to insert something into it.
  */
 function _fundraiser_node_form_after_build($form, &$form_state) {
+  // Hide "Display settings" fieldset if empty:
+  $display_settings_is_empty = TRUE;
+  foreach ($form['springboard_display'] as $form_key => $value) {
+    if (substr($form_key, 0, 1) != '#') {
+      $display_settings_is_empty = FALSE;
+      break;
+    }
+  }
+  if ($display_settings_is_empty) {
+    $form['springboard_display']['#description'] = t('No display settings are enabled at this time.');
+  }
+
   // Add additional js and css for this form.
   drupal_add_css(drupal_get_path('module', 'fundraiser') . '/css/fundraiser.css');
   drupal_add_js(drupal_get_path('module', 'fundraiser') . '/js/fundraiser.js');

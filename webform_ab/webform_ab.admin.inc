@@ -30,6 +30,12 @@ function webform_ab_admin_settings($form, &$form_state) {
     '#description' => t('If checked, hits on a webform will only be logged once per user.'),
     '#default_value' => variable_get('webform_ab_ignore_repeat_hits', '1'),
   );
+  $form['webform_ab_ignore_search_bot_hits'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Ignore hits from search engine bots'),
+    '#description' => t('If checked, hits from search engines like Google will be ignored.'),
+    '#default_value' => variable_get('webform_ab_ignore_search_bot_hits', '1'),
+  );
   return system_settings_form($form);
 }
 

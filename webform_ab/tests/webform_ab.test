@@ -1,0 +1,46 @@
+<?php
+
+/**
+ * @file
+ * Test cases for Webform A/B Testing.
+ */
+
+class WebformABTestCase extends DrupalWebTestCase {
+
+  /**
+   * Implements getInfo()
+   */
+  public static function getInfo() {
+    return array(
+      'name' => 'Webform A/B Testing',
+      'description' => 'Tests Webform A/B Testing functionality.',
+      'group' => 'Webform A/B Testing',
+    );
+  }
+
+  /**
+   * Tests search engine bots are properly detected.
+   */
+  public function testSearchBotDetection() {
+    // Test using normal user agent.
+    $user_agent = 'Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.80 Safari/537.36';
+    $is_bot = webform_ab_detect_search_bot($user_agent);
+    $this->assertFalse($is_bot, 'Detected regular browser.');
+
+    // Test using Google search user agent.
+    $user_agent = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
+    $is_bot = webform_ab_detect_search_bot($user_agent);
+    $this->assertTrue($is_bot, 'Detected Google search bot.');
+
+    // Test using Bing search user agent.
+    $user_agent = 'Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)';
+    $is_bot = webform_ab_detect_search_bot($user_agent);
+    $this->assertTrue($is_bot, 'Detected Bing search bot.');
+
+    // Test using Yahoo search user agent.
+    $user_agent = 'Mozilla/5.0 (compatible; Yahoo! Slurp; http://help.yahoo.com/help/us/ysearch/slurp)';
+    $is_bot = webform_ab_detect_search_bot($user_agent);
+    $this->assertTrue($is_bot, 'Detected Yahoo search bot.');
+  }
+
+}

@@ -1,0 +1,19 @@
+/**
+ *  Adjust styles so the current currency suffix or prefix is positioned currectly
+ *  around the "Only show donations greater than" text field.
+ */
+.vertical-tabs-pane fieldset#edit-recent-donors-list span.recent-donors-currency-symbol-before,
+.vertical-tabs-pane fieldset#edit-recent-donors-list span.recent-donors-currency-symbol-after {
+  font-size: 16px;
+  position: relative;
+  bottom: 4px;
+}
+.vertical-tabs-pane fieldset#edit-recent-donors-list span.recent-donors-currency-symbol-before {
+  margin-right: 5px;
+}
+.vertical-tabs-pane fieldset#edit-recent-donors-list span.recent-donors-currency-symbol-after {
+  margin-left: 5px;
+}
+.vertical-tabs-pane fieldset#edit-recent-donors-list #edit-show-recent-donation-greater-than {
+  width: 20%;
+}

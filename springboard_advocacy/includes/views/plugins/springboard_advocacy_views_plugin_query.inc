@@ -38,7 +38,6 @@ class springboard_advocacy_views_plugin_query extends views_plugin_query {
     // Helpful for the "add all link".
     if (isset($view->query->search_terms)) {
       $view->build_info['springboard_advocacy_search'] = $view->query->search_terms;
-      //dpm($view->query->search_terms);
     }
   }
 

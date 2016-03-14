@@ -144,16 +144,14 @@ function sba_message_action_queues_access($nid) {
  */
 function sba_message_action_preview_access($nid) {
   $node = node_load($nid);
+  $access = FALSE;
   if (isset($node->type) &&  $node->type == 'sba_message_action') {
-    $session_nid = isset($_SESSION['action_sid']['nid']) ? $_SESSION['action_sid']['nid'] : 0;
-    if (($session_nid && $session_nid != $nid)) {
-      return FALSE;
-    }
-    if (!$session_nid) {
-      return FALSE;
+    $session_nid = isset($_SESSION['action_sid']['nid']) ? $_SESSION['action_sid']['nid'] : FALSE;
+    if ($session_nid && $session_nid == $nid) {
+      $access = TRUE;
     }
   }
-  return TRUE;
+  return $access;
 }
 
 /**

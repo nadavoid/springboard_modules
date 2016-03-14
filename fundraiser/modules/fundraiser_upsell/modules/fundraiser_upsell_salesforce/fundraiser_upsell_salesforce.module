@@ -542,7 +542,7 @@ function fundraiser_upsell_salesforce_node_record($node) {
 function fundraiser_upsell_salesforce_salesforce_sync_pass_item($item, $result) {
   $sobject = NULL;
 
-  if ($item->delta == 'recurring_donation' && fundraiser_upsell_donation_record_exists($item->drupal_id)) {
+  if ($item->delta == 'fundraiser_sustainers_series' && fundraiser_upsell_donation_record_exists($item->drupal_id)) {
     $upsell_did = $item->drupal_id;
     $upsell_recurring_donation_sfid = $result->id;
     $upsold_did = fundraiser_upsell_get_upsold_did($upsell_did);
@@ -663,12 +663,16 @@ function fundraiser_upsell_salesforce_get_donation_sfid($did) {
  *   The SFID, or FALSE if one can't be found.
  */
 function fundraiser_upsell_salesforce_get_recurring_donation_sfid($did) {
-  $map = salesforce_sync_load_map(array(
-      'module' => 'fundraiser_sustainers',
-      'delta' => 'fundraiser_sustainers_series',
-      'drupal_id' => $did,
-      'object_type' => 'npe03__Recurring_Donation__c',
-    ));
+  // Moving to a direct query of the salesforce_sync_map table because we don't
+  // actually need the object_type (which prevents us from using salesforce_sync_load_map)
+  // in this case. This should be quicker anyway because salesforce_sync_load_map does runs
+  // a query and an entity_load.
+  $map = db_query("
+    SELECT sfid FROM {salesforce_sync_map}
+    WHERE drupal_id = :drupal_id
+    AND module = 'fundraiser_sustainers_series'
+    AND delta = 'fundraiser_sustainers_series'",
+  array(':drupal_id' => $did))->fetchObject();
 
   return isset($map->sfid) ? $map->sfid : FALSE;
 }

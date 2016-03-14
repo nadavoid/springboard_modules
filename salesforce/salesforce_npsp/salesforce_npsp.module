@@ -88,7 +88,8 @@ function salesforce_npsp_salesforce_queue_create_item_alter(&$item) {
     if (!empty($fundraiser_sustainers_series)) {
       $item['sobject']->fields['npe03__Contact__c'] = '[Contact:user:' . $fundraiser_sustainers_series->uid . ']';
 
-      if (empty(_salesforce_sync_get_rmid($item))) {
+      $rmid = _salesforce_sync_get_rmid($item);
+      if (empty($rmid)) {
         // Set installments to zero for unsynced objects to prevent NPSP
         // creating two sets of related opportunities.
         $item['sobject']->fields['npe03__Installments__c'] = 0;
@@ -276,12 +277,31 @@ function salesforce_npsp_update_fundraiser_sustainers_series($donation) {
   $donation = fundraiser_donation_get_donation($donation->did);
   $fundraiser_sustainers_series = entity_load_single('fundraiser_sustainers_series', $donation->did);
 
+  $last_charge = time();
+  $next_charge = NULL;
+
   if (!empty($fundraiser_sustainers_series)) {
-    $next_charge = db_query('SELECT `next_charge` FROM {fundraiser_sustainers} WHERE `master_did` = :did AND `attempts` = 0 ORDER BY `did` ASC LIMIT 1', array(
+    $sustainer_count = db_query("SELECT COUNT(`did`) AS `count` FROM {fundraiser_sustainers} WHERE `master_did` = :did AND `did` != `master_did`", array(
       ':did' => $donation->did,
         ))->fetchField();
 
-    $fundraiser_sustainers_series->npsp_last_payment_date = date('Y-m-d H:i:s');
+    if ($sustainer_count == 0) {
+      // No sustainer records have been created yet; this is the initial
+      // donation.
+      $next_charge = mktime(date('H', $last_charge), date('i', $last_charge), date('s', $last_charge), (date('n', $last_charge) + 1), date('j', $last_charge), date('Y', $last_charge));
+    }
+    else {
+      $next_charge = db_query('SELECT `next_charge` FROM {fundraiser_sustainers} WHERE `master_did` = :did AND `did` != `master_did` AND `attempts` = 0 ORDER BY `did` ASC LIMIT 1', array(
+      ':did' => $donation->did,
+        ))->fetchField();
+
+      if (empty($next_charge)) {
+        // Set next payment date to last date if at end of series.
+        $next_charge = $last_charge;
+      }
+    }
+
+    $fundraiser_sustainers_series->npsp_last_payment_date = date('Y-m-d H:i:s', $last_charge);
     $fundraiser_sustainers_series->npsp_next_payment_date = date('Y-m-d H:i:s', $next_charge);
     $fundraiser_sustainers_series->npsp_installment_period = 'Monthly';
     $fundraiser_sustainers_series->npsp_schedule_type = 'Multiply By';
