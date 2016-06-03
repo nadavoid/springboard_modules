@@ -471,7 +471,20 @@ function commerce_sage_payments_cc_vault_cardonfile_charge($payment_method, $car
 
 }
 
+/**
+ * Implements hook_fundraiser_commerce_fundraiser_gateway_auth_type().
+ */
+function commerce_sage_payments_fundraiser_commerce_fundraiser_gateway_auth_type($method_instance) {
+  switch($method_instance['settings']['transaction_type']) {
+    case COMMERCE_CREDIT_AUTH_ONLY:
+      return COMMERCE_CREDIT_AUTH_ONLY;
+      break;
 
+    case COMMERCE_CREDIT_AUTH_CAPTURE:
+      return COMMERCE_CREDIT_AUTH_CAPTURE;
+      break;
+  }
+}
 
 /**
  * Card on file callback: updates the credit card expiry.

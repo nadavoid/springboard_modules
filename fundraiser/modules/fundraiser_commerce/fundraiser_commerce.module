@@ -1167,7 +1167,7 @@ function fundraiser_commerce_fundraiser_donation_process($donation) {
   // Grab the gateway configuration from fundraisers data.
   $info = _fundraiser_get_donation_gateway($donation->did);
   $method_instance = commerce_payment_method_instance_load($info['id']); // From commerce_payment.module.
-  // Choose which of two ways to process this.
+  // Choose which of three ways to process this.
   if (in_array($donation->donation['payment_method'], $info['offsite_processing'])) {
     // If external processing, we cannot execute a recurring charge against it. So we're ok.
     // Load up additional data as needed for this donation, from Fundraiser and Commerce.
@@ -1188,6 +1188,22 @@ function fundraiser_commerce_fundraiser_donation_process($donation) {
     }
     // If external, check for paths to be available.
     _fundraiser_commerce_fundraiser_donation_process_external($donation, $info);
+  }
+  // If this is an upsell submission and the gateway is auth-only.
+  elseif (isset($donation->is_upsell)) {
+    $auth_type = module_invoke($method_instance['module'], 'fundraiser_commerce_fundraiser_gateway_auth_type', $method_instance);
+    if ($auth_type == COMMERCE_CREDIT_AUTH_ONLY) {
+      // Add parts from original donation
+      // - Load from $donation->fundraiser_upsell->related_did.
+      $related_donation_entity = entity_load_single('fundraiser_donation', $donation->fundraiser_upsell->related_did);
+      $related_donation_entity_wrapper = entity_metadata_wrapper('fundraiser_donation', $related_donation_entity);
+      $upsell_donation_entity = entity_load_single('fundraiser_donation', $donation->did);
+      $upsell_donation_entity_wrapper = entity_metadata_wrapper('fundraiser_donation', $upsell_donation_entity);
+      // Do parts of _fundraiser_commerce_fundraiser_donation_process_internal()?
+      $donation->result['success'] = TRUE;
+      // _fundraiser_commerce_update_donation_result_data();
+      // fundraiser_commerce_fundraiser_donation_after_process();
+    }
   }
   else {
     // If internal processing, then it may be a sustainer charge or newly declared.

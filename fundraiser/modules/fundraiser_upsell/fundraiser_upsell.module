@@ -1213,12 +1213,21 @@ function fundraiser_upsell_create_master_donation($upsold_donation, $new_amount)
   // Remember clone is a shallow copy.
   $master_donation = clone $upsold_donation;
 
-  // Reset transaction info.
-  $master_donation->data['txn_id'] = '';
-  $master_donation->data['remote_id'] = '';
-  $master_donation->data['transaction_id'] = '';
-  $master_donation->data['status'] = '';
-  $master_donation->data['remote_status'] = '';
+  // Grab the gateway configuration from fundraisers data.
+  $info = _fundraiser_get_donation_gateway($upsold_donation->did);
+  $method_instance = commerce_payment_method_instance_load($info['id']); // From commerce_payment.module.
+  $auth_type = module_invoke($method_instance['module'], 'fundraiser_commerce_fundraiser_gateway_auth_type', $method_instance);
+
+  // If auth_only, keep transaction data too, because it applies to the new
+  // master donation.
+  // Reset transaction info only if not auth_only.
+  if (!$auth_type == COMMERCE_CREDIT_AUTH_ONLY) {
+    $master_donation->data['txn_id'] = '';
+    $master_donation->data['remote_id'] = '';
+    $master_donation->data['transaction_id'] = '';
+    $master_donation->data['status'] = '';
+    $master_donation->data['remote_status'] = '';
+  }
 
   // Set the proper order status and amount.
   $master_donation->status = 'pending_future_payment';
@@ -1292,6 +1301,8 @@ function fundraiser_upsell_create_master_donation($upsold_donation, $new_amount)
     // Process the donation.  Since it references the original donation,
     // we don't need payment info.
     $master_donation->reference_charge = TRUE;
+    // Make it clear to other processes that this is an upsell donation.
+    $master_donation->is_upsell = TRUE;
     fundraiser_donation_process($master_donation);
     if (!isset($master_donation->result['message'])) {
       $master_donation->result['message'] = '';
