@@ -656,8 +656,15 @@ function fundraiser_upsell_upsell_ajax_submit($did, $amount) {
   // Allow modules to modify the original upsold donation.
   drupal_alter('upsold_donation', $upsold_donation);
 
-  // Create the recurring donation series.
-  $success = fundraiser_upsell_create_recurring_series($master_donation);
+  // Allow modules to prevent the creation of this series.
+  $prevent_series = module_invoke_all('fundraiser_upsell_prevent_series', $master_donation, $upsold_donation);
+  if ($prevent_series) {
+    $success = TRUE;
+  }
+  else {
+    // Create the recurring donation series.
+    $success = fundraiser_upsell_create_recurring_series($master_donation);
+  }
 
   // Grab and process the thank you content if successful.
   if ($success) {
