@@ -367,7 +367,7 @@ function commerce_sage_payments_cc_vault_submit_form_submit($payment_method, $pa
  */
 function commerce_sage_payments_cc_vault_cardonfile_charge($payment_method, $card_data, $order, $charge = NULL) {
   $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
-  $txn_type = COMMERCE_CREDIT_AUTH_CAPTURE;
+  $txn_type = $payment_method['settings']['transaction_type'];
 
   // Format order total for transaction.
   if (!isset($charge)) {
@@ -448,7 +448,7 @@ function commerce_sage_payments_cc_vault_cardonfile_charge($payment_method, $car
   }
 
   // Store the type of transaction in the remote status.
-  $transaction->remote_status = COMMERCE_CREDIT_AUTH_CAPTURE;
+  $transaction->remote_status = $txn_type;
 
   // Store the remote id.
   $transaction->remote_id = !empty($transaction_response['REFERENCE']) ? $transaction_response['REFERENCE'] : '';
@@ -1131,7 +1131,12 @@ function _commerce_sage_payments_vault_request_sale($gateway, $request_parameter
   switch($gateway['method_id']) {
     case 'commerce_sage_payments_cc' :
       $sage_client = _commerce_sage_payments_get_sage_payments_vault_bankcard_client();
-      $type = 'VAULT_BANKCARD_SALE';
+      if ($gateway['settings']['transaction_type'] == COMMERCE_CREDIT_AUTH_ONLY) {
+        $type = 'VAULT_BANKCARD_AUTHONLY';
+      }
+      else {
+        $type = 'VAULT_BANKCARD_SALE';
+      }
       break;
     case 'commerce_sage_payments_eft' :
       $sage_client = _commerce_sage_payments_get_sage_payments_vault_virtual_check_client();
