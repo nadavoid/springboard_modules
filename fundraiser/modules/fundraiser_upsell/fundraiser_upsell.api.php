@@ -99,3 +99,21 @@ function hook_upsell_master_donation_alter(&$master_donation) {
 function hook_fundraiser_upsell_create_recurring_success($donation) {
 
 }
+
+/**
+ * Prevent creation of donation series.
+ *
+ * If any module returns a value, upsell will NOT create a sustainer series.
+ *
+ * @param object $master_donation
+ *   Master donation, the result of the upsell.
+ * @param object $upsold_donation
+ *   Original donation that the upsell was generated from.
+ *
+ * @return string
+ *   Name of module implementing the hook, mainly for identifying which module
+ *   prevents the series creation.
+ */
+function hook_fundraiser_upsell_prevent_series($master_donation, $upsold_donation) {
+  return 'my_module';
+}

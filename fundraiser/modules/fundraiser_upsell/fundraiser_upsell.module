@@ -652,7 +652,7 @@ function fundraiser_upsell_upsell_ajax_submit($did, $amount) {
   drupal_alter('upsold_donation', $upsold_donation);
 
   // Allow modules to prevent the creation of this series.
-  $prevent_series = fundraiser_upsell_prevent_series($master_donation, $upsold_donation);
+  $prevent_series = module_invoke_all('fundraiser_upsell_prevent_series', $master_donation, $upsold_donation);
   if ($prevent_series) {
     $success = TRUE;
   }
@@ -681,25 +681,6 @@ function fundraiser_upsell_upsell_ajax_submit($did, $amount) {
   }
 
   return $content;
-}
-
-/**
- * Find out if any modules want to prevent the creation of this series.
- *
- * @return array
- *   Names of modules preventing the series creation.
- */
-function fundraiser_upsell_prevent_series($master_donation, $upsold_donation) {
-  $result = array();
-
-  foreach(module_implements('fundraiser_upsell_prevent_series') as $module) {
-    $answer = module_invoke($module, 'fundraiser_upsell_prevent_series', $master_donation, $upsold_donation);
-    if ($answer) {
-      $result[$module] = $answer;
-    }
-  }
-
-  return $result;
 }
 
 /**
