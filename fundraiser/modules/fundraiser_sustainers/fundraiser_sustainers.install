@@ -417,6 +417,10 @@ function fundraiser_sustainers_enable() {
  * Opportunity object in Salesforce.
  */
 function _fundraiser_sustainers_create_sustainers_series_mapping() {
+  // Exit early if salesforce_mapping is not enabled.
+  if (!module_exists('salesforce_mapping')) {
+    return;
+  }
   $default_map_sustainers_series = '{
   "type" : "salesforce_mapping",
   "name" : "fundraiser_sustainers_series",
@@ -732,7 +736,7 @@ function fundraiser_sustainers_update_7010() {
    * Rename the old log table to leave previous records alone.
    *
    * These records aren't used anymore but we leave them for historical purposes.
-   */ 
+   */
   db_rename_table('fundraiser_sustainers_log', 'fundraiser_sustainers_log_pre_insights');
 
   // Create the new table.
@@ -860,7 +864,9 @@ function fundraiser_sustainers_update_7012() {
     ),
   );
 
-  db_create_table('fundraiser_sustainers_series', $fundraiser_sustainers_series_schema);
+  if (!db_table_exists('fundraiser_sustainers_series')) {
+    db_create_table('fundraiser_sustainers_series', $fundraiser_sustainers_series_schema);
+  }
 
   _fundraiser_sustainers_create_sustainers_series_mapping();
 
