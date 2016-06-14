@@ -1129,7 +1129,7 @@ function _commerce_sage_payments_vault_request_sale($gateway, $request_parameter
 
   // Determine the correct client and request type to use
   switch($gateway['method_id']) {
-    case 'commerce_sage_payments_cc' :
+    case 'commerce_sage_payments_cc':
       $sage_client = _commerce_sage_payments_get_sage_payments_vault_bankcard_client();
       if ($gateway['settings']['transaction_type'] == COMMERCE_CREDIT_AUTH_ONLY) {
         $type = 'VAULT_BANKCARD_AUTHONLY';
@@ -1138,7 +1138,8 @@ function _commerce_sage_payments_vault_request_sale($gateway, $request_parameter
         $type = 'VAULT_BANKCARD_SALE';
       }
       break;
-    case 'commerce_sage_payments_eft' :
+
+    case 'commerce_sage_payments_eft':
       $sage_client = _commerce_sage_payments_get_sage_payments_vault_virtual_check_client();
       $type = 'VIRTUAL_CHECK_WEB_SALE';
       break;
@@ -1206,7 +1207,7 @@ function _commerce_sage_payments_get_sage_payments_vault_management_client() {
   $client = new SoapClient(drupal_get_path('module', 'commerce_sage_payments') . '/libraries/wsVault.wsdl.xml',
                            array('location' => 'https://gateway.sagepayments.net/web_services/wsVault/wsVault.asmx',
                                  'uri'      => 'https://gateway.sagepayments.net/web_services/wsVault/'
-                                )
+                           )
                           );
   return $client;
 }
@@ -1220,7 +1221,7 @@ function _commerce_sage_payments_get_sage_payments_vault_bankcard_client() {
                            array('location' => 'https://gateway.sagepayments.net/web_services/wsVault/wsVaultBankcard.asmx',
                                  'uri'      => 'https://gateway.sagepayments.net/web_services/wsVault/',
                                  // 'trace' => 1
-                                )
+                           )
                           );
   return $client;
 }
@@ -1234,7 +1235,7 @@ function _commerce_sage_payments_get_sage_payments_vault_virtual_check_client() 
                            array('location' => 'https://gateway.sagepayments.net/web_services/wsVault/wsVaultVirtualCheck.asmx',
                                  'uri'      => 'https://gateway.sagepayments.net/web_services/wsVault/',
                                  // 'trace' => 1,
-                                )
+                           )
                           );
   return $client;
 }
