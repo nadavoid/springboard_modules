@@ -3256,8 +3256,10 @@ function fundraiser_sustainers_fundraiser_donation_success($donation) {
         $fundraiser_sustainers_series = entity_create('fundraiser_sustainers_series', $fundraiser_sustainers_series_data);
         $fundraiser_sustainers_series->save();
 
+        // Allow modules to prevent the creation of this series.
+        $prevent_series = module_invoke_all('fundraiser_upsell_prevent_series', NULL, $donation);
         // Now handle the recurring object, and the rest of the orders.
-        if (!_fundraiser_sustainers_offsite_recurring($info['offsite_recurring'], $donation->donation['payment_method'])) { // Is not an offline recurring
+        if (empty($prevent_series) && !_fundraiser_sustainers_offsite_recurring($info['offsite_recurring'], $donation->donation['payment_method'])) { // Is not an offline recurring
           $info = _fundraiser_get_donation_gateway($donation->did);
           // This created donation is the master, so passing it in to create the set.
           // We can't predict the form key for these values, so ask the gateway to provide.
