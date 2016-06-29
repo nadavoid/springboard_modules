@@ -287,3 +287,15 @@ function _fundraiser_commerce_payflow_transaction_pnref($order_id) {
     return !empty($data['commerce_payflow']['pnref']) ? $data['commerce_payflow']['pnref'] : FALSE;
   }
 }
+
+/**
+ * Callback function, return expiration dates for this submission.
+ */
+function fundraiser_commerce_payflow_eft_expire($submission_fields) {
+  // No expiration dates are provided, so we provide a default, 24 months away.
+  $exp_timestamp = strtotime('+24 months');
+  return array(
+    'month' => date('m', $exp_timestamp),
+    'year' => date('Y', $exp_timestamp),
+  );
+}
