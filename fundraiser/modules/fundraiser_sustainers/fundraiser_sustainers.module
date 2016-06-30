@@ -1530,7 +1530,7 @@ function _fundraiser_sustainers_recurs_monthly_field_create($fundraiser, $field)
   if (empty($fundraiser->recurring_setting)) {
     return FALSE;
   }
-  // If the show other options is disallowed, unset it.
+  // If the form is always-recurring, hide the donation-type selector.
   if ($fundraiser->recurring_setting == 'always') {
     $field['#type'] = 'hidden';
     $field['#extra'] = array(
@@ -1539,7 +1539,7 @@ function _fundraiser_sustainers_recurs_monthly_field_create($fundraiser, $field)
     );
     $field['#value'] = 'recurs';
   }
-  // If the show other options is disallowed, unset it.
+  // If the form is never-recurring, hide the donation-type selector.
   else if ($fundraiser->recurring_setting == 'never') {
     $field['#type'] = 'hidden';
     $field['#extra'] = array(
@@ -1548,16 +1548,28 @@ function _fundraiser_sustainers_recurs_monthly_field_create($fundraiser, $field)
     );
     $field['#value'] = 'NO_RECURR';
   }
+  // If component type hasn't been set, this is a legacy form and we haven't don't have enough config info yet, so leave it alone.
+  else if (empty($fundraiser->recurring_donation_type_component)) {
+    $field['#node_extra_settings']['description'] = FALSE;
+    $field['#node_extra_settings']['multiple'] = FALSE;
+  }
+  // If the form is user-choice, and we have enough info, configure the component accordingly.
   else if ($fundraiser->recurring_setting == 'user_choice') {
     // Set the "multiple" attribute: TRUE for a checkbox, FALSE for radios.
+    $orig_multiple = $field['#extra']['multiple'];
     $field['#extra']['multiple'] = empty($fundraiser->recurring_donation_type_component) ?
-      TRUE : $field['#extra']['multiple'] = ($fundraiser->recurring_donation_type_component == 'checkbox');
+      TRUE : ($fundraiser->recurring_donation_type_component == 'checkbox');
     // Use the help text given in the node edit form.
     if (isset($fundraiser->recurring_donation_type_help_text)) {
       $field['#extra']['description'] = t($fundraiser->recurring_donation_type_help_text);
     }
+    // Was a checkbox component requested?
+    if ($field['#extra']['multiple']) {
+      // If switching to checkbox, make sure we overwrite any old selection items.
+      $field['#node_extra_settings']['items'] = TRUE;  //@TODO: If we ever make items configurable from the node edit form for checkbox components, we can lose this.
+    }
     // Was a non-checkbox (i.e., radios) component requested?
-    if (!$field['#extra']['multiple']) {
+    else {
       // Use the options and default value given in the node edit form.
       if (!empty($fundraiser->recurring_donation_type_options)) {
         $field['#extra']['items'] = is_array($fundraiser->recurring_donation_type_options) ?  // Array comes from node edit form, string comes from DB.
@@ -1567,24 +1579,18 @@ function _fundraiser_sustainers_recurs_monthly_field_create($fundraiser, $field)
       if (!empty($fundraiser->recurring_default_donation_type)) {
         $field['#value'] = $fundraiser->recurring_default_donation_type;
       }
-      // Default to not showing the component title.
-      $field['#extra']['title_display'] = 'none';
     }
     // If fundraiser_webform is the "glue" module, look for a pre-existing component.
     if (module_exists('fundraiser_webform')) {
       foreach ($fundraiser->webform['components'] as $component) {
         if ($component['form_key'] == 'recurs_monthly') {
           if ($component['type'] != 'select') {
-            // Not allowed! It has to be a select.
+            // Not allowed! It has to be a select, so delete and re-create.
             _fundraiser_webform_delete_component($fundraiser->nid, 'recurs_monthly');
           } else if ($component['extra']['multiple'] != $field['#extra']['multiple']) {
             // Toggle component title display on/off when switching between checkbox and radios.
             $field['#extra']['title_display'] = $field['#extra']['multiple'] ? 'before' : 'none';
             $field['#node_extra_settings']['title_display'] = TRUE;
-            if ($field['#extra']['multiple']) {
-              // If switching from radios to checkbox, also make sure we overwrite the selection items.
-              $field['#node_extra_settings']['items'] = TRUE;  //@TODO: If we ever make items configurable from the node edit form for checkbox components, we can lose this.
-            }
           }
           break;
         }

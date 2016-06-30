@@ -1255,8 +1255,13 @@ function _fundraiser_amount_field_create($fundraiser, $field) {
       $default = '';
     }
     else if (in_array($fundraiser->default_amount, $keys)) {
-      // Default is one of the defined ask amounts.
-      $default = $fundraiser->default_amount;
+      // Default is one of the defined ask amounts. Use it, but make sure the formatting matches the ask amount exactly.
+      foreach ($keys as $ask_amount) {
+        if ($ask_amount == $fundraiser->default_amount) {
+          $default = $ask_amount;
+          break;
+        }
+      }
     }
 
     // Extra settings may get clobbered in fundraiser_webform. if we don't flag them.
