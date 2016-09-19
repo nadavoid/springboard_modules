@@ -430,6 +430,11 @@ function fundraiser_upsell_page_alter(&$page) {
         // Make sure the payment method used supports recurring.
         $info = _fundraiser_get_donation_gateway($donation->did);
         if (_fundraiser_sustainers_supports_recurring($info['allow_recurring'], $donation->donation['payment_method'])) {
+          // Hide the modal if the payment method is offsite recurring.
+          if (_fundraiser_sustainers_offsite_recurring($info['offsite_recurring'], $donation->donation['payment_method'])) {
+            return;
+          }
+
           // Hide the modal if the donation amount matches no brackets:
           if (!isset($donation->donation['amount'])
             || !fundraiser_upsell_find_suggested_amount($donation->donation['amount'])) {
