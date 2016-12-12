@@ -114,11 +114,11 @@ function springboard_theme($existing, $type, $theme, $path) {
   return array(
     'springboard_sf_status' => array(
       'variables' => array('status' => '', 'identity' => array(), 'batch_status' => '', 'queue' => ''),
-      'template' => drupal_get_path('theme', $theme) . '/templates/springboard-sf-status',
+      'template' => '/templates/springboard-sf-status',
     ),
     'springboard_help' => array(
       'variables' => array('help_array' => array()),
-      'template' => drupal_get_path('theme', $theme) . '/templates/springboard-help',
+      'template' => '/templates/springboard-help',
     ),
   );
 }

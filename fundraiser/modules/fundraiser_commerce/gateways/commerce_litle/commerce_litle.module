@@ -463,7 +463,7 @@ function _commerce_litle_fraud_markup($session_id = NULL) {
   $page_id = isset($node->nid) ? $node->nid : '1';
   $markup = '<div style="background:url(https://' . $subdomain . '/fp/clear.png?org_id=' . $org_id . '&amp;session_id=' . $session_id . '&amp;m=1)"></div>';
   $markup .= '<img src="https://' . $subdomain . '/fp/clear.png?org_id=' . $org_id . '&amp;session_id=' . $session_id . '&amp;m=2" />';
-  $markup .= '<script src="https://' . $subdomain . '/fp/check.js?org_id=' . $org_id . '&amp; session_id=' . $session_id . '&amp;pageid=##' . $page_id . '##"></script>';
+  $markup .= '<script src="https://' . $subdomain . '/fp/check.js?org_id=' . $org_id . '&amp;session_id=' . $session_id . '&amp;pageid=##' . $page_id . '##"></script>';
   $markup .= '<object type="application/x-shockwave-flash" data="https://' . $subdomain . '/fp/fp.swf?org_id=' . $org_id . '&amp;session_id=' . $session_id . '" width="1" height="1">';
   $markup .= '<param name="movie" value="https://' . $subdomain . '/fp/fp.swf?org_id=' . $org_id . '&amp;session_id=' . $session_id . '" /><param name="wmode" value="transparent" /> <div></div></object>';
   return $markup;
@@ -1679,11 +1679,12 @@ function commerce_litle_get_token_from_response($response) {
 
   $token = NULL;
   $response_code = $sdk->getNode($response, 'response');
+  $response_code = intval($response_code, 10);
 
   // Keep in mind tokenResponseCode is different than response.
   // 801 Account number was successfully registered.
   // 802 Account number was previously registered.
-  if (in_array($response_code, array(801, 802))) {
+  if (in_array($response_code, array(000, 801, 802))) {
     $token = $sdk->getNode($response, 'litleToken');
   }
 

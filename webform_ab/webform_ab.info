@@ -1,4 +1,4 @@
-name = Webform A/B Testing
+name = Multivariate Testing 
 description = "Adds a content type for an A/B test of webforms plus a multivariate testing view."
 core = 7.x
 package = Webform Extra

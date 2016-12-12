@@ -483,6 +483,10 @@ function fundraiser_sustainers_views_default_views() {
   $handler->display->display_options['empty']['area']['empty'] = TRUE;
   $handler->display->display_options['empty']['area']['content'] = 'No sustainers were found that require attention.';
   $handler->display->display_options['empty']['area']['format'] = 'filtered_html';
+  /* Relationship: Fundraiser sustainer record: Fundraiser Donation */
+  $handler->display->display_options['relationships']['did']['id'] = 'did';
+  $handler->display->display_options['relationships']['did']['table'] = 'fundraiser_sustainers';
+  $handler->display->display_options['relationships']['did']['field'] = 'did';
   /* Field: Bulk operations: Fundraiser sustainer record */
   $handler->display->display_options['fields']['views_bulk_operations']['id'] = 'views_bulk_operations';
   $handler->display->display_options['fields']['views_bulk_operations']['table'] = 'fundraiser_sustainers';
@@ -494,50 +498,14 @@ function fundraiser_sustainers_views_default_views() {
   $handler->display->display_options['fields']['views_bulk_operations']['vbo_settings']['force_single'] = 0;
   $handler->display->display_options['fields']['views_bulk_operations']['vbo_settings']['entity_load_capacity'] = '10';
   $handler->display->display_options['fields']['views_bulk_operations']['vbo_operations'] = array(
-    'action::views_bulk_operations_delete_item' => array(
-      'selected' => 0,
-      'postpone_processing' => 0,
-      'skip_confirmation' => 0,
-      'override_label' => 0,
-      'label' => '',
-    ),
-    'action::views_bulk_operations_script_action' => array(
-      'selected' => 0,
-      'postpone_processing' => 0,
-      'skip_confirmation' => 0,
-      'override_label' => 0,
-      'label' => '',
-    ),
-    'action::views_bulk_operations_modify_action' => array(
-      'selected' => 0,
-      'postpone_processing' => 0,
-      'skip_confirmation' => 0,
-      'override_label' => 0,
-      'label' => '',
-      'settings' => array(
-        'show_all_tokens' => 1,
-        'display_values' => array(
-          '_all_' => '_all_',
-        ),
-      ),
-    ),
-    'action::views_bulk_operations_argument_selector_action' => array(
-      'selected' => 0,
-      'skip_confirmation' => 0,
-      'override_label' => 0,
-      'label' => '',
-      'settings' => array(
-        'url' => '',
-      ),
-    ),
-    'action::system_send_email_action' => array(
-      'selected' => 0,
-      'postpone_processing' => 0,
-      'skip_confirmation' => 0,
-      'override_label' => 0,
-      'label' => '',
-    ),
     'action::fundraiser_sustainers_unlock_sustainer_action' => array(
+      'selected' => 1,
+      'postpone_processing' => 0,
+      'skip_confirmation' => 0,
+      'override_label' => 0,
+      'label' => '',
+    ),
+    'action::fundraiser_sustainers_omit_sustainer_action' => array(
       'selected' => 1,
       'postpone_processing' => 0,
       'skip_confirmation' => 0,
@@ -555,6 +523,11 @@ function fundraiser_sustainers_views_default_views() {
   $handler->display->display_options['fields']['did']['table'] = 'fundraiser_sustainers';
   $handler->display->display_options['fields']['did']['field'] = 'did';
   $handler->display->display_options['fields']['did']['separator'] = '';
+  /* Field: Fundraiser donations: Donation amount */
+  $handler->display->display_options['fields']['amount']['id'] = 'amount';
+  $handler->display->display_options['fields']['amount']['table'] = 'fundraiser_donation';
+  $handler->display->display_options['fields']['amount']['field'] = 'amount';
+  $handler->display->display_options['fields']['amount']['relationship'] = 'did';
   /* Field: Fundraiser sustainer record: Next charge */
   $handler->display->display_options['fields']['next_charge']['id'] = 'next_charge';
   $handler->display->display_options['fields']['next_charge']['table'] = 'fundraiser_sustainers';
@@ -608,6 +581,12 @@ function fundraiser_sustainers_views_default_views() {
   $handler->display->display_options['filters']['gateway_resp_1']['value'] = 'processing';
   $handler->display->display_options['filters']['gateway_resp_1']['group'] = 2;
   /* Filter criterion: Fundraiser sustainer record: Gateway response */
+  $handler->display->display_options['filters']['gateway_resp_4']['id'] = 'gateway_resp_4';
+  $handler->display->display_options['filters']['gateway_resp_4']['table'] = 'fundraiser_sustainers';
+  $handler->display->display_options['filters']['gateway_resp_4']['field'] = 'gateway_resp';
+  $handler->display->display_options['filters']['gateway_resp_4']['value'] = 'locked';
+  $handler->display->display_options['filters']['gateway_resp_4']['group'] = 2;
+  /* Filter criterion: Fundraiser sustainer record: Gateway response */
   $handler->display->display_options['filters']['gateway_resp_2']['id'] = 'gateway_resp_2';
   $handler->display->display_options['filters']['gateway_resp_2']['table'] = 'fundraiser_sustainers';
   $handler->display->display_options['filters']['gateway_resp_2']['field'] = 'gateway_resp';
@@ -620,11 +599,192 @@ function fundraiser_sustainers_views_default_views() {
   $handler->display->display_options['filters']['next_charge']['operator'] = '<';
   $handler->display->display_options['filters']['next_charge']['value']['value'] = '-1 hour';
   $handler->display->display_options['filters']['next_charge']['value']['type'] = 'offset';
+  $handler->display->display_options['filters']['next_charge']['group'] = 1;
 
   /* Display: Page */
   $handler = $view->new_display('page', 'Page', 'page');
   $handler->display->display_options['path'] = 'admin/springboard/reports/reconciliation/locked-not-processed-sustainers';
+
   $views['stuck_sustainer_records'] = $view;
+
+  $view = new view();
+  $view->name = 'ommitted_sustainer_records';
+  $view->description = '';
+  $view->tag = 'default';
+  $view->base_table = 'fundraiser_sustainers';
+  $view->human_name = 'Omitted sustainer records';
+  $view->core = 7;
+  $view->api_version = '3.0';
+  $view->disabled = FALSE; /* Edit this to true to make a default view disabled initially */
+
+  /* Display: Master */
+  $handler = $view->new_display('default', 'Master', 'default');
+  $handler->display->display_options['title'] = 'Omitted sustainers';
+  $handler->display->display_options['use_more_always'] = FALSE;
+  $handler->display->display_options['access']['type'] = 'perm';
+  $handler->display->display_options['access']['perm'] = 'administrate recurring donations';
+  $handler->display->display_options['cache']['type'] = 'time';
+  $handler->display->display_options['cache']['results_lifespan'] = '60';
+  $handler->display->display_options['cache']['results_lifespan_custom'] = '0';
+  $handler->display->display_options['cache']['output_lifespan'] = '300';
+  $handler->display->display_options['cache']['output_lifespan_custom'] = '0';
+  $handler->display->display_options['query']['type'] = 'views_query';
+  $handler->display->display_options['exposed_form']['type'] = 'basic';
+  $handler->display->display_options['pager']['type'] = 'full';
+  $handler->display->display_options['pager']['options']['items_per_page'] = '10';
+  $handler->display->display_options['style_plugin'] = 'table';
+  $handler->display->display_options['style_options']['columns'] = array(
+    'master_did_1' => 'master_did_1',
+    'did' => 'did',
+    'next_charge' => 'next_charge',
+    'gateway_resp' => 'gateway_resp',
+    'attempts' => 'attempts',
+    'cancellation_reason' => 'cancellation_reason',
+    'lock_id' => 'lock_id',
+    'sustainer_key' => 'sustainer_key',
+  );
+  $handler->display->display_options['style_options']['default'] = 'did';
+  $handler->display->display_options['style_options']['info'] = array(
+    'master_did_1' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'did' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'next_charge' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'gateway_resp' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'attempts' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'cancellation_reason' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'lock_id' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'sustainer_key' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+  );
+  $handler->display->display_options['style_options']['sticky'] = TRUE;
+  /* No results behavior: Global: Text area */
+  $handler->display->display_options['empty']['area']['id'] = 'area';
+  $handler->display->display_options['empty']['area']['table'] = 'views';
+  $handler->display->display_options['empty']['area']['field'] = 'area';
+  $handler->display->display_options['empty']['area']['label'] = 'No locked but not processed sustainers';
+  $handler->display->display_options['empty']['area']['empty'] = TRUE;
+  $handler->display->display_options['empty']['area']['content'] = 'No sustainers were found that require attention.';
+  $handler->display->display_options['empty']['area']['format'] = 'filtered_html';
+  /* Field: Bulk operations: Fundraiser sustainer record */
+  $handler->display->display_options['fields']['views_bulk_operations']['id'] = 'views_bulk_operations';
+  $handler->display->display_options['fields']['views_bulk_operations']['table'] = 'fundraiser_sustainers';
+  $handler->display->display_options['fields']['views_bulk_operations']['field'] = 'views_bulk_operations';
+  $handler->display->display_options['fields']['views_bulk_operations']['label'] = '';
+  $handler->display->display_options['fields']['views_bulk_operations']['element_label_colon'] = FALSE;
+  $handler->display->display_options['fields']['views_bulk_operations']['vbo_settings']['display_type'] = '0';
+  $handler->display->display_options['fields']['views_bulk_operations']['vbo_settings']['enable_select_all_pages'] = 1;
+  $handler->display->display_options['fields']['views_bulk_operations']['vbo_settings']['force_single'] = 0;
+  $handler->display->display_options['fields']['views_bulk_operations']['vbo_settings']['entity_load_capacity'] = '10';
+
+  /* Field: Fundraiser sustainer record: Master donation ID */
+  $handler->display->display_options['fields']['master_did_1']['id'] = 'master_did_1';
+  $handler->display->display_options['fields']['master_did_1']['table'] = 'fundraiser_sustainers';
+  $handler->display->display_options['fields']['master_did_1']['field'] = 'master_did';
+  $handler->display->display_options['fields']['master_did_1']['separator'] = '';
+  /* Field: Fundraiser sustainer record: Donation ID */
+  $handler->display->display_options['fields']['did']['id'] = 'did';
+  $handler->display->display_options['fields']['did']['table'] = 'fundraiser_sustainers';
+  $handler->display->display_options['fields']['did']['field'] = 'did';
+  $handler->display->display_options['fields']['did']['separator'] = '';
+  /* Field: Fundraiser sustainer record: Next charge */
+  $handler->display->display_options['fields']['next_charge']['id'] = 'next_charge';
+  $handler->display->display_options['fields']['next_charge']['table'] = 'fundraiser_sustainers';
+  $handler->display->display_options['fields']['next_charge']['field'] = 'next_charge';
+  $handler->display->display_options['fields']['next_charge']['date_format'] = 'medium';
+  /* Field: Fundraiser sustainer record: Gateway response */
+  $handler->display->display_options['fields']['gateway_resp']['id'] = 'gateway_resp';
+  $handler->display->display_options['fields']['gateway_resp']['table'] = 'fundraiser_sustainers';
+  $handler->display->display_options['fields']['gateway_resp']['field'] = 'gateway_resp';
+  /* Field: Fundraiser sustainer record: Attempts */
+  $handler->display->display_options['fields']['attempts']['id'] = 'attempts';
+  $handler->display->display_options['fields']['attempts']['table'] = 'fundraiser_sustainers';
+  $handler->display->display_options['fields']['attempts']['field'] = 'attempts';
+  /* Field: Fundraiser sustainer record: Cancellation reason */
+  $handler->display->display_options['fields']['cancellation_reason']['id'] = 'cancellation_reason';
+  $handler->display->display_options['fields']['cancellation_reason']['table'] = 'fundraiser_sustainers';
+  $handler->display->display_options['fields']['cancellation_reason']['field'] = 'cancellation_reason';
+  /* Field: Fundraiser sustainer record: Lock ID */
+  $handler->display->display_options['fields']['lock_id']['id'] = 'lock_id';
+  $handler->display->display_options['fields']['lock_id']['table'] = 'fundraiser_sustainers';
+  $handler->display->display_options['fields']['lock_id']['field'] = 'lock_id';
+  /* Field: Fundraiser sustainer record: Sustainer key */
+  $handler->display->display_options['fields']['sustainer_key']['id'] = 'sustainer_key';
+  $handler->display->display_options['fields']['sustainer_key']['table'] = 'fundraiser_sustainers';
+  $handler->display->display_options['fields']['sustainer_key']['field'] = 'sustainer_key';
+  /* Sort criterion: Fundraiser sustainer record: Donation ID */
+  $handler->display->display_options['sorts']['did']['id'] = 'did';
+  $handler->display->display_options['sorts']['did']['table'] = 'fundraiser_sustainers';
+  $handler->display->display_options['sorts']['did']['field'] = 'did';
+  $handler->display->display_options['filter_groups']['groups'] = array(
+    1 => 'AND',
+    2 => 'OR',
+  );
+
+  /* Filter criterion: Fundraiser sustainer record: Lock ID */
+  $handler->display->display_options['filters']['lock_id']['id'] = 'lock_id';
+  $handler->display->display_options['filters']['lock_id']['table'] = 'fundraiser_sustainers';
+  $handler->display->display_options['filters']['lock_id']['field'] = 'lock_id';
+  $handler->display->display_options['filters']['lock_id']['operator'] = '!=';
+  $handler->display->display_options['filters']['lock_id']['value'] = '0';
+  $handler->display->display_options['filters']['lock_id']['group'] = 1;
+  /* Filter criterion: Fundraiser sustainer record: Gateway response */
+  $handler->display->display_options['filters']['gateway_resp_1']['id'] = 'gateway_resp_1';
+  $handler->display->display_options['filters']['gateway_resp_1']['table'] = 'fundraiser_sustainers';
+  $handler->display->display_options['filters']['gateway_resp_1']['field'] = 'gateway_resp';
+  $handler->display->display_options['filters']['gateway_resp_1']['value'] = 'omitted';
+  $handler->display->display_options['filters']['gateway_resp_1']['group'] = 2;
+
+
+  /* Display: Page */
+  $handler = $view->new_display('page', 'Page', 'page');
+  $handler->display->display_options['path'] = 'admin/springboard/reports/reconciliation/omitted-sustainers';
+  $views['omitted_sustainer_records'] = $view;
 
   $view = new view();
   $view->name = 'successful_sustainers_by_date';

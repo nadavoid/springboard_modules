@@ -1,9 +1,9 @@
 <?php
 /**
  * @file
- * Webform A/B Testing
+ * Multivariate Testing
  *
- * Adds a content type for an A/B test of webforms.
+ * Adds a content type for an Multivariate test of webforms.
  */
 
 /**
@@ -27,9 +27,9 @@ define('WEBFORM_AB_WEBFORM_STATUS_RETIRED', 3);
 function webform_ab_node_info() {
   return array(
     'webform_ab' => array(
-      'name' => t('Webform A/B Test'),
+      'name' => t('Multivariate Test'),
       'base' => 'webform_ab',
-      'description' => t('An A/B test for Webforms'),
+      'description' => t('A Multivariate test for Webforms'),
       'title_label' => t('Test Name'),
       'body_label' => t('Admin Description'),
       'locked' => TRUE,
@@ -44,39 +44,39 @@ function webform_ab_permission() {
   return array(
     'administer webform_ab' => array(
       'title' => t('administer webform_ab'),
-      'description' => t('Administer Webform A/B'),
+      'description' => t('Administer Multivariate Testing'),
     ),
     'reset webform_ab test data' => array(
       'title' => t('reset webform_ab test data'),
-      'description' => t('Reset a Webform A/B test'),
+      'description' => t('Reset a Multivariate test'),
     ),
     'create webform_ab' => array(
       'title' => t('create webform_ab'),
-      'description' => t('Create a Webform A/B test'),
+      'description' => t('Create a Multivariate test'),
     ),
     'edit own webform_ab' => array(
       'title' => t('edit own webform_ab'),
-      'description' => t('Edit your own Webform A/B tests'),
+      'description' => t('Edit your own Multivariate tests'),
     ),
     'edit any webform_ab' => array(
       'title' => t('edit any webform_ab'),
-      'description' => t('Edit any Webform A/B test'),
+      'description' => t('Edit any Multivariate test'),
     ),
     'delete own webform_ab' => array(
       'title' => t('delete own webform_ab'),
-      'description' => t('Delete your own Webform A/B tests'),
+      'description' => t('Delete your own Multivariate tests'),
     ),
     'delete any webform_ab' => array(
       'title' => t('delete any webform_ab'),
-      'description' => t('Delete any Webform A/B test'),
+      'description' => t('Delete any Multivariate test'),
     ),
     'view own webform_ab reports' => array(
       'title' => t('view own webform_ab reports'),
-      'description' => t('View your own Webform A/B tests'),
+      'description' => t('View your own Multivariate tests'),
     ),
     'view any webform_ab reports' => array(
       'title' => t('view any webform_ab reports'),
-      'description' => t('View any Webform A/B test'),
+      'description' => t('View any Multivariate test'),
     ),
   );
 }
@@ -87,7 +87,7 @@ function webform_ab_permission() {
 function webform_ab_menu() {
   $items = array();
   $items['node/%webform_ab_menuitem/reports'] = array(
-    'title' => 'A/B reports',
+    'title' => 'Multivariate testing reports',
     'page callback' => 'webform_ab_test_reports',
     'page arguments' => array(1),
     'access callback' => 'webform_ab_can_view_reports',
@@ -97,7 +97,7 @@ function webform_ab_menu() {
     'type' => MENU_LOCAL_TASK,
   );
   $items['node/%webform_ab_menuitem/reports/reports'] = array(
-    'title' => 'A/B reports',
+    'title' => 'Multivariate testing reports',
     'weight' => 0,
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
@@ -130,8 +130,8 @@ function webform_ab_menu() {
     'type' => MENU_CALLBACK,
   );
   $items['admin/config/content/webform_ab'] = array(
-    'title' => 'Webform A/B test settings',
-    'description' => 'Settings for Webform A/B tests',
+    'title' => 'Multivariate test settings',
+    'description' => 'Settings for Multivariate tests',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('webform_ab_admin_settings'),
     'access arguments' => array('administer webform_ab'),
@@ -151,7 +151,7 @@ function webform_ab_views_api() {
 }
 
 /**
- * Check if the current user can view the reports on a given Webform A/B Test
+ * Check if the current user can view the reports on a given Multivariate test 
  */
 function webform_ab_can_view_reports($node) {
   global $user;
@@ -160,7 +160,7 @@ function webform_ab_can_view_reports($node) {
 }
 
 /**
- * Menu loader callback. Load a Webform A/B Test node if the given nid is for
+ * Menu loader callback. Load a Multivariate Test node if the given nid is for
  * the right node type.
  */
 function webform_ab_menuitem_load($nid) {
@@ -205,7 +205,7 @@ function webform_ab_form(&$node, $form_state) {
   $type = node_type_get_type($node);
   $form['test_settings'] = array(
     '#type' => 'fieldset',
-    '#title' => t('A/B Test Settings'),
+    '#title' => t('Multivariate Test Settings'),
     '#collapsible' => TRUE,
     '#collapsed' => FALSE,
   );
@@ -232,7 +232,7 @@ function webform_ab_form(&$node, $form_state) {
     '#default_value' => !empty($node->public_teaser) ? $node->public_teaser : '',
     '#cols' => 60,
     '#rows' => 5,
-    '#description' => t('Teaser for public use. This is is shown if this Webform A/B Test node is shown in a ' .
+    '#description' => t('Teaser for public use. This is is shown if this Multivariate Test node is shown in a ' .
       'list of nodes where only the teaser is displayed. This might be a description like, "Donate to our organization."'),
   );
   $form['test_settings']['webform_types'] = array(
@@ -253,9 +253,17 @@ function webform_ab_form(&$node, $form_state) {
     '#collapsed' => FALSE,
     '#tree' => TRUE,
   );
+
+  $filter_groups = array();
+
   // Get win condition plugins and show them as options
   $win_thresholds = _webform_ab_get_win_threshold_plugins();
   foreach ($win_thresholds as $plugin_key => $plugin) {
+    // Gather data for form filtering:
+    $filter_groups[$plugin['module']][] = array(
+      'condition' => 'win_thresholds',
+      'plugin_key' => $plugin_key,
+    );
     // Add a checkbox to enable this win threshold
     $form['win_thresholds'][$plugin_key]['enable'] = array(
       '#type' => 'checkbox',
@@ -310,6 +318,11 @@ function webform_ab_form(&$node, $form_state) {
   // Get win condition plugins and show them as options
   $win_conditions = _webform_ab_get_win_condition_plugins();
   foreach ($win_conditions as $plugin_key => $plugin) {
+    // Gather data for form filtering:
+    $filter_groups[$plugin['module']][] = array(
+      'condition' => 'win_conditions',
+      'plugin_key' => $plugin_key,
+    );
     // Add a checkbox to enable this win condition
     $form['win_conditions'][$plugin_key]['enable'] = array(
       '#type' => 'checkbox',
@@ -350,6 +363,30 @@ function webform_ab_form(&$node, $form_state) {
       // ...and merge them into the fieldset
       $form['win_conditions'][$plugin_key]['options'] = array_merge(
         $form['win_conditions'][$plugin_key]['options'], $config_form);
+    }
+  }
+
+  // Hide win conditions and thresholds not associated with the currently selected webform type:
+  $webform_types = module_invoke_all('webform_ab_get_webform_types');
+  $target = ':input[name="webform_types"]';
+  foreach ($filter_groups as $this_webform_type => $plugins) {
+    foreach ($plugins as $plugin_data) {
+      $condition = $plugin_data['condition']; $plugin_key = $plugin_data['plugin_key'];
+      // Make the container a proper fieldset so states can be applied:
+      $form[$condition][$plugin_key]['#type'] = 'fieldset';
+      $form[$condition][$plugin_key]['#attributes'] = array('class' => array(str_replace(' ', '-', $condition) . '-container'));
+      // Set the visible conditions:
+      if ($this_webform_type != 'webform_ab') {
+        $form[$condition][$plugin_key]['#states']['visible'][$target][] = array(
+          'value' => str_replace('_ab', '', $this_webform_type));
+      }
+      // Set the invisible conditions:
+      foreach ($webform_types as $webform_type => $type_label) {
+        if ($webform_type . '_ab' != $this_webform_type && $this_webform_type != 'webform_ab') {
+          $form[$condition][$plugin_key]['#states']['invisible'][$target][] = array(
+            'value' => $webform_type);
+        }
+      }
     }
   }
 
@@ -489,7 +526,7 @@ function webform_ab_node_delete($node) {
       $webform_types = array('webform');
     }
 
-    // If this is a webform node, delete A/B test records
+    // If this is a webform node, delete Multivariate test records
     if (in_array($node->type, $webform_types)) {
       db_delete('webform_ab_forms')
         ->condition('webform_nid', $node->nid)
@@ -506,7 +543,7 @@ function webform_ab_node_delete($node) {
 
 /**
  * Implements hook_insert().
- * Save new Webform A/B Test nodes. Just calls webform_ab_update
+ * Save new Webform Multivariate Test nodes. Just calls webform_ab_update
  */
 function webform_ab_insert($node) {
   return webform_ab_update($node, TRUE);
@@ -514,7 +551,7 @@ function webform_ab_insert($node) {
 
 /**
  * Implements hook_update().
- * Update existing or insert new Webform A/B Test nodes
+ * Update existing or insert new Multivariate Test nodes
  */
 function webform_ab_update($node, $is_insert = FALSE) {
   $record = array(
@@ -658,9 +695,22 @@ function webform_ab_view(&$node, $view_mode) {
   // overview page instead of directing them to one of the webforms in the test
   // If view_webform is set in the URL, don't show the overview
   if (node_access('update', $node) && (empty($_GET['view_webform']) || $_GET['view_webform'] != 1)) {
+    // Remove the node clone link for webform_ab notes if the node_clone module is enabled:
+    if (module_exists('clone')) {
+      $js = '
+        (function ($) {
+          $("ul.action-links").each(function () {
+            if ($(this).text().indexOf("Clone") >= 0) {
+              $(this).hide();
+            }
+          });
+        })(jQuery);
+      ';
+      drupal_add_js($js, array('type' => 'inline', 'scope' => 'footer', 'cache' => TRUE));
+    }
     $type = node_type_get_type($node);
     $node->content['description'] = array(
-      '#markup' => 'This is the admin overview of the A/B Test. If an unprivileged or anonymous user visits this same URL, ' .
+      '#markup' => 'This is the admin overview of the Multivariate Test. If an unprivileged or anonymous user visits this same URL, ' .
         'they will be redirected to one of the webforms within the test.',
       '#weight' => -10,
       '#prefix' => '<p>',
@@ -675,7 +725,7 @@ function webform_ab_view(&$node, $view_mode) {
     );
     $node->content['test_settings'] = array(
       '#type' => 'fieldset',
-      '#title' => t('A/B Test Settings'),
+      '#title' => t('Multivariate Test Settings'),
       '#collapsible' => FALSE,
       '#collapsed' => FALSE,
       '#weight' => 0,
@@ -821,8 +871,19 @@ function webform_ab_view(&$node, $view_mode) {
     }
   }
   else {
+    // If this user is anonymous and no tests are active then prevent viewing of the webform_an node view page:
+    global $user;
+    if (!$user->uid) {
+      drupal_set_message('The page you are trying to access is not available at this time.', 'warning');
+      if (drupal_is_front_page()) {
+        drupal_set_title('Access denied');
+      }
+      else {
+        drupal_goto('<front>');
+      }
+    }
     $node->content['no_webforms'] = array(
-      '#value' => t('There are no webforms in this A/B test.'),
+      '#value' => t('There are no webforms in this Multivariate test.'),
     );
     return $node;
   }
@@ -859,7 +920,7 @@ function _webform_ab_has_winner_already($node_or_nid) {
 /**
  * Implements hook_webform_ab_valid_webforms().
  * Return an array of webforms of the given form type that may be included in an
- * A/B Test.
+ * Multivariate Test.
  */
 function webform_ab_webform_ab_valid_webforms($webform_types) {
   if ($webform_types == 'webform') {
@@ -876,7 +937,7 @@ function webform_ab_webform_ab_valid_webforms($webform_types) {
 
 
 /**
- * Handles A/B test form delete confirmation on the admin content page
+ * Handles Multivariate test form delete confirmation on the admin content page
  * when bulk deletion is attempted:
  */
 function webform_ab_form_node_admin_content_alter(&$form, &$form_state, $form_id) {
@@ -884,7 +945,7 @@ function webform_ab_form_node_admin_content_alter(&$form, &$form_state, $form_id
     return;
   }
 
-  // Gather a list of any A/B form actively being tested:
+  // Gather a list of any Multivariate form actively being tested:
   $webform_types = webform_variable_get('webform_node_types');
   $webform_types_sql_list = '\'' . implode('\' , \'', array_filter($webform_types)) . '\'';
   $forms_being_ab_tested = array();
@@ -928,7 +989,7 @@ function webform_ab_form_node_admin_content_alter(&$form, &$form_state, $form_id
     t('The') . ' ' . format_plural(count($distinct_webform_nids), 'node', 'following nodes') . ' ' .
     t('you are attempting to delete') . ' ' .
     format_plural(count($distinct_webform_nids), 'belongs', 'belong') . ' ' . t('to') . ' ' .
-    format_plural(count($distinct_webform_ab_nids), 'an active A/B test', '@count active A/B tests') . ' ' .
+    format_plural(count($distinct_webform_ab_nids), 'an active Multivariate test', '@count active Multivariate tests') . ' ' .
     t('and deletion will result in a loss of data:') . '<br /><br />';
   foreach ($webforms_testing_data as $this_webform_data) {
     $webform_ab_link = l($this_webform_data->webform_ab_title,
@@ -937,7 +998,7 @@ function webform_ab_form_node_admin_content_alter(&$form, &$form_state, $form_id
     );
     $webform_link = l(strip_tags($deletion_nodes_nid_title_map[$this_webform_data->webform_nid]),
       'node/' . $this_webform_data->webform_nid, array('attributes' => array('target' => '_blank')));
-    $description .= $webform_link . ' ' . t('is part of') . ' ' . t('Webform A/B Test') . ' ' .
+    $description .= $webform_link . ' ' . t('is part of') . ' ' . t('Multivariate Test') . ' ' .
       $webform_ab_link . '.<br />';
   }
   $description .= '<br />';
@@ -952,7 +1013,7 @@ function webform_ab_form_node_admin_content_alter(&$form, &$form_state, $form_id
     '#type' => 'checkbox',
     '#title' => t('I understand') . ' ' .
       format_plural(count($distinct_webform_nids), 'this node\'s', 'these nodes\'') . ' ' .
-      t('A/B test data will be lost upon deletion.'),
+      t('Multivariate test data will be lost upon deletion.'),
   );
   $form['actions']['submit']['#states'] = array(
     'invisible' => array(
@@ -970,7 +1031,7 @@ function webform_ab_form_node_admin_content_alter(&$form, &$form_state, $form_id
  * Require further confirmation if a user reaches the "delete confirmation" page
  * for a webform or donation_form node that is part of a webform_ab node.
  *
- * This is to prevent A/B testing data from being unintentionally lost.
+ * This is to prevent Multivariate testing data from being unintentionally lost.
  */
 function webform_ab_form_node_delete_confirm_alter(&$form, $form_state) {
   if (!isset($form['#node']->nid) || !isset($form['#node']->type) ||
@@ -994,13 +1055,13 @@ function webform_ab_form_node_delete_confirm_alter(&$form, $form_state) {
       '#type' => 'fieldset',
       '#weight' => -9999, // Ensure this warning appears at the top of the form.
       '#description' => t('WARNING:') . '<br />' .
-        t('The form you are attempting to delete is part of an ' .
-        'A/B test, ') . $webform_ab_link . t(', and deleting it will result in a loss of ' .
+        t('The form you are attempting to delete is part of a ' .
+        'Multivariate test, ') . $webform_ab_link . t(', and deleting it will result in a loss of ' .
         'the data associated with its use within this test!'),
     );
     $form['confirm_ab_test_form_deletion']['ab_confirmation'] = array(
       '#type' => 'checkbox',
-      '#title' => t('I understand this node\'s A/B test data will be lost upon deletion.'),
+      '#title' => t('I understand this node\'s Multivariate test data will be lost upon deletion.'),
     );
     // Hide the submit button until the user clicks the checkbox to confirm deletion:
     $form['actions']['submit']['#states'] = array(
@@ -1011,6 +1072,19 @@ function webform_ab_form_node_delete_confirm_alter(&$form, $form_state) {
         ':input[name="ab_confirmation"]' => array('checked' => TRUE),
       ),
     );
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ * Hide reference to webform_ab on node clone settings, since it is not compatible:
+ */
+function webform_ab_form_clone_settings_alter(&$form, &$form_state, $form_id) {
+  if (isset($form['publishing']['clone_reset_webform_ab'])) {
+    unset($form['publishing']['clone_reset_webform_ab']);
+  }
+  if (isset($form['omit']['clone_omitted']['#default_value']['webform_ab'])) {
+    unset($form['omit']['clone_omitted']['#options']['webform_ab']);
   }
 }
 
@@ -1113,14 +1187,14 @@ function webform_ab_webform_submit($form, &$form_state) {
       }
     }
 
-    // Check if a form should be declared the winner in this A/B Test
+    // Check if a form should be declared the winner in this Multivariate Test
     _webform_ab_check_for_win($form_state['values']['test_nid']);
   }
 }
 
 /**
  * Implements hook_webform_ab_validate_conversion().
- * If the A/B Test is using standard webforms, just return TRUE, since a form
+ * If the Multivariate Test is using standard webforms, just return TRUE, since a form
  * submission counts as a conversion
  */
 function webform_ab_webform_ab_validate_conversion($webform_types, $test_node, $form_state) {
@@ -1130,13 +1204,13 @@ function webform_ab_webform_ab_validate_conversion($webform_types, $test_node, $
 }
 
 /**
- * Check if the given A/B Test has a winning webform
+ * Check if the given Multivariate Test has a winning webform
  *
  * This function checks to see if a webform has already been declared the
  * winner.
  *
  * If not, it calls the win check function on each win condition plugin that's
- * in use on this A/B Test
+ * in use on this Multivariate Test
  */
 function _webform_ab_check_for_win($test_nid) {
   // Check if there is already a winner, and gather a list of forms that have
@@ -1159,7 +1233,7 @@ function _webform_ab_check_for_win($test_nid) {
     // before checking the win conditions
     $meets_thresholds = TRUE;
     foreach ($node->included_webforms as $webform_nid => $details) {
-      // Check each threshold in use on the A/B Test node
+      // Check each threshold in use on the Multivariate Test node
       foreach ($node->win_thresholds as $plugin_key => $plugin_config) {
         // Load the plugin details from
         $plugin = _webform_ab_get_win_threshold_plugin($plugin_key);
@@ -1183,7 +1257,7 @@ function _webform_ab_check_for_win($test_nid) {
 
     // Check win conditions each included webform
     foreach ($node->included_webforms as $webform_nid => $details) {
-      // Check each condition in use on the A/B Test node
+      // Check each condition in use on the Multivariate Test node
       foreach ($node->win_conditions as $plugin_key => $plugin_config) {
         // Load the plugin details from
         $plugin = _webform_ab_get_win_condition_plugin($plugin_key);
@@ -1210,13 +1284,13 @@ function _webform_ab_check_for_win($test_nid) {
  * Process a test-winning form
  *
  * @param $test_node
- *   Webform A/B test node
+ *   Webform Multivariate test node
  * @param $webform_node_details
  *   Array with details about the winning webform
  */
 function _webform_ab_process_winner($test_node, $webform_node_details) {
   // Log the win
-  watchdog('webform_ab', 'Winner declared in A/B test !testname: !winner',
+  watchdog('webform_ab', 'Winner declared in Multivariate test !testname: !winner',
     array(
     '!testname' => l($test_node->title, 'node/' . $test_node->nid),
     '!winner' => l($webform_node_details['title'], 'node/' . $webform_node_details['webform_nid']),

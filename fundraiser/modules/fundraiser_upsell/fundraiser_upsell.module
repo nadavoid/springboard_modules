@@ -427,9 +427,9 @@ function fundraiser_upsell_page_alter(&$page) {
     if ($did !== FALSE) {
       $donation = fundraiser_donation_get_donation($did);
       if (!empty($donation->status) && $donation->status == 'payment_received') {
-        // Make sure the payment method used supports recurring.
+        // Make sure the payment method used supports upsell.
         $info = _fundraiser_get_donation_gateway($donation->did);
-        if (_fundraiser_sustainers_supports_recurring($info['allow_recurring'], $donation->donation['payment_method'])) {
+        if (fundraiser_upsell_gateway_supports_upsell($info, $donation->donation['payment_method'])) {
           // Hide the modal if the donation amount matches no brackets:
           if (!isset($donation->donation['amount'])
             || !fundraiser_upsell_find_suggested_amount($donation->donation['amount'])) {
@@ -844,7 +844,7 @@ function fundraiser_upsell_node_insert($node) {
     $record = fundraiser_upsell_node_record($node);
     drupal_write_record('fundraiser_upsell', $record);
 
-    // If we have email wrappers settings then we're coming from a form,
+    // If we have email templates settings then we're coming from a form,
     // so we need to save them.
     if (isset($node->fundraiser_upsell['email_wrappers']) && is_array($node->fundraiser_upsell['email_wrappers'])) {
       fundraiser_upsell_save_email_wrapper_settings($node->nid, $node->fundraiser_upsell['email_wrappers']);
@@ -917,7 +917,7 @@ function fundraiser_upsell_node_load($nodes, $types) {
  * Implements hook_node_delete().
  */
 function fundraiser_upsell_node_delete($node) {
-  // Delete the email wrapper settings.
+  // Delete the email template settings.
   $params = array(
     'module' => 'fundraiser_upsell',
     'delta' => 'nid_' . $node->nid,
@@ -1087,6 +1087,10 @@ function fundraiser_upsell_modal($node, $did, $ajax) {
     // Create a better close button for the preview.
     if($form_state['preview'] == TRUE) {
       $output[0]['output'] .= '<div class="close-modal-wrapper" style="background-color:#000; padding: .2em; color: #000; position: absolute; top: -13px; right: -10px; opacity: .4;"><a href="#" class="ctools-close-modal" style="color: #fff;">Close Preview</a></div>';
+    }
+    // Slightly different close button for the real modal.
+    else {
+      $output[0]['output'] .= '<div class="close-modal-wrapper top-close"><a href="#" class="ctools-close-modal">Close</a></div>';
     }
 
     if (!empty($form_state['executed'])) {
@@ -1386,6 +1390,30 @@ function fundraiser_upsell_donation_is_offsite_recurring($donation) {
   $info = _fundraiser_get_donation_gateway($donation->did);
   if (_fundraiser_sustainers_offsite_recurring($info['offsite_recurring'], $donation->donation['payment_method'])) {
 
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/**
+ * Determine if a fundraiser gateway supports upsell for a given payment method.
+ *
+ * @param array $info
+ *   Fundraiser gateway info array.
+ * @param string $payment_method
+ *   Payment method, such as "credit".
+ *
+ * @return bool
+ *   TRUE if gateway supports upsell for the payment method.
+ */
+function fundraiser_upsell_gateway_supports_upsell($info, $payment_method) {
+  // Gateway supports upsell if it supports recurring and is not offsite
+  // recurring for the payment method.
+  $supports_recurring = _fundraiser_sustainers_supports_recurring($info['allow_recurring'], $payment_method);
+  $is_offsite_recurring = _fundraiser_sustainers_offsite_recurring($info['offsite_recurring'], $payment_method);
+
+  if ($supports_recurring && !$is_offsite_recurring) {
     return TRUE;
   }
 

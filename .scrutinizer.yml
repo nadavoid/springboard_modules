@@ -1,8 +1,10 @@
 build:
     environment:
         timezone: 'US/Eastern'
+        selenium:
+            version: 2.53
         php:
-            version: 5.4.30
+            version: 5.6.16
             ini:
                 allow_url_fopen: "On"
                 allow_url_include: "Off"
@@ -59,8 +61,8 @@ build:
             - 'sudo composer self-update'
             - 'if [ -n "${GITHUB_ACCESS_TOKEN}" ]; then composer global config github-oauth.github.com $GITHUB_ACCESS_TOKEN; fi'
             - 'composer global require --update-no-dev drush/drush:6.5.0'
-            - 'wget http://selenium-release.storage.googleapis.com/2.45/selenium-server-standalone-2.45.0.jar'
-            - "xvfb-run -a -s '-screen 0 1024x768x16' java -Xmx512m -jar selenium-server-standalone-2.45.0.jar >> artifacts/selenium.log 2>&1 &"
+#            - 'wget http://selenium-release.storage.googleapis.com/2.53/selenium-server-standalone-2.53.0.jar'
+#            - "xvfb-run -a -s '-screen 0 1024x768x16' java -Xmx512m -jar selenium-server-standalone-2.53.0.jar >> artifacts/selenium.log 2>&1 &"
             - 'mysql -uroot -e "CREATE DATABASE springboard"'
             - 'sudo apt-get install ack-grep -y'
     project_setup:
@@ -69,7 +71,7 @@ build:
             - 'find . -type f \( -name "*.php" -or -name "*.module" -or -name "*.install" -or -name "*.inc" -or -name "*.profile" -or -name "*.test" -or -name "*.theme" \) -print0 | xargs -0 -n1 -P8 php -l'
             # Negate the return value of ack, because not finding these
             # strings should be a pass.
-            - '! ack-grep -i "<<<<<<<|^=======$|>>>>>>>|dpm\(|dsm\(|var_dump\(|var_export\(|debug\(|dpq|dvm|dpr\(|kpr|dvr|kprint_r|dprint_r|devel_render|ddebug_backtrace|debug_backtrace|debug_print_backtrace|debug_to_file" --ignore-file=ext:txt,html,yml,js'
+            - '! ack-grep -i "<<<<<<<|^=======$|>>>>>>>|dpm\(|dsm\(|var_dump\(|var_export\(|[^set]debug\(|dpq|dvm|dpr\(|kpr|dvr|kprint_r|dprint_r|devel_render|ddebug_backtrace|debug_backtrace|debug_print_backtrace|debug_to_file" --ignore-file=ext:txt,html,yml,js'
             - 'cd'
             - 'mv build repo'
             - 'git clone --depth 1 --branch 7.x-4.x https://github.com/JacksonRiver/Springboard-Build.git build-tools'
@@ -78,6 +80,7 @@ build:
             - 'cd ~/build'
             - 'chmod -R 777 sites/default'
             - "drush si sbsetup install_configure_form.update_status_module='array(FALSE,FALSE)' --account-name=admin --account-pass=admin --account-mail=david.barbarisi@jacksonriver.com --clean-url=1 --site-mail=david.barbarisi@jacksonriver.com --site-name=4x --db-url=mysql://root:@127.0.0.1/springboard --yes"
+            - 'drush dis toolbar -y'
             - 'drush -l http://local.dev cc all'
             - 'drush -l http://local.dev sql-dump --result-file=../dump.sql'
             - 'cd'
@@ -93,9 +96,9 @@ build:
             - 'cd ~/build'
             - 'drush -l http://local.dev status'
             - 'curl --max-time 20 http://local.dev | grep "DONATE"'
-            - 'drush -l http://local.dev en springboard_tests -y'
-            - 'drush -l http://local.dev sb-test-run springboard --xml=../artifacts'
-            - 'cd ~/acceptance-tests && ./vendor/bin/codecept run --html --xml -vv'
+#            - 'if [[ "$ALLOWED_BRANCHES" =~ "$SCRUTINIZER_BRANCH" ]]; then drush -l http://local.dev en springboard_tests -y ; fi'
+#            - 'if [[ "$ALLOWED_BRANCHES" =~ "$SCRUTINIZER_BRANCH" ]]; then drush -l http://local.dev sb-test-run springboard --xml=../artifacts ; fi'
+            - 'if [[ "$ALLOWED_BRANCHES" =~ "$SCRUTINIZER_BRANCH" ]]; then cd ~/acceptance-tests && ./vendor/bin/codecept run -v ; fi'
 
 filter:
     paths:
@@ -113,6 +116,14 @@ filter:
 tools:
     js_hint:
         enabled: true
+        use_native_config: false
+        config:
+            eqnull: true
+            asi: true
+            laxbreak: true
+            evil: true
+            funcscope: true
+            eqeqeq: false
         filter:
             paths:
                 - '*.js'
@@ -129,30 +140,30 @@ tools:
             excluded_paths: ['vendor/*', 'app/*', 'web/*']
         config:
             code_size_rules:
-                cyclomatic_complexity:  true
-                npath_complexity:     true
-                excessive_method_length:  true
-                excessive_class_length:  true
+                cyclomatic_complexity:  false
+                npath_complexity:     false
+                excessive_method_length:  false
+                excessive_class_length:  false
                 excessive_parameter_list:  true
-                excessive_public_count:  true
-                too_many_fields:      true
-                too_many_methods:     true
-                excessive_class_complexity:  true
+                excessive_public_count:  false
+                too_many_fields:      false
+                too_many_methods:     false
+                excessive_class_complexity:  false
             design_rules:
-                exit_expression:      true
+                exit_expression:      false
                 eval_expression:      true
                 goto_statement:       true
                 number_of_class_children:  true
                 depth_of_inheritance:  true
                 coupling_between_objects:  true
             unused_code_rules:
-                unused_private_field:  true
-                unused_local_variable:  true
-                unused_private_method:  true
+                unused_private_field:  false
+                unused_local_variable:  false
+                unused_private_method:  false
                 unused_formal_parameter:  false
             naming_rules:
                 short_variable:
-                    minimum:              3
+                    minimum:              1
                 long_variable:
                     maximum:              40
                 short_method:
@@ -168,7 +179,7 @@ tools:
                 camel_case_parameter_name:  false
                 camel_case_variable_name:  false
     php_code_sniffer:
-        enabled: true
+        enabled: false
         extensions:
             - php
             - module
@@ -184,6 +195,7 @@ tools:
             encoding: utf8
             standard: Drupal
     php_cpd:
+        enabled: false
         names:
             - '*.php'
             - '*.module'
@@ -205,6 +217,7 @@ tools:
             - '*.test'
             - '*.theme'
     php_pdepend:
+        enabled: false
         suffixes:
             - php
             - module

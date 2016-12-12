@@ -225,7 +225,7 @@ function sba_quicksign_form_validate(&$form, &$form_state) {
           $profile[$webform_field] = !empty($items[0]['value']) ? $items[0]['value'] : FALSE;
         }
         else {
-          // Special handling for mail
+          // Special handling for mail.
           if (valid_email_address($mail)) {
             $profile['mail'] = $mail;
           }
@@ -392,12 +392,16 @@ function sba_quicksign_form_node_form_alter(&$form, &$form_state, $form_id) {
       '#description' => t('Label text to display above the quick sign form.'),
       '#default_value' => isset($settings['quicksign_label']) ? $settings['quicksign_label'] : 'Already a supporter?',
     );
-
     $form['sba_quicksign']['quicksign_button_text'] = array(
       '#type' => 'textfield',
       '#title' => t('Submit button text'),
       '#description' => t('Change the text on the quick sign form submit button.'),
       '#default_value' => isset($settings['quicksign_button_text']) ? $settings['quicksign_button_text'] : t('Sign now'),
+      '#states' => array(
+        'required' => array(
+          ':input[name="quicksign_enabled"]' => array('checked' => TRUE),
+        ),
+      ),
     );
 
     $default_desc = ($node->type == 'sba_message_action' || $node->type == 'sba_social_action') ? t('If we already have your information, just enter your email address and click to send this message now.') : t('If we already have your information, just enter your email address and click to sign this petition now.');
@@ -408,6 +412,20 @@ function sba_quicksign_form_node_form_alter(&$form, &$form_state, $form_id) {
       '#default_value' => isset($settings['quicksign_description']) ? $settings['quicksign_description'] : $default_desc,
       '#format' => isset($settings['quicksign_description_format']) ? $settings['quicksign_description_format'] : NULL,
     );
+
+    $form['#validate'][] = 'sba_quicksign_node_form_validate';
+  }
+}
+
+/**
+ * Make quicksign button text required.
+ *
+ * @param $form
+ * @param $form_state
+ */
+function sba_quicksign_node_form_validate($form, &$form_state) {
+  if ($form_state['values']['quicksign_enabled'] == 1 && empty($form_state['values']['quicksign_button_text'])) {
+    form_set_error('quicksign_button_text', t('Quick Sign submit button text is required.'));
   }
 }
 
@@ -801,4 +819,3 @@ function sba_quicksign_clone_node_alter(&$node, $context) {
     $node->quicksign_button_text = $original_settings['quicksign_button_text'];
   }
 }
-

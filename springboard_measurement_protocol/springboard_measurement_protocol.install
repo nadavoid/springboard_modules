@@ -1,0 +1,16 @@
+<?php
+/**
+ * @file
+ * Install file for springboard_measurement_protocol.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function springboard_measurement_protocol_install() {
+  // If the googleanalytics module is enabled, copy the GA tracking variable and
+  // set it as a variable for our module.
+  if (module_exists('googleanalytics')) {
+    variable_set('springboard_measurement_protocol_ga_account', variable_get('googleanalytics_account', 'UA-'));
+  }
+}

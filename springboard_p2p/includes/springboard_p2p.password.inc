@@ -125,13 +125,12 @@ function springboard_p2p_request_password_reset_form_submit($form, &$form_state)
 /**
  * Form callback for the custom password reset page.
  */
-function springboard_p2p_set_password_form($form, &$form_state, $uid, $timestamp, $hashed_pass) {
+function springboard_p2p_set_password_form($form, &$form_state, $uid, $timestamp, $hashed_pass, $action = NULL) {
 
   global $user;
-
   $form = array();
   $show_password_form = FALSE;
-
+  
   // When processing the one-time login link, we have to make sure that a user
   // isn't already logged in.
   if ($user->uid) {
@@ -180,23 +179,44 @@ function springboard_p2p_set_password_form($form, &$form_state, $uid, $timestamp
         );
 
       }
-      elseif ($account->uid && $timestamp >= $account->login && $timestamp <= $current && $hashed_pass == user_pass_rehash($account->pass, $timestamp, $account->login)) {
-
-        // Set the new user.
-        $user = $account;
-        // user_login_finalize() also updates the login timestamp of the
-        // user, which invalidates further use of the one-time login link.
-        user_login_finalize();
-
-        // Add the p2p role if the user doesn't already have it.
-        if (!springboard_p2p_user_is_registered_for_p2p($user->uid)) {
-          springboard_p2p_register_user_for_p2p($user->uid);
+      elseif ($account->uid && $timestamp >= $account->login && $timestamp <= $current && $hashed_pass == user_pass_rehash($account->pass, $timestamp, $account->login, $account->uid)) {
+        // First stage is a confirmation form, then login
+        if ($action == 'login') {
+          // Set the new user.
+          $user = $account;
+          // user_login_finalize() also updates the login timestamp of the
+          // user, which invalidates further use of the one-time login link.
+          user_login_finalize();
+  
+          // Add the p2p role if the user doesn't already have it.
+          if (!springboard_p2p_user_is_registered_for_p2p($user->uid)) {
+            springboard_p2p_register_user_for_p2p($user->uid);
+          }
+  
+          watchdog('user', 'User %name used one-time login link at time %timestamp.', array('%name' => $account->name, '%timestamp' => $timestamp));
+          drupal_set_message(t('You have just used your one-time login link. It is no longer necessary to use this link to log in. Please set your password.'));
+  
+          $show_password_form = TRUE;
+          
+          // Include this from user.pages.inc: Let the user's password be changed without the current password check.
+          $token = drupal_random_key();
+          $_SESSION['pass_reset_' . $user->uid] = $token;
+          // Also redirect as in user.pages.inc so that the form is rebuilt with the proper token.
+          drupal_goto('p2p/set_password/' . $user->uid . "/$timestamp/$hashed_pass", array('query' => array('pass-reset-token' => $token)));
         }
-
-        watchdog('user', 'User %name used one-time login link at time %timestamp.', array('%name' => $account->name, '%timestamp' => $timestamp));
-        drupal_set_message(t('You have just used your one-time login link. It is no longer necessary to use this link to log in. Please set your password.'));
-
-        $show_password_form = TRUE;
+        else {
+          
+          // Force user interaction. Automatically logging in the user via a one-time link is problematic for
+          // e-mail clients that attempt to render previews of urls--this will invalidated the token before the user
+          // has an opportunity to reset their password.
+          $form['message'] = array('#markup' => t('<p>This is a one-time login for %user_name and will expire on %expiration_date.</p><p>Click on this button to log in to the site and change your password.</p>', array('%user_name' => $account->name, '%expiration_date' => format_date($timestamp + $timeout))));
+          $form['help'] = array('#markup' => '<p>' . t('This login can be used only once.') . '</p>');
+          $form['actions'] = array('#type' => 'actions');
+          $form['actions']['submit'] = array('#type' => 'submit', '#value' => t('Log in'));
+          $form['#action'] = url("p2p/set_password/$uid/$timestamp/$hashed_pass/login");
+          
+          return $form;
+        }
 
       }
       else {
@@ -217,6 +237,22 @@ function springboard_p2p_set_password_form($form, &$form_state, $uid, $timestamp
   }
 
   if ($show_password_form && isset($account)) {
+    // To skip the current password field, the user must have logged in via a
+    // one-time link and have the token in the URL.
+    $pass_reset = isset($_SESSION['pass_reset_' . $account->uid]) && isset($_GET['pass-reset-token']) && ($_GET['pass-reset-token'] == $_SESSION['pass_reset_' . $account->uid]);
+    $protected_values = array();
+    $current_pass_description = '';
+    // The user may only change their own password without their current
+    // password if they logged in via a one-time login link.
+    if (!$pass_reset) {
+      $form['account'] = array(
+        '#type' => 'container',
+      );
+      $protected_values['pass'] = t('Password');
+      $request_new = l(t('Request new password'), 'p2p/password', array('attributes' => array('title' => t('Request new password via e-mail.'))));
+      $current_pass_description = t('Enter your current password to change the %pass. !request_new.', array('%pass' => $protected_values['pass'], '!request_new' => $request_new));
+    }
+    
     $form['#user'] = $account;
     $form_state['user'] = $account;
 
@@ -232,7 +268,26 @@ function springboard_p2p_set_password_form($form, &$form_state, $uid, $timestamp
       '#description' => t('Provide a password for the new account in both fields.'),
       '#required' => TRUE,
     );
-
+       // The user must enter their current password to change to a new one.
+    if ($user->uid == $account->uid && !$pass_reset) {
+      $form['account']['current_pass_required_values'] = array(
+        '#type' => 'value',
+        '#value' => $protected_values,
+      );
+      $form['account']['current_pass'] = array(
+        '#type' => 'password',
+        '#title' => t('Current password'),
+        '#size' => 25,
+        '#access' => !empty($protected_values),
+        '#description' => $current_pass_description,
+        '#weight' => -5,
+        // Do not let web browsers remember this password, since we are trying
+        // to confirm that the person submitting the form actually knows the
+        // current one.
+        '#attributes' => array('autocomplete' => 'off'),
+      );
+      $form['#validate'][] = 'user_validate_current_pass';
+    }
     $form['actions'] = array('#type' => 'actions');
     $form['actions']['submit'] = array('#type' => 'submit', '#value' => t('Set password'));
 

@@ -1,5 +1,5 @@
-name = Fundraiser A/B Test
-description = "Adds special functionality to the Webform A/B Test module for use with Fundraising forms."
+name = Fundraiser Multivariate Testing
+description = "Adds special functionality to the Multivariate Testing module for use with Fundraising forms."
 core = 7.x
 version = 7.x-4.x-dev
 dependencies[] = webform_ab

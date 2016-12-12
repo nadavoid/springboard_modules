@@ -265,6 +265,17 @@ function sba_social_action_node_insert($node) {
   if ($node->type == 'sba_social_action') {
     module_load_include('inc', 'sba_social_action', 'includes/sba_social_action.components');
     sba_social_action_insert_components($node);
+    springboard_advocacy_node_form_post_save($node);
+  }
+}
+
+
+/**
+ * Implements hook_node_update().
+ */
+function sba_social_action_node_update($node) {
+  if ($node->type == 'sba_social_action') {
+    springboard_advocacy_node_form_post_save($node);
   }
 }
 
@@ -455,8 +466,6 @@ function sba_social_action_form_sba_social_action_node_form_alter(&$form, &$form
     '#weight' => -4,
   );
   $form['#attached']['css'][] = drupal_get_path('module', 'sba_social_action') . '/css/sba-social-node-form.css';
-  $form['actions']['submit']['#validate'][] = 'sba_social_action_form_sba_social_action_node_form_validate';
-  $form['actions']['submit']['#submit'][] = 'sba_social_action_form_sba_social_action_node_form_submit';
 
   // Hide field_sba_social_require_auth field if twitter configuration is not
   // complete at admin/config/services/advocacy.
@@ -467,56 +476,6 @@ function sba_social_action_form_sba_social_action_node_form_alter(&$form, &$form
     $form['field_sba_social_require_auth'][LANGUAGE_NONE]['#default_value'][0] = 0;
   }
 }
-
-/**
- * Force test mode on unpublished actions.
- *
- * @param $form
- * @param $form_state
- */
-function sba_social_action_form_sba_social_action_node_form_validate(&$form, &$form_state) {
-
-  // Require test_mode_email if test_mode is checked.
-//  $lang = $form['field_sba_test_mode']['#language'];
-//
-//  if ($form_state['values']['field_sba_test_mode'][$lang][0]['value'] == 0) {
-//    if ($form_state['values']['status'] == 0) {
-//      form_set_error("field_sba_test_mode", t('Test mode must be enabled for unpublished actions.'));
-//    }
-//  }
-}
-
-/**
- * Redirect to the messages tab instead of webform tab.
- *
- * @param $form
- * @param $form_state
- */
-function sba_social_action_form_sba_social_action_node_form_submit(&$form, &$form_state) {
-  $data = array(
-    'nid' => $form_state['values']['nid'],
-    'visibility' => $form_state['values']['show_participants']
-  );
-  $visibility = db_query('select visibility from {springboard_action_opt_in_block} WHERE nid=:nid', array(':nid' => $form_state['values']['nid']))->fetchCol();
-  if (empty($visibility)) {
-    drupal_write_record('springboard_action_opt_in_block', $data);
-  }
-  else {
-    drupal_write_record('springboard_action_opt_in_block', $data, 'nid');
-  }
-  $submit = array(
-    'nid' => $form_state['values']['nid'],
-    'submit_text' => $form_state['values']['social_submit_button_text']
-  );
-
-  drupal_write_record('webform', $submit, 'nid');
-
-  if (empty($form['#node']->nid)) {
-    $path = 'node/'.$form_state['nid'].'/messages';
-    $form_state['redirect'] = $path;
-  }
-}
-
 
 /**
  * Build redirect for multi-step form.

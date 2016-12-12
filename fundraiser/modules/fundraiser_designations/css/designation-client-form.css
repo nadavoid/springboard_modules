@@ -1,0 +1,125 @@
+fieldset#webform-component-designations legend {
+  margin-bottom: 0!important;
+}
+
+.designation-group-wrapper,
+.fundraiser-designation-cart-wrapper,
+.designation-addon-wrapper {
+  padding: 10px;
+  margin-bottom: 5px;
+}
+
+.designation-group-image {
+  float: left;
+  margin: 0 15px 15px 0;
+  max-width: 250px;
+}
+
+.designation-group-description {
+  margin: 0 15px;
+}
+
+.designation-group-funds-table-wrapper {
+  clear: left;
+}
+
+.designation-group-funds-table tr,
+.fundraiser-designation-cart-table tr,
+.designation-addon-funds-table tr {
+  background: inherit;
+}
+
+.designation-group-funds-table td, .fundraiser-designation-cart-table td, .designation-addon-funds-table td {
+  padding: 4px;
+}
+
+.designation-addon-funds-table div[id*="funds-placeholder"],
+.designation-group-funds-table div[id*="funds-placeholder"],
+.designation-group-funds-table div.form-type-select {
+  text-align: left;
+}
+
+.designation-group-funds-table td select {
+  margin: 0;
+  padding: 0;
+}
+
+.designation-addon-funds-table .control-group,
+.designation-group-funds-table .control-group {
+  float: left;
+  clear: none;
+  margin-right: 10px;
+  width: auto
+}
+
+.designation-addon-funds-table .control-group label,
+.designation-group-funds-table .control-group label {
+  margin-left: 4px;
+}
+
+#webform-component-designations div[class*="funds-quant"] {
+  width: auto!important;
+}
+
+#webform-component-designations select[name*="funds_quant"] {
+  width: 50px;
+}
+
+#webform-component-designations input[name*="fd_other"] {
+  width: 100px;
+}
+
+label[for*="fd-other"],
+label[for*="funds-quant"]{
+  float:left;
+  margin-right: 4px;
+}
+
+label[for*="funds-placeholder"] {
+  font-weight: bold;
+}
+
+.designation-addon-funds-table,
+.designation-group-funds-table,
+.fundraiser-designation-cart-table {
+  width: 100%;
+}
+
+td.fund-cancel {
+  color: red;
+  cursor: pointer;
+  width: 10px;
+}
+
+td.fund-amount, td.fund-amount-empty {
+  width: 100px;
+}
+
+tr.cart-fund-empty td:first-child {
+  width: 10px;
+}
+
+td.fund-name {
+  min-width: 200px;
+}
+
+tr.cart-fund-row {
+  border-bottom: 1px solid #ccc;
+}
+
+.designation-group-wrapper h4 {
+  font-weight: normal;
+}
+
+.designation-group-subheader h3 {
+  font-size: 20px;
+  font-weight: normal;
+}
+
+.error-message {
+  color: red;
+}
+
+.checkbox-locked {
+  font-weight: bold;
+}

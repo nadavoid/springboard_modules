@@ -144,7 +144,7 @@ function _sba_message_action_create_node_fields($update = false) {
       'label' => 'Body',
       'required' => 1,
       'settings' => array(
-        'display_summary' => 1,
+        'display_summary' => 0,
         'text_processing' => 1,
         'user_register_form' => FALSE,
       ),

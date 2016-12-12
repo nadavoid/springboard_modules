@@ -1,0 +1,88 @@
+<?php
+/**
+ * @file
+ * salesforce_line_item.module
+ */
+
+/**
+ * Implements hook_salesforce_mapping_map_fields_alter().
+ *
+ * Examines the context to see if it's a commerce_line_item
+ * entity that's being mapped. If so, iterate over the fields
+ * in the map and try to determine which fields represent the
+ * opportunity and product. When these fields are found replace
+ * their values w/ Springboard relationship tokens for replacement
+ * during syncing.
+ *
+ * In order for this system to work, the order_id and product_id 
+ * drupal fields must be mapped to the fields in the joining object
+ * that represent the opportunity and product. If configured correctly
+ * in Salesforce these will be reference fields.
+ *
+ * The biggest caveat here is that the commerce product type field
+ * must be mapped as that will tell us which entity type represents
+ * the product in the line item. This is crucial to generating the
+ * correct relationship token for the product.
+ */
+function salesforce_line_item_salesforce_mapping_map_fields_alter(&$fields, $context) {
+  // Used to store the fields that represent the opportunity object and product.
+  $opportunity_field = '';
+  $product_type_field = '';
+  $product_field = '';
+
+  // Only do this if the entity type being mapped is a line item.
+  if ($context['entity_type'] == 'commerce_line_item') {
+    // Loop over each mapped field looking for product_id, order_id, and product_type
+    foreach ($context['map']->field_mappings as $field_map) {
+      if ($field_map['drupal_field']['fieldmap_value'] == 'commerce_product:product_id' && 
+          $field_map['salesforce_field']['type'] == 'reference' && count($field_map['salesforce_field']['referenceTo'][0])) {
+        $product_field = $field_map['salesforce_field'];
+      }
+
+      if ($field_map['drupal_field']['fieldmap_value'] == 'order_id' && 
+          $field_map['salesforce_field']['type'] == 'reference' && count($field_map['salesforce_field']['referenceTo'][0])) {
+        $opportunity_field = $field_map['salesforce_field'];
+      }
+
+      if ($field_map['drupal_field']['fieldmap_value'] == 'commerce_product:type') {
+        $product_type_field = $field_map['salesforce_field'];
+      }
+    }
+
+    // Get the name of the product type entity.
+    $product_type = $fields[$product_type_field['name']];
+
+    // Override the field's value with a Springboard relationship token.
+    $fields[$opportunity_field['name']] = sprintf('[Opportunity:donation:%d]', $fields[$opportunity_field['name']]);
+    $fields[$product_field['name']] = sprintf('[%s:%s:%d]', $product_field['name'], $product_type, $fields[$product_field['name']]);
+  }
+  
+}
+
+/**
+ * Implements hook_entity_property_info_alter().
+ */
+function salesforce_line_item_entity_property_info_alter(&$info) {
+  // Move the product properties to the line item by default, this makes dealing with them more convenient.
+  $properties = array();
+
+  foreach ($info['commerce_line_item']['bundles'] as $bundle => $bundle_info) {
+    $bundle_info += array('properties' => array());
+    $properties += $bundle_info['properties'];
+  }
+
+  if (!empty($properties['commerce_product'])) {
+    $info['commerce_line_item']['properties']['commerce_product'] = $properties['commerce_product'];
+    $info['commerce_line_item']['properties']['commerce_product']['property info'] = $info['commerce_product']['properties'];
+  }
+}
+
+/**
+ * Implements hook_salesforce_mapping_entity_fields_alter().
+ */
+function salesforce_line_item_salesforce_mapping_entity_fields_alter(&$entity_fields, $entity_type, $entity_bundle_type) {
+  if ($entity_type == 'commerce_line_item' && $entity_bundle_type == 'designation') {
+    $entity_fields['Product']['commerce_product:product_id'] = 'Product ID';
+    $entity_fields['Product']['commerce_product:type'] = 'Product Type';
+  }
+}

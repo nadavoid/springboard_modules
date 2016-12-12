@@ -1161,3 +1161,25 @@ function _sb_social_list_share_enabled_market_source_fields() {
   }
   return $enabled_fields;
 }
+
+/**
+ * Implements hook_form_webform_client_form_alter().
+ */
+function sb_social_form_webform_client_form_alter(&$form, &$form_state, $form_id) {
+  $form['#validate'][] = 'sb_social_social_referer_field_validate';
+}
+
+/**
+ * Remove invalid values from social share field.
+ *
+ * @param $form
+ * @param $form_state
+ */
+function sb_social_social_referer_field_validate($form, &$form_state) {
+ if (!empty($form_state['values']['submitted']['social_referer_transaction'])) {
+   $is_number = ctype_digit((string) $form_state['values']['submitted']['social_referer_transaction']);
+   if (!$is_number) {
+     form_set_value($form['submitted']['social_referer_transaction'], '', $form_state);
+   }
+ }
+}

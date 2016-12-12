@@ -11,6 +11,50 @@
  */
 
 /**
+ * Implements hook_cron().
+ */
+function salesforce_log_cron(){
+  // Cleanup the salesforce_log_item table.
+  $row_limit = variable_get('salesforce_log_item_row_limit', 0);
+  // For row limit n, get the lid of the nth row in descending lid order.
+  // Counting the most recent n rows avoids issues with lid number sequences,
+  // e.g. auto_increment value > 1 or rows deleted directly from the table.
+  if ($row_limit > 0) {
+    $min_row = db_select('salesforce_log_item', 'i')
+      ->fields('i', array('lid'))
+      ->orderBy('lid', 'DESC')
+      ->range($row_limit - 1, 1)
+      ->execute()->fetchField();
+    // Delete all table entries older than the nth row, if nth row was found.
+    if ($min_row) {
+      db_delete('salesforce_log_item')
+        ->condition('lid', $min_row, '<')
+        ->execute();
+    }
+  }
+
+  // Cleanup the salesforce_log_batch table.
+  $row_limit = variable_get('salesforce_log_batch_row_limit', 0);
+  // For row limit n, get the bid of the nth row in descending bid order.
+  // Counting the most recent n rows avoids issues with bid number sequences,
+  // e.g. auto_increment value > 1 or rows deleted directly from the table.
+  if ($row_limit > 0) {
+    $min_row = db_select('salesforce_log_batch', 'b')
+      ->fields('b', array('bid'))
+      ->orderBy('bid', 'DESC')
+      ->range($row_limit - 1, 1)
+      ->execute()->fetchField();
+    // Delete all table entries older than the nth row, if nth row was found.
+    if ($min_row) {
+      db_delete('salesforce_log_batch')
+        ->condition('bid', $min_row, '<')
+        ->execute();
+    }
+  }
+
+}
+
+/**
  * Implements hook_entity_info().
  */
 function salesforce_log_entity_info() {

@@ -190,11 +190,15 @@ Drupal.behaviors.marketSourceFormPopulate = {
     // just Bing and Yahoo!. Google hides its search strings behind a redirect these days.
     if (/http(s?)\:\/\/search\.yahoo/.test(qs_keys['initial_referrer']['value'])) {
       var matches = /(\?|\&)p\=([^\&]+)/.exec(qs_keys['initial_referrer']['value']);
-      qs_keys['search_string']['value'] = decodeURIComponent(matches[2].replace(/\+/g, '%20'));
+      if (matches != null && typeof(matches[2]) !== 'undefined') {
+        qs_keys['search_string']['value'] = decodeURIComponent(matches[2].replace(/\+/g, '%20'));
+      }
     }
     else if (/http(s?)\:\/\/www\.bing/.test(qs_keys['initial_referrer']['value'])) {
       var matches = /(\?|\&)q\=([^\&]+)/.exec(qs_keys['initial_referrer']['value']);
-      qs_keys['search_string']['value'] = decodeURIComponent(matches[2].replace(/\+/g, '%20'));
+      if (matches != null && typeof(matches[2]) !== 'undefined') {
+        qs_keys['search_string']['value'] = decodeURIComponent(matches[2].replace(/\+/g, '%20'));
+      }
     }
   }
   if (typeof qs_keys['user_agent'] !== 'undefined') {

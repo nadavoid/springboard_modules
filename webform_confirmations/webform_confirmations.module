@@ -482,7 +482,7 @@ function _webform_confirmation_send_on_settings($form_state) {
  * Send confirmation mail.
  *
  * @param $settings
- * Email Wrappers settings array.
+ * Email templates settings array.
  *
  * @param $donation
  * Fundraiser donation object.
@@ -517,7 +517,7 @@ function _webform_confirmation_send_confirmation_mail_helper($settings, $donatio
   module_load_include('inc', 'webform', 'includes/webform.submissions');
   $message = $params['message'];
   $params['donation'] = $donation;
-  // Email Wrappers handles webform token replacement so all we need to do is pick off order tokens.
+  // Email Templates handles webform token replacement so all we need to do is pick off order tokens.
   $token_set = array(
     'node' => $node,
     'donation' => $donation,

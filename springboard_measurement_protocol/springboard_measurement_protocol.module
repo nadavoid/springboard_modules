@@ -1,0 +1,183 @@
+<?php
+/**
+ * @file
+ * Module file for springboard_measurement_protocol.
+ */
+
+// @codingStandardsIgnoreStart
+/**
+ * For older versions of PHP (< 5.5.19, < 5.6.3), we need to manually define
+ * this constant.
+ */
+if (!defined('CURL_SSLVERSION_TLSv1_2')) {
+  define('CURL_SSLVERSION_TLSv1_2', 6);
+}
+// @codingStandardsIgnoreEnd
+
+/**
+ * Implements hook_menu().
+ */
+function springboard_measurement_protocol_menu() {
+  $items['admin/config/system/springboard-measurement-protocol'] = array(
+    'title' => 'Springboard Measurement Protocol',
+    'description' => "Google's Measurement Protocol integration.",
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('springboard_measurement_protocol_admin'),
+    'access arguments' => array('administer springboard measurement_protocol'),
+    'file' => 'includes/springboard_measurement_protocol.admin.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_springboard_admin_menu_items_alter().
+ */
+function springboard_measurement_protocol_springboard_admin_admin_menu_items_alter(&$items) {
+  // Add a menu item for the admin page.
+  $items['admin/springboard/marketing-analytics']['_children']['admin/springboard/measurement-protocol'] = array(
+    'link_path' => 'admin/config/system/springboard-measurement-protocol',
+    'link_title' => t('Measurement Protocol'),
+    'menu_name' => 'springboard_admin_menu',
+    'expanded' => 1,
+    'customized' => 1,
+    'weight' => 20,
+  );
+}
+
+/**
+ * Implements hook_commerce_paypal_ipn_process().
+ */
+function springboard_measurement_protocol_commerce_paypal_ipn_process($order, $payment_method, $ipn) {
+  if (variable_get('springboard_measurement_protocol_paypal_enable', FALSE)) {
+    if (variable_get('springboard_measurement_protocol_ga_account', 'UA-') == 'UA-') {
+      drupal_set_message(t('The Springboard Measurement Protocol module must be configured before PayPal IPN messages can be processed.'), 'warning');
+      return;
+    }
+    // @todo Support refund events.
+    if ($ipn['payment_status'] == 'Completed') {
+      // Load the donation object using the order id from $ipn.
+      $donation = fundraiser_donation_get_donation($ipn['order_id']);
+      // The Measurement Protocol API requires a client ID value in the form of
+      // a UUID (https://www.ietf.org/rfc/rfc4122.txt). If the UUID module is
+      // available, we'll just use that. Otherwise we will generate a UUID using
+      // code from a generator function from the UUID module.
+      $cid = NULL;
+      if (module_exists('uuid')) {
+        module_load_include('inc', 'uuid', 'uuid');
+        $cid = uuid_generate();
+      }
+      else {
+        // The following code comes from the UUID module and is available at
+        // http://cgit.drupalcode.org/uuid/tree/uuid.inc#n181.
+        $cid = sprintf('%04x%04x-%04x-4%03x-%04x-%04x%04x%04x',
+          // 32 bits for "time_low".
+          mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+          // 16 bits for "time_mid".
+          mt_rand(0, 0xffff),
+          // 12 bits after the initial 0100 (version 4) for
+          // "time_hi_and_version".
+          mt_rand(0, 0x0fff),
+          // 16 bits in total for "clk_seq_hi_res" and "clk_seq_low", with the
+          // most significant 2 bits of clk_seq_hi_res set to '10'. We do a
+          // bitwise OR of a random 14-bit value (maximum 0x3fff) with 0x8000
+          // (a 16-bit integer with only the most significant bit set).
+          mt_rand(0, 0x3fff) | 0x8000,
+          // 48 bits for "node".
+          mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+        );
+      }
+
+      $variables = array(
+        // The Measurement Protocol version.
+        'v' => 1,
+        // The Tracking ID.
+        'tid' => variable_get('springboard_measurement_protocol_ga_account', ''),
+        // The client ID.
+        'cid' => $cid,
+        // The type of event.
+        't' => 'event',
+        // The event category.
+        'ec' => 'Transaction',
+        // The event action.
+        'ea' => 'purchase',
+        // The product action.
+        'pa' => 'purchase',
+        // The transaction item quantity.
+        'iq' => 1,
+        // The product item quantity.
+        'pr1qt' => 1,
+      );
+
+      // Check each of the following to prevent php notices/warnings in the
+      // watchdog. If any of the following aren't set, the hit will likely fail.
+      if (isset($donation->nid)) {
+        // The product ID and transaction item code (SKU).
+        $variables['pr1id'] = $variables['ic'] = $donation->nid;
+      }
+      if (isset($donation->node->title)) {
+        // The product and transaction item name.
+        $variables['pr1nm'] = $variables['in'] = $donation->node->title;
+      }
+      if (isset($donation->donation['amount'])) {
+        // The product and transaction item price.
+        $variables['pr1pr'] = $variables['ip'] = $variables['tr'] = $donation->donation['amount'];
+      }
+      if (isset($donation->did)) {
+        // The transaction ID.
+        $variables['ti'] = $donation->did;
+      }
+      if (isset($donation->donation['recurs_monthly'])) {
+        // The transaction item category.
+        $variables['iv'] = ($donation->donation['recurs_monthly'] == 1) ? 'Monthly' : 'One-time';
+      }
+      if (isset($donation->donation['currency']['code'])) {
+        // The currency type.
+        $variables['cu'] = $donation->donation['currency']['code'];
+      }
+
+      $variables = http_build_query($variables);
+      $host = 'https://www.google-analytics.com/collect';
+
+      if (module_exists('chr')) {
+        chr_curl_http_request($host, array(
+          'method' => 'POST',
+          'data' => $variables,
+          'verify_ssl' => TRUE,
+        ));
+      }
+      else {
+        // Setup the cURL request.
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $host);
+        curl_setopt($ch, CURLOPT_VERBOSE, 0);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $variables);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_NOPROGRESS, 1);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 0);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 1);
+        curl_setopt($ch, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2);
+
+        $response = curl_exec($ch);
+
+        // If an error occurred during processing, log the message and exit.
+        if ($error = curl_error($ch)) {
+          watchdog('springboard_measurement_protocol', "Attempt to send data to Google's Measurement Protocol failed with cURL error: @error", array('@error' => $error), WATCHDOG_ERROR);
+          return FALSE;
+        }
+        curl_close($ch);
+      }
+
+      if (variable_get('springboard_measurement_protocol_debug', FALSE)) {
+        watchdog('springboard_measurement_protocol', 'Sent the following to the GA Measurement Protocol service: %message<br /><br />To verify this was a valid hit, in your terminal execute the following command: !curl', array(
+          '%message' => $host . '?' . $variables,
+          '!curl' => '<pre>' . format_string('curl --http1.1 --data "@variables" "https://www.google-analytics.com/debug/collect"', array(
+            '@variables' => $variables,
+          )) . '</pre>',
+        ), WATCHDOG_NOTICE);
+      }
+    }
+  }
+}

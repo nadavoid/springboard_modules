@@ -1,0 +1,16 @@
+name = Fundraiser Fund Group
+description = Provides fund group entities for Fundraiser Designtions
+core = 7.x
+
+dependencies[] = draggableviews
+dependencies[] = entityreference_prepopulate
+dependencies[] = entity
+
+files[] = fundraiser_fund_group.admin.inc
+files[] = views/fundraiser_fund_group.views.inc
+files[] = views/fundraiser_fund_group_handler_link_field.inc
+files[] = views/fundraiser_fund_group_handler_delete_link_field.inc
+files[] = views/fundraiser_fund_group_handler_edit_link_field.inc
+files[] = views/fundraiser_fund_group_handler_override_field.inc
+
+

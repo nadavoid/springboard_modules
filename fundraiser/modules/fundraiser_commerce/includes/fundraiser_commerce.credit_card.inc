@@ -115,6 +115,12 @@ function _fundraiser_commerce_credit_card_cleanup($submission_fields) {
  */
 function _fundraiser_commerce_credit_card_validate($submission_fields, $form_parents) {
   $prefix = implode('][', $form_parents) . '][';
+
+  // If using a stored card, return early.
+  if (isset($submission_fields['payment_fields']['token']) && $submission_fields['payment_fields']['token']) {
+    return;
+  }
+
   // Include the file with the validation info.
   module_load_include('inc', 'commerce_payment', 'includes/commerce_payment.credit_card');
   $number = $submission_fields['payment_fields']['credit']['card_number'];

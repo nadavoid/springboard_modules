@@ -511,6 +511,8 @@ function fundraiser_webform_form_alter(&$form, &$form_state, $form_id) {
 
 /**
  * Alters the display of webform submissions to prevent edits/display of confusing info.
+ *
+ * Also populates the tickets table field with its associated data.
  */
 function fundraiser_webform_submission_display(&$form, &$form_state) {
 
@@ -530,8 +532,21 @@ function fundraiser_webform_submission_display(&$form, &$form_state) {
     '#title' => t('Donation Information'),
   );
 
+  // Break up donation amount into original amount + an additional amount if one is available:
+  $total_amount = $donation->amount;
+  $additional_amount = $donation->amount - (isset($donation->donation['amount']) ? $donation->donation['amount'] : 0);
+  $original_amount = $total_amount - $additional_amount;
+  if ($original_amount != $total_amount) {
+    $amount_field_value = commerce_currency_format($total_amount, $donation->currency, NULL, FALSE) . ' (' .
+      commerce_currency_format($original_amount, $donation->currency, NULL, FALSE) . ' + an additional ' .
+      commerce_currency_format($additional_amount, $donation->currency, NULL, FALSE) . ')';
+  }
+  else {
+    $amount_field_value = commerce_currency_format($total_amount, $donation->currency, NULL, FALSE);
+  }
+
   $form['submitted']['donation_info']['display_amount'] = array(
-    '#markup' => '<div class="form-item"><label>' . t('Donation Amount') . ':</label>' . $donation->donation['amount_formatted'] . '</div>',
+    '#markup' => '<div class="form-item"><label>' . t('Donation Amount') . ':</label>' . $amount_field_value . '</div>',
   );
 
   // Show whether or not it's a recurring donation.
@@ -580,6 +595,42 @@ function fundraiser_webform_submission_display(&$form, &$form_state) {
   $form = _fundraiser_update_form_field($form, 'payment_information', $payment_information_field);
   $form = _fundraiser_update_form_field($form, 'payment_method', $payment_method_field);
   $form = _fundraiser_update_form_field($form, 'payment_fields', $payment_fields_field);
+
+  // Populate the ticket fields if available:
+  if (isset($form_state['build_info']['args'][1]->data)
+    && isset($form['submitted']['tickets']['ticket_box'])) {
+    _fundraiser_webform_populate_ticket_field($form, $form_state);
+  }
+  // Disabled the ticket fields as the donation has already been created:
+  $form['submitted']['tickets']['ticket_box']['#disabled'] = TRUE;
+}
+
+/**
+ * Populates ticket values on the submission edit form.
+ */
+function _fundraiser_webform_populate_ticket_field(&$form, &$form_state) {
+  // Locate and obtain the ticket values if they are available:
+  foreach ($form_state['build_info']['args'][1]->data as $ticket_data) { 
+    if (is_array($ticket_data['value'])
+      && (strpos(serialize($ticket_data['value']), 'ticket-quant') !== FALSE
+      || strpos(serialize($ticket_data['value']), 'tickets-extra-donation') !== FALSE)
+    ) {
+      $ticket_values = $ticket_data['value'];
+   }
+  } 
+  if (!isset($ticket_values)) {
+    return;
+  }
+  // Populate ticket values:
+  foreach ($ticket_values as $ticket_row) {
+    $row_data = unserialize($ticket_row);
+    $row_data_keys = array_keys($row_data);
+    $row_key = array_shift($row_data_keys);
+    if (!empty($row_data[$row_key])) {
+      $quantity = $row_data[$row_key];
+      $form['submitted']['tickets']['ticket_box'][$row_key]['#default_value'] = $quantity;
+    }
+  }
 }
 
 /**
@@ -1405,20 +1456,58 @@ function fundraiser_webform_node_delete($node) {
  * Implements hook_webform_submission_render_alter().
  *
  * Updates the currency symbols on the ask amount and other amount webform
- * submission display page.
+ * submission display page. Also break down donations consisting of multiple amounts.
  */
 function fundraiser_webform_webform_submission_render_alter(&$renderable) {
   $donation = _fundraiser_webform_get_donation_by_sid($renderable['#submission']->sid);
-  if (!empty($donation)) {
-    $renderable['donation']['amount']['#value'][0] = $donation->donation['amount_formatted'];
-    $renderable['donation']['other_amount']['#field_prefix'] = $donation->donation['currency']['symbol'];
+  if (empty($donation)) {
+    return;
   }
-  // Don't clutter regular submission report with empty "Payment Information" fieldset.
-  if (isset($renderable['payment_information'])) {
-    $children = element_children($renderable['payment_information']);
-    if (count($children) == 0 || implode('', $children) == 'payment_method') {
-      // Nothing to see here. We expect 'payment_information' to be empty.
-      unset($renderable['payment_information']);
+
+  // Gather purchase amount information:
+  $total_amount = floatval($donation->amount);
+  $total_formatted = commerce_currency_format($total_amount, $donation->currency, NULL, FALSE);
+  $original_amount = floatval($donation->donation['amount']);
+  $original_formatted = commerce_currency_format($original_amount, $donation->currency, NULL, FALSE);
+  $additional_amount = floatval($donation->amount - $donation->donation['amount']);
+  $additional_formatted = commerce_currency_format($additional_amount, $donation->currency, NULL, FALSE);
+
+  // Render a table detailing ticket data via a commerce order view:
+  $commerce_view = views_get_view('commerce_line_item_table');
+  if ($commerce_view) {
+    $order = commerce_order_load($donation->did);
+    $commerce_view->set_display('default');
+    $commerce_view->pre_execute();
+
+    // Gather line item IDs:
+    $line_item_ids = array();
+    foreach ($order->commerce_line_items[LANGUAGE_NONE] as $order_data) {
+      $line_item_ids[] = intval($order_data['line_item_id']);
+    }
+    $commerce_view->set_arguments(array(implode(',', $line_item_ids)));
+    $commerce_view->execute();
+
+    $view_html = $commerce_view->render();
+    
+    // Populate the additional amount if available:
+    if ($total_amount != $original_amount) {
+      $additional_row = '<tr class="additional-row"><td>Additional amount</td><td>' .
+        $additional_formatted . '</td>' . '<td>1</td><td>' . $additional_formatted . '</td></tr>';
+      $view_html = str_replace('</tbody>', $additional_row . '</tbody>', $view_html);
+    }
+    // Populate the total amount:
+    $total_row = '<tr><td class="total-row" colspan="3">Total</td><td class="amount">' .
+      $total_formatted . '</td></tr>';
+    $view_html = str_replace('</tbody>', $total_row . '</tbody>', $view_html);       
+    $renderable['tickets']['#description'] = $view_html;
+  }
+
+  // Display an additional donation amount if one is available:
+  $markup = $total_formatted;
+  if (isset($donation->donation['amount'])) {
+    if ($total_amount != $original_amount) {
+      $markup .= ' (' . $original_formatted . ' + an additional donation of ' . $additional_formatted . ')';
     }
   }
+  $renderable['amount']['#markup'] = $markup;
 }

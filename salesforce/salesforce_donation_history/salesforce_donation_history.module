@@ -1,0 +1,728 @@
+<?php
+
+/**
+ * @file
+ * Query and render donor tax records from Salesforce.
+ */
+
+/**
+ * Default select SOQL query.
+ */
+define('SALESFORCE_DONATION_HISTORY_DEFAULT_SOQL', "SELECT Id, StageName, CloseDate, Amount, CC_Type__c, CC_Last_4__c FROM Opportunity WHERE AccountId = ':accountId'");
+/**
+ * Default StageName values on Opportunity object.
+ */
+define('SALESFORCE_DONATION_HISTORY_DEFAULT_STAGE_NAME', "Posted\nPartially Refunded");
+
+/**
+ * Implements hook_flush_caches().
+ */
+function salesforce_donation_history_flush_caches() {
+  return array('cache_salesforce_donation_history');
+}
+
+/**
+ * Implements hook_menu().
+ */
+function salesforce_donation_history_menu() {
+  $items = array();
+
+  $items['admin/config/salesforce/donation_history'] = array(
+    'title' => 'Salesforce Donation History',
+    'description' => 'Manage Salesforce Donation History settings.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('salesforce_donation_history_query'),
+    'access arguments' => array('administer salesforce_donation_history settings'),
+    'file' => 'includes/salesforce_donation_history.admin.inc',
+  );
+
+  $items['admin/config/salesforce/donation_history/query'] = array(
+    'title' => 'Query',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'description' => 'Manage Salesforce Donation History Query.',
+    'weight' => 0,
+  );
+
+  $items['admin/config/salesforce/donation_history/fields'] = array(
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('salesforce_donation_history_fields'),
+    'access arguments' => array('administer salesforce_donation_history settings'),
+    'title' => 'Fields',
+    'type' => MENU_LOCAL_TASK,
+    'description' => 'Manage Salesforce Donation History Fields.',
+    'file' => 'includes/salesforce_donation_history.admin.inc',
+    'weight' => 1,
+  );
+
+  $items['admin/config/salesforce/donation_history/annual-summary-receipt'] = array(
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('salesforce_donation_history_annual_summary'),
+    'access arguments' => array('administer salesforce_donation_history settings'),
+    'title' => 'Annual Summary Receipt',
+    'type' => MENU_LOCAL_TASK,
+    'description' => 'Manage Salesforce Annual Summary Receipts.',
+    'file' => 'includes/salesforce_donation_history.admin.inc',
+    'weight' => 2,
+  );
+
+  $items['admin/config/salesforce/donation_history/donation-receipt'] = array(
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('salesforce_donation_history_donation'),
+    'access arguments' => array('administer salesforce_donation_history settings'),
+    'title' => 'Individual Donation Receipt',
+    'type' => MENU_LOCAL_TASK,
+    'description' => 'Manage Salesforce Individual Donation Receipts.',
+    'file' => 'includes/salesforce_donation_history.admin.inc',
+    'weight' => 2,
+  );
+
+  $items['user/%user/donation-history'] = array(
+    'title' => 'My donation history',
+    'page callback' => 'salesforce_donation_history_page',
+    'page arguments' => array(1),
+    'access callback' => 'user_edit_access',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'includes/salesforce_donation_history.pages.inc',
+  );
+
+  $items['user/%user/donation-history/summary/%'] = array(
+    'page callback' => 'salesforce_donation_history_annual_summary_page',
+    'page arguments' => array(1, 4),
+    'access callback' => 'user_edit_access',
+    'access arguments' => array(1),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'includes/salesforce_donation_history.pages.inc',
+  );
+
+  $items['user/%user/donation-history/receipt/%'] = array(
+    'page callback' => 'salesforce_donation_history_donation_receipt_page',
+    'page arguments' => array(1, 4),
+    'access callback' => 'user_edit_access',
+    'access arguments' => array(1),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'includes/salesforce_donation_history.pages.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function salesforce_donation_history_permission() {
+  return array(
+    'administer salesforce_donation_history settings' => array(
+      'title' => t('Administer Salesforce Donation History settings'),
+      'description' => t('Grants access to change settings.'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_theme().
+ */
+function salesforce_donation_history_theme() {
+  return array(
+    'salesforce_donation_history_admin_field_table' => array(
+      'render element' => 'element',
+    ),
+  );
+}
+
+/**
+ * Returns HTML for a table of form elements for donation history admin page.
+ *
+ * @ingroup themeable
+ */
+function theme_salesforce_donation_history_admin_field_table($variables) {
+  $element = $variables['element'];
+  $rows = array();
+  foreach (element_children($element) as $key) {
+    $rows[] = array(
+      array('data' => $element[$key]['label']['#extra_data']['field_table']),
+      array('data' => $element[$key]['label']['#extra_data']['field_name']),
+      array('data' => render($element[$key]['label'])),
+      array('data' => render($element[$key]['show_on_tab'])),
+      array('data' => render($element[$key]['show_on_receipt'])),
+      array('data' => render($element[$key]['show_on_summary'])),
+    );
+  }
+  $header = array(
+    t('SF Table'),
+    t('Field'),
+    t('Custom Label'),
+    t('Show on User Tab'),
+    t('Show on Individual Donation Receipt'),
+    t('Show on Annual Summary'),
+  );
+  return theme('table', array('header' => $header, 'rows' => $rows));
+}
+
+/**
+ * Gets all opportunities for a user.
+ *
+ * @param string $sfid
+ *   Salesforce Account ID.
+ *
+ * @return array
+ *   An array of opportunity data that was specified in the SOQL query.
+ */
+function salesforce_donation_history_get_opportunities($sfid) {
+  $opportunities = &drupal_static(__FUNCTION__);
+  if (!isset($opportunities)) {
+    if ($cache = cache_get($sfid, 'cache_salesforce_donation_history')) {
+      $opportunities = $cache->data;
+    }
+    else {
+      $soql = strtr(variable_get('salesforce_donation_history_query', SALESFORCE_DONATION_HISTORY_DEFAULT_SOQL), array(':accountId' => $sfid));
+      try {
+        $sfapi = salesforce_get_api();
+        $soap = new SalesforceSoapPartner($sfapi);
+        $response = $soap->query($soql);
+        $result = new QueryResult($response);
+      }
+      catch (Exception $e) {
+        watchdog('Salesforce Donation History', $e->getMessage(), NULL, WATCHDOG_ERROR);
+        return FALSE;
+      }
+      $opportunities = $result->records;
+      cache_set($sfid, $opportunities, 'cache_salesforce_donation_history', CACHE_TEMPORARY);
+    }
+  }
+  return $opportunities;
+}
+
+/**
+ * Get single donation by opportunity ID.
+ *
+ * @param string $user_sfid
+ *   Salesforce Account ID.
+ * @param string $donation_sfid
+ *   The ID of the opportunity object.
+ *
+ * @return array
+ *   If found, array contains one value, which is the stdObj representing the
+ *   opportunity.
+ */
+function salesforce_donation_history_get_opportunity($user_sfid, $donation_sfid) {
+  $results = array();
+  $opportunities = salesforce_donation_history_get_opportunities($user_sfid);
+  if (count($opportunities) > 0) {
+    foreach ($opportunities as $opportunity) {
+      // dpm($opportunity->Id);
+      foreach ($opportunity->Id as $id) {
+        if ($id == $donation_sfid) {
+          $results[] = $opportunity;
+          return $results;
+        }
+      }
+    }
+  }
+  return $results;
+}
+
+
+/**
+ * Get object description from Salesforce API.
+ *
+ * @param string $sfobject_name
+ *   Name of the Salesforce object to describe. eg Account or Opportunity.
+ */
+function salesforce_donation_history_describe_object($sfobject_name) {
+  $sfapi = salesforce_get_api();
+  if ($sfapi->isAuthorized()) {
+    return $sfapi->objectDescribe($sfobject_name);
+  }
+}
+
+/**
+ * Form callback. Returns auto-submitting select box.
+ *
+ * @param array $form
+ *   Provided by drupal_get_form().
+ * @param array $form_state
+ *   Provided by drupal_get_form().
+ * @param array $available_years
+ *   List of years to be displayed in the select box.
+ * @param string $selected_year
+ *   The currently-selected year. Defaults to current year.
+ *
+ * @return array
+ *   A form.
+ */
+function salesforce_donation_history_select_year($form, &$form_state, $available_years, $selected_year) {
+  $current_year = date('Y');
+  $output['#method'] = 'get';
+  $output['year'] = array(
+    '#title' => t('Select year'),
+    '#type' => 'select',
+    '#default_value' => $selected_year,
+    '#attributes' => array('onchange' => 'this.form.submit();'),
+  );
+  foreach ($available_years as $year) {
+    $output['year']['#options'][$year] = $year;
+  }
+  $output['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Select year',
+    '#attributes' => array('class' => array('element-invisible')),
+  );
+  return $output;
+}
+
+/**
+ * Returns a count of the donations for a user in the salesforce_queue.
+ */
+function salesforce_donation_history_count_pending_donations($uid) {
+  return db_query("SELECT count(f.did) FROM {salesforce_queue} s LEFT JOIN {fundraiser_donation} f ON s.drupal_id = f.did WHERE s.object_type = 'Opportunity' AND f.uid = :uid", array(':uid' => $uid))->fetchField();
+}
+
+/**
+ * Get the SF account id for a given user.
+ */
+function salesforce_donation_history_user_account_id($uid) {
+  // Sync map lookup requires this format.
+  $record = array(
+    'module' => 'user',
+    'delta' => 'user',
+    'drupal_id' => $uid,
+    'object_type' => 'Account',
+  );
+
+  $map = salesforce_sync_load_map($record);
+
+  // If the user has been exported, return it's account id.
+  if (!empty($map)) {
+    return $map->sfid;
+  }
+
+  return FALSE;
+}
+
+/**
+ * Gets the active Salesforce connection object.
+ *
+ * @todo There is probably a standard wrapper function for this
+ * somewhere.
+ */
+function salesforce_donation_history_get_salesforce() {
+  $sfapi = salesforce_get_api();
+
+  if (!is_object($sfapi) || !$sfapi->isAuthorized()) {
+    // Throw error, log and exit gracefully.
+    return FALSE;
+  }
+
+  return $sfapi;
+}
+
+/**
+ * Groups an array of SF records by year, descending.
+ *
+ * @param array $records
+ *   An array of records as found in QueryResult->records.
+ *
+ * @return array
+ *   An associative array containing the available years and their records. E.g:
+ *   -2016
+ *   --0 (stdClass)
+ *   --1 (stdClass)
+ *   --2 (stdClass)
+ *   -2015
+ *   --0 (stdClass)
+ *   -2014
+ *   --0 (stdClass)
+ *   --1 (stdClass)
+ */
+function salesforce_donation_history_sort_by_year($records) {
+  $return_array = array();
+  foreach ($records as $record) {
+    if (!($record instanceof SObject)) {
+      $sobject = new SObject($record);
+    }
+    // @TODO Make date field and format configurable?
+    $date = DateTime::createFromFormat("Y-m-d", $sobject->fields->CloseDate);
+    $year = $date->format("Y");
+    $return_array[$year][] = $record;
+  }
+  krsort($return_array);
+  return $return_array;
+}
+
+/**
+ * Removes records with CloseDate set in the future.
+ */
+function salesforce_donation_history_filter_by_date($records) {
+  $return_array = array();
+  foreach ($records as $record) {
+    if (!($record instanceof SObject)) {
+      $sobject = new SObject($record);
+    }
+    // @TODO Make date field and format configurable?
+    $close_date = DateTime::createFromFormat("Y-m-d", $sobject->fields->CloseDate);
+    $now = new DateTime();
+    if ($close_date <= $now) {
+      $return_array[] = $record;
+    }
+  }
+  return $return_array;
+}
+
+/**
+ * Removes records based on StageName value.
+ *
+ * Records that do not have a StageName value that matches those included in
+ * the salesforce_donation_history_stage_name variable.
+ */
+function salesforce_donation_history_filter_by_status($records) {
+  $return_array = array();
+  // Explode status values from text area into array on any (reasonable) newline
+  // combo.
+  $statuses = preg_split("/\r\n|\n|\r/", variable_get('salesforce_donation_history_stage_name', SALESFORCE_DONATION_HISTORY_DEFAULT_STAGE_NAME));
+  $statuses = array_map('trim', $statuses);
+  $statuses = array_map('strtolower', $statuses);
+  foreach ($records as $record) {
+    if (!($record instanceof SObject)) {
+      $sobject = new SObject($record);
+    }
+    if (in_array(strtolower($sobject->fields->StageName), $statuses)) {
+      $return_array[] = $record;
+    }
+  }
+  return $return_array;
+}
+
+/**
+ * Creates table of donation history activity.
+ *
+ * @param array $records
+ *   An array of records returned by the SOQL query.
+ * @param string $display_key
+ *   Used to control which fields display on a particular table. Corresponds to
+ *   an array key value from the fields settings form. Valid values include
+ *   'show_on_tab', 'show_on_receipt', and 'show_on_summary'.
+ * @param bool $display_headers
+ *   Used to omit headers on nested tables.
+ *
+ * @return array
+ *   Render array for a table.
+ */
+function salesforce_donation_history_create_table($records, $display_key = 'show_on_tab', $display_headers = TRUE, $add_print_receipt_column = TRUE) {
+  $table = array('#theme' => 'table');
+  if ($display_headers) {
+    // Call shared recusive function for header printing.
+    if ($records[0] instanceof SObject) {
+      $table['#header'] = salesforce_donation_history_create_table_headers($records[0], $display_key);
+    }
+    else {
+      $table['#header'] = salesforce_donation_history_create_table_headers(new SObject($records[0]), $display_key);
+    }
+  }
+  // Print the remaining rows in the body.
+  $table['#rows'] = array();
+  foreach ($records as $record) {
+    // Call shared recusive function for row printing.
+    if ($record instanceof SObject) {
+      $row = salesforce_donation_history_create_table_row($record, $display_key);
+    }
+    else {
+      $row = salesforce_donation_history_create_table_row(new SObject($record), $display_key);
+    }
+    for ($i = 0; $i < count($row); $i++) {
+      // I've actually never seen this if statement satisfied.
+      if ($row[$i] instanceof QueryResult && !is_array($row[$i])) {
+        $row[$i] = array($row[$i]);
+      }
+      // If the cell is an array and [0] is a QueryResult, we recurse and
+      // create a table within a table.
+      if (isset($row[$i][0]) && $row[$i][0] instanceof QueryResult) {
+        foreach ($row[$i] as $qr) {
+          $nested_table = salesforce_donation_history_create_table($qr->records, $display_key, FALSE, FALSE);
+          // @TODO I don't think rendering the nested table and inserting the
+          // markup into the parent cell should be necessary but I couldn't get
+          // it to display as nested render arrays.
+          $row[$i] = render($nested_table);
+        }
+      }
+    }
+    // Add 'print receipt' cell to the end of each row.
+    if ($add_print_receipt_column) {
+      $row[] = l(t('Print Receipt'), 'user/' . arg(1) . '/donation-history/receipt/' . $record->Id[0]);
+    }
+    $table['#rows'][] = $row;
+  }
+  // Add 'print receipt' column header.
+  if ($add_print_receipt_column) {
+    $table['#header'][] = '';
+  }
+  return $table;
+}
+
+/**
+ * Returns an array of headers.
+ *
+ * @param object $sobject
+ *   A salesforce object.
+ *
+ * @return array
+ *   A list of headers to be used in the table.
+ */
+function salesforce_donation_history_create_table_headers($sobject, $display_key) {
+  $field_settings = variable_get('salesforce_donation_history_field_settings', NULL);
+  if (!isset($header_buffer_array)) {
+    $header_buffer_array = array();
+  }
+  if (isset($sobject->Id) && !isset($sobject->fields->Id)) {
+    // Only add the Id to header if it is configured to be displayed.
+    if ($field_settings[$sobject->type . '-Id'][$display_key]) {
+      // Use the custom label as the header if one has been specified.
+      // Else, default to the salesforce field name (Id).
+      $header_buffer_array[] = (!empty($field_settings[$sobject->type . '-Id']['label'])) ? $field_settings[$sobject->type . '-Id']['label'] : 'Id';
+    }
+  }
+  if (isset($sobject->fields)) {
+    foreach ($sobject->fields as $fieldname => $fieldvalue) {
+      if ($fieldvalue instanceof SObject) {
+        $recurse = salesforce_donation_history_create_table_headers($fieldvalue);
+        $header_buffer_array = array_merge($header_buffer_array, $recurse);
+      }
+      else {
+        // Only add the header if it is configured to be displayed.
+        if (!empty($field_settings[$sobject->type . '-' . $fieldname][$display_key])) {
+          // Use the custom label as the field header if one has been specified.
+          // Else, default to the salesforce field name.
+          $fieldname = (!empty($field_settings[$sobject->type . '-' . $fieldname]['label'])) ? $field_settings[$sobject->type . '-' . $fieldname]['label'] : $fieldname;
+          $header_buffer_array[] = htmlspecialchars($fieldname, ENT_QUOTES);
+        }
+      }
+    }
+  }
+  if (isset($sobject->queryResult)) {
+    if (!is_array($sobject->queryResult)) {
+      $sobject->queryResult = array($sobject->queryResult);
+    }
+    foreach ($sobject->queryResult as $qr) {
+      // Use the custom label as the field header if one has been specified.
+      // Else, default to the salesforce table name.
+      $fieldname = (!empty($field_settings[$qr->records[0]->type])) ? $field_settings[$qr->records[0]->type]['label'] : $qr->records[0]->type;
+      $header_buffer_array[] = $fieldname;
+    }
+  }
+  return $header_buffer_array;
+}
+
+/**
+ * Returns an array representing the data in a table row.
+ *
+ * @param object $sobject
+ *   A salesforce object.
+ *
+ * @return array
+ *   An array representing the data in a table row.
+ */
+function salesforce_donation_history_create_table_row($sobject, $display_key) {
+  $field_settings = variable_get('salesforce_donation_history_field_settings', NULL);
+  if (!isset($row)) {
+    $row = array();
+  }
+  if (isset($sobject->Id) && !isset($sobject->fields->Id)) {
+    // Only add the Id to the row if it is configured to be displayed.
+    if ($field_settings[$sobject->type . '-Id'][$display_key]) {
+      $row[] = $sobject->Id;
+    }
+  }
+  if (isset($sobject->fields)) {
+    foreach ($sobject->fields as $key => $datum) {
+      if ($datum instanceof SObject) {
+        $row = array_merge($row, salesforce_donation_history_create_table_row($datum, $display_key));
+      }
+      else {
+        // Add datum to row if it is not set (so we don't end up with too few
+        // cells in a row OR the field settings say to include it).
+        if (!isset($datum) || !empty($field_settings[$sobject->type . '-' . $key][$display_key])) {
+          $row[] = salesforce_donation_history_format_field($datum, $sobject->type, $key);
+        }
+      }
+    }
+  }
+  if (isset($sobject->queryResult)) {
+    $row[] = $sobject->queryResult;
+  }
+  return $row;
+}
+
+/**
+ * Formats the output based on the type of SF field that is being displayed.
+ *
+ * @param string $fieldvalue
+ *   The string to be formatted.
+ * @param string $object
+ *   The SF Object (table) of the field being formatted.
+ * @param string $fieldname
+ *   The SF field name of the value being formatted.
+ *
+ * @return string
+ *   The formatted value.
+ */
+function salesforce_donation_history_format_field($fieldvalue, $object, $fieldname) {
+  // @todo consider statically caching $query_fields? This gets called a lot.
+  $query_fields = variable_get('salesforce_donation_history_query_fields', NULL);
+  if (!empty($query_fields[$object][$fieldname]['type'])) {
+    if ($query_fields[$object][$fieldname]['type'] == 'currency') {
+      return money_format('$%i', $fieldvalue);
+    }
+  }
+  return htmlspecialchars($fieldvalue, ENT_QUOTES);
+}
+
+/**
+ * Saves the SF tables and fields from the results of a SOQL query.
+ *
+ * This function will call itself recursively to process the tables and fields
+ * in sub-select statements of the SOQL results.
+ *
+ * @param array $records
+ *    An array of salesforce objects. This function only examines $records[0].
+ *
+ * @return array
+ *    An associative array representing the tables and fields. E.g.:
+ *    -Opportunity:
+ *    --CloseDate: ''
+ *    --Amount: ''
+ *    -kell01__Allocation__c:
+ *    ---Name: ''
+ *    ---kell01__Amount__c: ''
+ *    -kell01__Fund__c:
+ *    ---Name: ''
+ *    --OwnerId: ''
+ */
+function salesforce_donation_history_get_query_fields($records) {
+  // Create an SObject to work with.
+  // We only care about the headers, so we should only need to deal with the
+  // first ([0]) record.
+  if (!is_array($records)) {
+    $records = array($records);
+  }
+  if ($records[0] instanceof SObject) {
+    $sobject = $records[0];
+  }
+  else {
+    $sobject = new SObject($records[0]);
+  }
+  // Static array to store field definitions when this function is called
+  // recursively.
+  if (!isset($fields)) {
+    $fields = array();
+  }
+  // Process the sobject Id.
+  if (isset($sobject->Id) && !isset($sobject->fields->Id)) {
+    $fields[$sobject->type]['Id'] = '';
+  }
+  // Process the sobject fields.
+  if (isset($sobject->fields)) {
+    foreach ($sobject->fields as $fieldname => $fieldvalue) {
+      if ($fieldvalue instanceof SObject) {
+        $recurse = salesforce_donation_history_get_query_fields($fieldvalue);
+        $fields = array_merge($fields, $recurse);
+      }
+      else {
+        $fields[$sobject->type][$fieldname] = '';
+      }
+    }
+  }
+  // Process the sobject queryResult, if any.
+  if (isset($sobject->queryResult)) {
+    if (!is_array($sobject->queryResult)) {
+      $sobject->queryResult = array($sobject->queryResult);
+    }
+    foreach ($sobject->queryResult as $qr) {
+      $recurse = salesforce_donation_history_get_query_fields($qr->records);
+      $fields = array_merge($fields, $recurse);
+    }
+  }
+  return $fields;
+}
+
+/**
+ * Adds the field type to each field in the provided array.
+ *
+ * @param array $query_fields
+ *   An associative array representing the tables and fields, as provided by
+ *   function salesforce_donation_history_get_query_fields(). E.g.:
+ *   -Opportunity:
+ *   --CloseDate: ''
+ *   --Amount: ''
+ *   -kell01__Allocation__c:
+ *   ---Name: ''
+ *   ---kell01__Amount__c: ''
+ *   -kell01__Fund__c:
+ *   ---Name: ''
+ *   --OwnerId: ''.
+ *
+ * @return array
+ *   The same array with ['type'] = $type added to each child element. E.g.:
+ *   -Opportunity:
+ *   --CloseDate:
+ *   ---type = 'date'
+ *   --Amount:
+ *   ---type = 'currency'
+ *   -kell01__Allocation__c:
+ *   --Name:
+ *   ---type = 'string'
+ *   --kell01__Amount__c:
+ *   ---type = 'currency'
+ *   -etc.
+ */
+function salesforce_donation_history_get_field_types($query_fields) {
+  foreach ($query_fields as $table => $fields) {
+    $sobject = salesforce_donation_history_describe_object($table);
+    for ($i = 0; $i < count($sobject['fields']); $i++) {
+      if (array_key_exists($sobject['fields'][$i]['name'], $fields)) {
+        $fiend_name = $sobject['fields'][$i]['name'];
+        $query_fields[$table][$fiend_name]['type'] = $sobject['fields'][$i]['type'];
+      }
+    }
+  }
+  return $query_fields;
+}
+
+/**
+ * Perform a test query of the given SOQL.
+ *
+ * Replaces the WHERE claue of the SOQL query with LIMIT 1. This should return
+ * the first available result, including all of the fields included in the
+ * query.
+ */
+function salesforce_donation_history_test_query($query) {
+  // Find last occurance of 'WHERE '. Replace everything from there to the end
+  // of the query with 'LIMIT 1'.
+  $soql = substr_replace($query, 'LIMIT 1', strrpos($query, 'WHERE '), strlen($query));
+  try {
+    $sfapi = salesforce_get_api();
+    $soap = new SalesforceSoapPartner($sfapi);
+    $response = $soap->query($soql);
+    $result = new QueryResult($response);
+  }
+  catch (Exception $e) {
+    drupal_set_message(t('The Test SOQL query performed was: :soql', array(':soql' => $soql)), 'error');
+    drupal_set_message($e->getMessage(), 'error');
+    return FALSE;
+  }
+
+  return $result;
+}
+
+/**
+ * Implements hook_salesforce_sync_pass_item().
+ */
+function salesforce_donation_history_salesforce_sync_pass_item($item, $result) {
+  // Delete cache item for a user when an Opportunity item for them syncs.
+  if ($item->sobject->type == 'Opportunity') {
+    if (isset($item->sobject->fields['AccountId'])) {
+      $num_deleted = db_delete('cache_salesforce_donation_history')
+        ->condition('cid', $item->sobject->fields['AccountId'])
+        ->execute();
+    }
+  }
+}

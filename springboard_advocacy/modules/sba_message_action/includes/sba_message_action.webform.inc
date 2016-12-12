@@ -58,17 +58,26 @@ function sba_message_action_send_message(array $user_message, array $form_state)
     if (!empty($multi_flow[0]['value']) && $multi_flow[0]['value'] == 'multi') {
       $submission['multiflow'] = 'step_one';
     }
+
     // Send submission to API Client.
     $api_call = springboard_advocacy_api_call();
     $response = $api_call->invokeClientMethod('resolveTargets', $submission);
+
     if (isset($response->data)) {
       // We got a valid response, build the confirmation message array.
       sba_message_action_set_confirmation_session_vars($response->data, $contact);
 
-      // Fire the success hook for one-step actions.
-      if (!empty($multi_flow[0]['value']) && $multi_flow[0]['value'] != 'multi') {
-        $_SESSION['success_messages'] =  (array) $response->data->messages;
-      }
+      // Set session data to use in later in
+      // sba_message_action_form_submit_success hook that needs to have $sid
+      // present
+      $_SESSION['springboard_advocacy_action_webform_data']['node_data'] =  $node;
+      $_SESSION['springboard_advocacy_action_webform_data']['contact_data'] =  $contact;
+      $_SESSION['springboard_advocacy_action_webform_data']['response_data'] =  (array) $response->data;
+
+      // Also set reference to the single or multi-step action type so we can
+      // submit the data to advocacy success hooks at the appropriate time.
+      $_SESSION['springboard_advocacy_action_webform_data']['is_multiflow_action'] =
+        ($multi_flow[0]['value'] == 'one') ? FALSE:TRUE;
     }
   }
   return !empty($response->data) ? $response->data : NULL;
@@ -294,24 +303,24 @@ function sba_message_action_preprocess_webform_confirmations_delivered(&$vars) {
 
     // Format the contact for token replacement.
     $contact = (object) $_SESSION['contact'];
-    // Replace the tokens
+    // Replace the tokens.
     $message['body'] = token_replace($message['body'], array('sba_contact' => $contact, 'sba_target' => $message['targets'],));
-    //In case it comes back encoded,
+    // In case it comes back encoded,
     // we don't want theme_link to double encode it.
     $subject = decode_entities($message['subject']);
     // Prepare the body text for display in a javascript
     // pop-up window. Make sure we're not double encoding.
-    $body =  nl2br(check_plain(decode_entities($message['body'])));
+    $body = nl2br(check_plain(decode_entities($message['body'])));
     $body = addslashes(trim(preg_replace('/\s+/', ' ', $body)));
     $on_click = "if(typeof messageWrapper !=='undefined'){messageWrapper.close()};messageWrapper=window.open('','messageWrapper','toolbar=no,scrollbars=yes,status=no,menubar=no,resizable=yes,top=0,left=0,width=640,height=480');messageWrapper.document.write(\"" . $body  . "\");messageWrapper.focus();return false;";
     $link = l($subject, '#', array('attributes' => array('onclick' => $on_click)));
     // Prepare the recipients for display in a bulleted list.
     unset($message['person']['url']);
     $targets[$key]['person'] = theme('sba_message_action_person_details', $message);
-    $targets[$key]['link'] =  $link;
+    $targets[$key]['link'] = $link;
   }
 
-  if(empty($targets)) {
+  if (empty($targets)) {
     $targets[]['person'] = t('You have no deliverable messages.');
   }
 
@@ -335,6 +344,7 @@ function sba_message_action_preprocess_webform_confirmations_delivered(&$vars) {
  * Theme the undelivered messages.
  *
  * @param array $vars
+ *
  * @return string
  */
 function sba_message_action_preprocess_webform_confirmations_undelivered(&$vars) {
@@ -345,7 +355,7 @@ function sba_message_action_preprocess_webform_confirmations_undelivered(&$vars)
   $count_output = '';
 
   foreach ($messages as $id => $message) {
-    // Stores the segments of the target
+    // Stores the segments of the target.
     $person = $message['person'];
     $target_info = array();
     $target_count++;
@@ -360,12 +370,15 @@ function sba_message_action_preprocess_webform_confirmations_undelivered(&$vars)
     // Prepare the contact object so we can replace tokens in the message.
     $contact = (object) $_SESSION['contact'];
 
-    $message['message'] = token_replace($message['body'], array('sba_contact' => $contact, 'sba_target' => $message['targets'],));
+    $message['message'] = token_replace($message['body'], array(
+      'sba_contact' => $contact,
+      'sba_target' => $message['targets'],
+    ));
     // The recipient.
     $messages_out[$id]['target'] = implode(' ', $target_info);
     // Make sure we're not double encoding in case
     // it comes back from API server encoded.
-    $messages_out[$id]['subject'] =   check_plain(decode_entities($message['subject']));
+    $messages_out[$id]['subject'] = check_plain(decode_entities($message['subject']));
     $messages_out[$id]['message'] = check_markup($message['message'], 'filtered_html');
   }
 
@@ -387,7 +400,7 @@ function sba_message_action_preprocess_webform_confirmations_undelivered(&$vars)
     $count_output .= t('You have no undeliverable messages.');
   }
 
-  $vars['undeliverable_title'] =  t('Undeliverable Messages');
+  $vars['undeliverable_title'] = t('Undeliverable Messages');
   $vars['message_count'] = $message_count;
   $vars['target_count'] = $target_count;
   $vars['message_count_text'] = $count_output;
@@ -434,12 +447,19 @@ function sba_message_action_get_message_statuses($response) {
   foreach ($messages as $id => $message) {
     foreach ($messages[$id]['deliverable'] as $target) {
       // Filter the largish target object in the response down to
-      // a few select properties, in an array
+      // a few select properties, in an array.
       $target_details = sba_message_action_get_target_details($target);
 
       // Split into success and hold arrays.
       unset($target->addresses);
-      $tokens = array('primary_delivery_method' => $target->primary_delivery_method, 'id' => $target->id, 'salutation' => $target->salutation, 'first_name' => $target->first_name, 'last_name' => $target->last_name, 'type' => $target_details['class_name']);
+      $tokens = array(
+        'primary_delivery_method' => $target->primary_delivery_method,
+        'id' => $target->id,
+        'salutation' => $target->salutation,
+        'first_name' => $target->first_name,
+        'last_name' => $target->last_name,
+        'type' => $target_details['class_name'],
+      );
       if (empty($target->webform_status)
         || (!empty($target->webform_status) && ($target->webform_status != 'Hold' && $target->webform_status != 'CAPTCHA'))) {
         $success_count++;
@@ -524,25 +544,24 @@ function theme_sba_message_action_person_details(&$vars) {
   $output = '';
   $target = $vars['person'];
   $person = isset($target['name_with_webform_url']) ? $target['name_with_webform_url'] : $target['name'];
-  $title = isset($target['title']) ? ' ' . $target['title']  : '' ;
+  $title = isset($target['title']) ? ' ' . $target['title'] : '';
   $party = isset($target['party']) ? ' (' . $target['party'] . ')' : '';
-  $organization = !empty($target['organization']) ?  $target['organization'] : '';
+  $organization = !empty($target['organization']) ? $target['organization'] : '';
   $separator = !empty($title) && !empty($organization) ? ', ' : ' ';
-  $state = isset($target['district']) && $vars['person']['class_name'] == 'Legislator' ? ', ' .  $target['state'] : '';
-  if (empty($state) && $target['title'] == 'Governor') {
+  $state = isset($target['district']) && $vars['person']['class_name'] == 'Legislator' ? ', ' . $target['state'] : '';
+  if (empty($state) && isset($target['title']) && $target['title'] == 'Governor') {
     $state = ' ' . $target['state'];
     $separator = ', ';
   }
   $state = $state == 'Al' ? '' : $state;
 
   // Custom targets and executive branch.
-  $non_legislative_organization = !empty($organization)  ? $title . $separator . $organization :  $title . $separator . $state;
-  // Legislators. Backward compatible with Target db structure pre-fall 2015 release;
-  $legislative_organization = isset($target['district']) && !empty($title) ? $title  .  $state  : $organization;
+  $non_legislative_organization = !empty($organization) ? $title . $separator . $organization : $title . $separator . $state;
+  $legislative_organization = isset($target['district']) && !empty($title) ? $title . $state : $organization;
 
-  $affiliation = isset($target['district'])  ? $legislative_organization : $non_legislative_organization;
+  $affiliation = isset($target['district']) ? $legislative_organization : $non_legislative_organization;
   $output .= $person;
-  if(!empty($affiliation)) {
+  if (!empty($affiliation)) {
     $output .= $party;
     $output .= '<br />' . $affiliation;
   }

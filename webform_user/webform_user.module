@@ -537,8 +537,12 @@ function webform_user_webform_validate($form, &$form_state) {
 function webform_user_webform_submit($form, &$form_state) {
   global $user;
   $node = node_load($form_state['values']['details']['nid']);
+  $submission = webform_get_submission($node->nid, $form_state['values']['details']['sid']);
+  $account = new stdClass();
+
   // Only process if the form is completed and it's a webform_user form.
   $submit_op = empty($node->webform['submit_text']) ? t('Submit') : $node->webform['submit_text'];
+  $new_user = FALSE;
   if ($form_state['values']['op'] == $submit_op && _webform_user_is_webform_user_node($node)) {
     $fields = _webform_user_flatten_tree($form_state['values']['submitted_tree'], $node->nid);
     $map = _webform_user_get_map($form_state['values']['details']['nid'], $fields);
@@ -553,14 +557,14 @@ function webform_user_webform_submit($form, &$form_state) {
     if (!$skip_user_check && $user->uid && $form_state['redirect']) {
       $account = user_load($user->uid);
       // Update the existing user account.
-      _webform_user_save_profile_map($account, $map);
+      _webform_user_save_profile_map($account, $map, $form, $form_state);
     }
     // Or if we found an account matching the email.
     elseif (isset($account->uid) && $form_state['redirect']) {
       // Update the existing user account.
       // _webform_user_save_profile_map() performs user_save().
-      _webform_user_save_profile_map($account, $map);
-      $submission = webform_get_submission($node->nid, $form_state['values']['details']['sid']);
+      _webform_user_save_profile_map($account, $map, $form, $form_state);
+      //$submission = webform_get_submission($node->nid, $form_state['values']['details']['sid']);
       $submission->uid = $account->uid;
       if ($skip_user_check) {
         $submission->webform_user_skip_user_check = TRUE;
@@ -573,13 +577,25 @@ function webform_user_webform_submit($form, &$form_state) {
     }
     // Anonymous user, new email to Drupal.
     elseif ($form_state['redirect']) {
+      $new_user = TRUE;
+      if (module_exists('email_registration')) {
+        // Strip off everything after the @ sign.
+        $name = preg_replace('/@.*$/', '', $fields['mail']);
+        $name = email_registration_cleanup_username($name);
+        $name = email_registration_unique_username($name);
+      }
+      else {
+        // If email_registration is not enabled, fall back to using email for
+        // the drupal username.
+        $name = $fields['mail'];
+      }
       $account = new stdClass();
       $account->is_new = TRUE;
-      $account->name = $fields['mail'];
+      $account->name = $name;
       $account->status = TRUE;
       // Create the new user account.
-      $account = _webform_user_save_profile_map($account, $map);
-      $submission = webform_get_submission($node->nid, $form_state['values']['details']['sid']);
+      $account = _webform_user_save_profile_map($account, $map, $form, $form_state);
+      //$submission = webform_get_submission($node->nid, $form_state['values']['details']['sid']);
       $submission->uid = $account->uid;
       // Setting this flag skips uid checking during presave.
       if ($skip_user_check) {
@@ -590,11 +606,61 @@ function webform_user_webform_submit($form, &$form_state) {
       if (_webform_user_is_webform_user_session_store()) {
         _webform_user_session_set($node->nid, $map);
       }
-      // Send the e-mail through the user module.
-      if ($node->send_new_user_email) {
-        drupal_mail('user', 'register_no_approval_required', $account->mail, NULL, array('account' => $account), NULL);
-      }
     }
+
+    if (!$new_user && empty($account->pass)) {
+      $new_user = TRUE;
+    }
+
+    module_invoke_all('webform_user_submission_insert', $node, $submission, $account);
+
+    // This won't necessarily send a new email, but does allow other modules to
+    // hook into the email that would be sent, modify it, and set it to be sent.
+    webform_user_send_mail(array(
+      'module' => 'user',
+      'key' => 'register_no_approval_required',
+      'to' => $account->mail,
+      'parameters' => array(
+        'account' => $account,
+        'node' => $node,
+        'form' => $form,
+        'form_state' => $form_state,
+      ),
+      'send' => !empty($node->send_new_user_email) ? $node->send_new_user_email && $new_user : FALSE,
+    ));
+  }
+}
+
+/**
+ * Similar to drupal_mail, but gives us more granular control over what is sent.
+ *
+ * @param array $options
+ *   An array of parameters which will be sent to drupal_mail.
+ *
+ * @return array
+ *   The same result returned by drupal_mail.
+ */
+function webform_user_send_mail($options = array()) {
+  $required_values = array('module', 'key', 'to');
+  foreach ($required_values as $key) {
+    if (!isset($options[$key])) {
+      return FALSE;
+    }
+  }
+
+  $defaults = array(
+    'language' => language_default(),
+    'parameters' => array(),
+    'from' => NULL,
+    'send' => TRUE,
+  );
+  $options = array_merge($defaults, $options);
+
+  // Allow other modules to intervene before we call drupal_mail().
+  drupal_alter('webform_user_send_mail', $options);
+
+  if ($options['send']) {
+    drupal_mail($options['module'], $options['key'], $options['to'], $options['language'], $options['parameters'], $options['from'], TRUE);
   }
 }
 
@@ -1290,12 +1356,13 @@ function _webform_user_validate_email($mail) {
  * @return object
  *   An account object.
  */
-function _webform_user_save_profile_map($account, &$map) {
+function _webform_user_save_profile_map($account, &$map, &$form, &$form_state) {
   // The saved map has to handle saving to both profile2 / entity fields. And
   // profile.module.
   if ($map) {
     // First loop through the map and fields to grab results.
     $profile_values = array();
+    $map_array_keys = array_keys($map);
     $fields = _webform_user_get_profile_fields();
     foreach ($fields as $field) {
       // So far no types actually require a unique solution.
@@ -1312,7 +1379,7 @@ function _webform_user_save_profile_map($account, &$map) {
 
         default:
           // Only add the profile result if the name is in the keys.
-          if (in_array($field['name'], array_keys($map))) {
+          if (in_array($field['name'], $map_array_keys)) {
             $profile_values[$field['name']] = $map[$field['name']];
           }
           break;
@@ -1384,6 +1451,8 @@ function _webform_user_save_profile_map($account, &$map) {
         }
       }
     }
+
+    drupal_alter('webform_user_save_profile_map', $account, $form, $form_state);
     return user_save($account);
   } // End if map.
 }

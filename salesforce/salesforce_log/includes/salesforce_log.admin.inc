@@ -9,12 +9,12 @@
  * Form callback for settings page.
  */
 function salesforce_log_settings($form, $form_state) {
-
   $form['salesforce_log_batch_row_limit'] = array(
     '#type' => 'select',
     '#title' => t('Discard batch entries above the following row limit'),
-    '#default_value' => variable_get('salesforce_log_batch_row_limit', 10000),
+    '#default_value' => variable_get('salesforce_log_batch_row_limit', 0),
     '#options' => drupal_map_assoc(array(
+      '',
       5000,
       10000,
       25000,
@@ -24,7 +24,21 @@ function salesforce_log_settings($form, $form_state) {
     )),
     '#description' => t('The maximum number of rows to keep in the batch log.'),
   );
-
+  $form['salesforce_log_item_row_limit'] = array(
+    '#type' => 'select',
+    '#title' => t('Discard item entries above the following row limit'),
+    '#default_value' => variable_get('salesforce_log_item_row_limit', 0),
+    '#options' => drupal_map_assoc(array(
+      '',
+      5000,
+      10000,
+      25000,
+      50000,
+      75000,
+      100000,
+    )),
+    '#description' => t('The maximum number of rows to keep in the item log.'),
+  );
   $form = system_settings_form($form);
 
   return $form;

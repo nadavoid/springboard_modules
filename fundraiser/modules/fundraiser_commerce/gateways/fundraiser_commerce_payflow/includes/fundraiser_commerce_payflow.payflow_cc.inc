@@ -49,6 +49,12 @@ function commerce_payflow_cc_settings_form($settings = array(), $payment_method 
     '#default_value' => $settings['password'],
     '#required' => TRUE,
   );
+  $form['bn_code'] = array(
+    '#type' => 'textfield',
+    '#title' => t('BN Code'),
+    '#description' => t('This code should be provided by PayPal partners to be submitted along with every payment.'),
+    '#default_value' => $settings['bn_code'],
+  );
   $form['mode'] = array(
     '#type' => 'radios',
     '#title' => t('Processing mode'),
@@ -123,6 +129,7 @@ function commerce_payflow_cc_default_settings() {
     'vendor' => '',
     'user' => '',
     'password' => '',
+    'bn_code' => '',
     'mode' => 'test',
     'trxtype' => 'S',
     'currency_code' => in_array($default_currency, array_keys(commerce_paypal_currencies('payflow_link'))) ? $default_currency : 'USD',
@@ -214,6 +221,10 @@ function commerce_payflow_cc_submit_form_submit($payment_method, $pane_form, $pa
 
   if (isset($pane_values['credit_card']['code'])) {
     $nvp['CVV2'] = $pane_values['credit_card']['code'];
+  }
+
+  if (isset($payment_method['settings']['bn_code'])) {
+    $nvp['BUTTONSOURCE'] = $payment_method['settings']['bn_code'];
   }
 
   // Build a description for the order.

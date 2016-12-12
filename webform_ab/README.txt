@@ -1,17 +1,17 @@
 Overview
 ========
-The Webform A/B Test module creates a new node type (appropriately called "Webform A/B Test"). To build a test, create a Webform A/B Test node as you would with any other content type. When a user visits the URL for this test node, they will be redirected to one of the forms included in the test (selected at random). Once a form has been declared the winner of the test, all users who visit the test will be redirected to that form, and the others will be "retired."
+The Webform A/B Test (Renamed for Springboard: Multivariate Testing) module creates a new node type (appropriately called "Webform A/B Test" (Multivariate). To build a test, create a Webform A/B Test node as you would with any other content type. When a user visits the URL for this test node, they will be redirected to one of the forms included in the test (selected at random). Once a form has been declared the winner of the test, all users who visit the test will be redirected to that form, and the others will be "retired."
 
 
 Creating a Test
 ===============
 Options when creating or editing a Test
 ---------------------------------------
-### A/B Test Settings
+### A/B ((Multivariate)) Test Settings
 This fieldset includes basic information about the Test.
 
 * Test Name: This is the title of the Test node, so it will be used in content lists and shown on the admin overview for the test.
-* Admin Description: A brief description of the Test. This is only shown to admin users who have permission to edit Webform A/B Test nodes.
+* Admin Description: A brief description of the Test. This is only shown to admin users who have permission to edit Webform A/B Test (Multivariate Testing) nodes.
 * Public Teaser: Teaser text to show to unprivileged users when the node is shown in teaser mode, such as a list of nodes or if it's promoted to the home page.
 * Which types of webforms will this test use: A Test can only be run with a single type of webform. By default, this list only includes Standard Webforms, but other modules can define other types of webforms to use in Tests. For example, the Fundraiser A/B Test module (not yet released in contrib) allows Fundraiser forms to be used for a Test.
 
@@ -40,7 +40,7 @@ Like every other node, you can also set author information, menu settings, and s
 
 Included Webforms
 -----------------
-An A/B Test needs to include some webforms. After creating the node, visit the Included Webforms tab to add the ones you want to include in the Test. Use the Add Webform dropdown to choose the forms to be included. Note that this dropdown will only include forms that can be included in this Test, based on what was chosen for "Which types of webforms will this test use?" If the Test was setup to use Fundraiser forms, then only Fundraiser forms will be listed in the dropdown.
+An A/B Test (Multivariate Test) needs to include some webforms. After creating the node, visit the Included Webforms tab to add the ones you want to include in the Test. Use the Add Webform dropdown to choose the forms to be included. Note that this dropdown will only include forms that can be included in this Test, based on what was chosen for "Which types of webforms will this test use?" If the Test was setup to use Fundraiser forms, then only Fundraiser forms will be listed in the dropdown.
 
 Included webforms are listed here, with links to view or edit the webform node, or to remove them from the A/B test.
 
@@ -51,7 +51,7 @@ Regular Users
 -------------
 ### Full node
 
-When a regular user visits the Webform A/B Test node, one of the forms included in the Test will be chosen at random, and the user will be redirected there. Once they have visited the Test this first time, they will always be redirected to the same form.
+When a regular user visits the Webform A/B Test (Multivariate) node, one of the forms included in the Test will be chosen at random, and the user will be redirected there. Once they have visited the Test this first time, they will always be redirected to the same form.
 
 If one of the included forms has already 'won' the Test, then users will always be redirected there.
 
@@ -86,7 +86,7 @@ The following report columns only apply to the winning webform:
 * Post-win Conversion %: Percentage of hits that resulted in successful submissions after being declared the winner.
 
 
-Webform A/B Test Settings
+Webform A/B (Multivariate Testing) Test Settings
 =========================
 The Webform A/B Test Settings form is found under Administer > Site Configuration. Here, admins can configure some basic settings that affect all A/B Tests.
 

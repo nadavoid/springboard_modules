@@ -33,7 +33,7 @@ function sba_social_action_create_twitter_message_entity($update = FALSE) {
       'allowed_values' => array(
         'Website' => 'Official Website',
         'Facebook' => 'Facebook',
-        'Youtube' => 'Youtube',
+        'Youtube' => 'YouTube',
       ),
       'allowed_values_function' => '',
     ),

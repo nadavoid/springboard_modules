@@ -1,0 +1,127 @@
+<?php
+
+/**
+ * @file
+ * Install and update routines for Salesforce quick donate module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function salesforce_quick_donate_install() {
+  salesforce_quick_donate_map_optin_date();
+}
+
+function salesforce_quick_donate_uninstall() {
+  salesforce_quick_donate_unmap_optin_date();
+}
+
+/**
+ * Maps the new quick donate opt-in date profile field.
+ */
+function salesforce_quick_donate_map_optin_date() {
+  $user_map = salesforce_mapping_load('user_to_contact');
+
+  if (!salesforce_quick_donate_field_is_mapped($user_map->field_mappings, 'field_quick_donate_opt_in')) {
+    $user_map->field_mappings[] = salesforce_quick_donate_mapped_optin_field();
+  }
+
+  // Resave the map with the new fields.
+  $user_map->save();
+}
+
+/**
+ * Unmaps the quick donate opt-in field.
+ */
+function salesforce_quick_donate_unmap_optin_date() {
+  $user_map = salesforce_mapping_load('user_to_contact');
+
+  $index = 0;
+  $field_is_mapped = FALSE;
+  foreach ($user_map->field_mappings as $mapped_field) {
+    if ($mapped_field['drupal_field']['fieldmap_value'] == 'field_quick_donate_opt_in') {
+      $field_is_mapped = TRUE;
+      break;
+    }
+    $index++;
+  }
+
+  if ($field_is_mapped) {
+    unset($user_map->field_mappings[$index]);
+    $user_map->save();
+  }
+}
+
+/**
+ * Helper function to determine if a field is already mapped.
+ */
+function salesforce_quick_donate_field_is_mapped($mapping, $field) {
+  foreach ($mapping as $mapped_field) {
+    if ($mapped_field['drupal_field']['fieldmap_value'] == $field) {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+/**
+ * Defines the quick donate opt-in mapping record.
+ */
+function salesforce_quick_donate_mapped_optin_field() {
+  return json_decode(' {
+      "drupal_field" : {
+        "fieldmap_type" : "property",
+        "fieldmap_value" : "field_quick_donate_opt_in"
+      },
+      "salesforce_field" : {
+        "autoNumber" : false,
+        "byteLength" : 0,
+        "calculated" : false,
+        "calculatedFormula" : null,
+        "cascadeDelete" : false,
+        "caseSensitive" : false,
+        "controllerName" : null,
+        "createable" : true,
+        "custom" : true,
+        "defaultValue" : null,
+        "defaultValueFormula" : null,
+        "defaultedOnCreate" : false,
+        "dependentPicklist" : false,
+        "deprecatedAndHidden" : false,
+        "digits" : 0,
+        "displayLocationInDecimal" : false,
+        "externalId" : false,
+        "filterable" : true,
+        "groupable" : true,
+        "htmlFormatted" : false,
+        "idLookup" : false,
+        "inlineHelpText" : null,
+        "label" : "Quick Donate Opt-In Date",
+        "length" : 0,
+        "name" : "Quick_Donate_Opt_In_Date__c",
+        "nameField" : false,
+        "namePointing" : false,
+        "nillable" : true,
+        "permissionable" : true,
+        "picklistValues" : [],
+        "precision" : 0,
+        "referenceTo" : [],
+        "relationshipName" : null,
+        "relationshipOrder" : null,
+        "restrictedDelete" : false,
+        "restrictedPicklist" : false,
+        "scale" : 0,
+        "soapType" : "xsd:date",
+        "sortable" : true,
+        "type" : "date",
+        "unique" : false,
+        "updateable" : true,
+        "writeRequiresMasterRead" : false
+      },
+      "key" : false,
+      "direction" : "drupal_sf",
+      "drupal_sf" : "blank",
+      "sf_drupal" : "never"
+    }', TRUE);
+}

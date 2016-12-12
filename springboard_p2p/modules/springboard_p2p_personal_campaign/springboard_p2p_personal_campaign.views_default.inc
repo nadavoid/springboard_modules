@@ -1312,7 +1312,7 @@ function springboard_p2p_personal_campaign_views_default_views() {
   $view->core = 7;
   $view->api_version = '3.0';
   $view->disabled = FALSE; /* Edit this to true to make a default view disabled initially */
-
+  
   /* Display: Master */
   $handler = $view->new_display('default', 'Master', 'default');
   $handler->display->display_options['use_more_always'] = FALSE;
@@ -1323,26 +1323,18 @@ function springboard_p2p_personal_campaign_views_default_views() {
   $handler->display->display_options['pager']['type'] = 'full';
   $handler->display->display_options['style_plugin'] = 'table';
   $handler->display->display_options['style_options']['columns'] = array(
-    'sbp_first_name' => 'sbp_last_name',
-    'sbp_last_name' => 'sbp_last_name',
+    'donor_name' => 'donor_name',
     'amount' => 'amount',
     'created' => 'created',
     'mail' => 'mail',
   );
   $handler->display->display_options['style_options']['default'] = '-1';
   $handler->display->display_options['style_options']['info'] = array(
-    'sbp_first_name' => array(
+    'donor_name' => array(
       'sortable' => 0,
       'default_sort_order' => 'asc',
       'align' => '',
       'separator' => '',
-      'empty_column' => 0,
-    ),
-    'sbp_last_name' => array(
-      'sortable' => 0,
-      'default_sort_order' => 'asc',
-      'align' => '',
-      'separator' => ' ',
       'empty_column' => 0,
     ),
     'amount' => array(
@@ -1388,17 +1380,11 @@ function springboard_p2p_personal_campaign_views_default_views() {
   $handler->display->display_options['relationships']['personal_campaign_nid']['id'] = 'personal_campaign_nid';
   $handler->display->display_options['relationships']['personal_campaign_nid']['table'] = 'springboard_p2p_personal_campaign_action';
   $handler->display->display_options['relationships']['personal_campaign_nid']['field'] = 'personal_campaign_nid';
-  /* Field: User: First name */
-  $handler->display->display_options['fields']['sbp_first_name']['id'] = 'sbp_first_name';
-  $handler->display->display_options['fields']['sbp_first_name']['table'] = 'field_data_sbp_first_name';
-  $handler->display->display_options['fields']['sbp_first_name']['field'] = 'sbp_first_name';
-  $handler->display->display_options['fields']['sbp_first_name']['relationship'] = 'uid';
-  /* Field: User: Last name */
-  $handler->display->display_options['fields']['sbp_last_name']['id'] = 'sbp_last_name';
-  $handler->display->display_options['fields']['sbp_last_name']['table'] = 'field_data_sbp_last_name';
-  $handler->display->display_options['fields']['sbp_last_name']['field'] = 'sbp_last_name';
-  $handler->display->display_options['fields']['sbp_last_name']['relationship'] = 'uid';
-  $handler->display->display_options['fields']['sbp_last_name']['label'] = 'Name';
+  /* Field: P2P action: User Name */
+  $handler->display->display_options['fields']['donor_name']['id'] = 'donor_name';
+  $handler->display->display_options['fields']['donor_name']['table'] = 'springboard_p2p_personal_campaign_action';
+  $handler->display->display_options['fields']['donor_name']['field'] = 'donor_name';
+  $handler->display->display_options['fields']['donor_name']['label'] = 'Name';
   /* Field: P2P action: Action amount */
   $handler->display->display_options['fields']['amount']['id'] = 'amount';
   $handler->display->display_options['fields']['amount']['table'] = 'springboard_p2p_personal_campaign_action';
@@ -1445,7 +1431,7 @@ function springboard_p2p_personal_campaign_views_default_views() {
   $handler->display->display_options['filters']['status']['table'] = 'springboard_p2p_personal_campaign_action';
   $handler->display->display_options['filters']['status']['field'] = 'status';
   $handler->display->display_options['filters']['status']['value'] = '1';
-
+  
   /* Display: Page */
   $handler = $view->new_display('page', 'Page', 'page_1');
   $handler->display->display_options['path'] = 'p2p_personal_campaign_donor_dashboard';

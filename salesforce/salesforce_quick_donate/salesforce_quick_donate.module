@@ -1,0 +1,124 @@
+<?php
+
+/**
+ * Implements hook_fundraiser_quick_donate_optin_create().
+ */
+function salesforce_quick_donate_fundraiser_quick_donate_optin_create($account, $donation, $card_id) {
+  salesforce_quick_donate_optin($account, $donation, $card_id);
+}
+
+/**
+ * Implements hook_fundraiser_quick_donate_optin_update().
+ */
+function salesforce_quick_donate_fundraiser_quick_donate_optin_update($account, $donation, $old_card_id, $new_card_id) {
+  // When an optin is updated, e.g., the current card is replaced.
+  // Add a new quick donate subscription object and opt out of the old one.
+  salesforce_quick_donate_optin($account, $donation, $new_card_id);
+  salesforce_quick_donate_optout($old_card_id);
+}
+
+/**
+ * Implements hook_salesforce_genmap_map_fields_alter().
+ */
+function salesforce_quick_donate_salesforce_genmap_map_fields_alter(&$fields, $context) {
+  if ($context['module'] == 'salesforce_donation') {
+    // Add the card on file id to the opportunity if it was a quick donate transaction.
+    if (isset($context['object']->data['is_quick_donate'])) {
+      $fields['Quick_Donate_Token_Id__c'] = $context['object']->data['cardonfile'];  
+    }
+  }
+}
+
+/**
+ * Implements hook_fundraiser_quick_donate_optout().
+ */
+function salesforce_fundraiser_quick_donate_optout($card_id, $uid) {
+  salesforce_quick_donate_optout($card_id);
+}
+
+/**
+ * Implements hook_entity_delete().
+ */
+function salesforce_quick_donate_entity_delete($entity, $type) {
+  if ($type == 'commerce_cardonfile') {
+    // Send the subscription back to Salesforce with the opt-out date set.
+    salesforce_quick_donate_optout($entity->card_id);
+  }
+}
+
+/**
+ * Generates and queues a new quick donate subscription object.
+ */
+function salesforce_quick_donate_optin($account, $donation, $card_id) {
+  $card_on_file = commerce_cardonfile_load($card_id);
+
+  // Create a quick donate subscription object and queue it up.
+  $sobject = new stdClass();
+  $sobject->type = 'Quick_Donate_Subscription__c';
+  $sobject->fields = array(
+    'Payment_Token_Id__c' => $card_id,
+    'Payment_Method__c' => $card_on_file->payment_method,
+    'Payment_Gateway__c' => $card_on_file->instance_id,
+    'Payment_Token__c' => $card_on_file->remote_id,
+    'CC_Type__c' => $card_on_file->card_type,
+    'Donor_Name__c' => $card_on_file->card_name,
+    'CC_Last_4__c' => $card_on_file->card_number,
+    'CC_Exp_Month__c' => $card_on_file->card_exp_month,
+    'CC_Exp_Year__c' => $card_on_file->card_exp_year,
+    'Opt_In_Date__c' => $card_on_file->created,
+    'Default_Payment_Method__c' => $card_on_file->instance_default,
+    'Contact__c' => sprintf('[Contact:user:%d]', $account->uid),
+    'Donation__c' => sprintf('[Opportunity:donation:%d]', $donation->did),
+    'Donation_Form_Id__c' => $donation->node->nid,
+    'Donation_Form_Name__c' => $donation->node->title,
+  );
+
+  $item = array(
+    'drupal_id' => $card_id,
+    'module' => 'salesforce_quick_donate',
+    'delta' => 'commerce_cardonfile',
+    'object_type' => 'Quick_Donate_Subscription__c',
+    'operation' => 'CREATE',
+    'sobject' => $sobject,
+  );
+
+  $queue = salesforce_queue_load();
+  $result = $queue->createItem($item);
+}
+
+/**
+ * Sends an update to an existing quick donate subscription
+ * setting the opt-out date.
+ *
+ * @param $card_id
+ *   The id of the card being opted out of.
+ */
+function salesforce_quick_donate_optout($card_id) {
+  $sobject = new stdClass();
+  $sobject->type = 'Quick_Donate_Subscription__c';
+  $sobject->fields = array(
+    'Opt_Out_Date__c' => time(),
+    'Default_Payment_Method__c' => FALSE,
+  );
+
+  $item = array(
+    'drupal_id' => $card_id,
+    'module' => 'salesforce_quick_donate',
+    'delta' => 'commerce_cardonfile',
+    'object_type' => 'Quick_Donate_Subscription__c',
+    'operation' => 'CREATE',
+    'sobject' => $sobject,
+  );
+
+  $queue = salesforce_queue_load();
+  // Only queue these up if they've actually been exported.
+  if (salesforce_sync_load_map($item)) {
+    _salesforce_genmap_alter_operation($item);
+    $result = $queue->createItem($item);  
+  }
+  else {
+    // If the initial opt-in never exported. Delete it from the
+    // queue because there is nothing to update.
+    $queue->deleteItem((object)$item);
+  }
+}

@@ -3,14 +3,14 @@
 
 /**
  * @file
- * Email Wrappers helper functions for 3rd party module development.
+ * Email Templates helper functions for 3rd party module development.
  */
 
 /**
  * Drop this into your code to add/edit/delete mail settings.
  *
  * Be sure to provide module and name (unique per module, much like block
- * deltas) to ensure email wrappers can load your module-specific settings.
+ * deltas) to ensure email templates can load your module-specific settings.
  *
  * @param array $edit
  *   Placeholder for form API edit cruft.
@@ -194,7 +194,7 @@ function email_wrappers_mail_form_validate(&$form, $form_state) {
 /**
  * Submit handler for the mail form.
  *
- * Saves the email wrappers mail settings.
+ * Saves the email templates mail settings.
  */
 function email_wrappers_mail_form_submit($form, $form_state) {
   $settings = _email_wrappers_concat_settings_from_submission($form_state['values']);
@@ -305,7 +305,7 @@ function email_wrappers_sanitize_from_name($name) {
 }
 
 /**
- * Inserts email wrapper settings into the database.
+ * Inserts email template settings into the database.
  *
  * @param object|array $settings
  *   The values to insert.
@@ -315,7 +315,7 @@ function email_wrappers_save($settings) {
 }
 
 /**
- * Updates email wrapper settings in the database.
+ * Updates email templates settings in the database.
  *
  * @param object|array $settings
  *   The values to update.

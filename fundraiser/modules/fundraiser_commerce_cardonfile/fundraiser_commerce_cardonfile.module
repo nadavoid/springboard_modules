@@ -1,0 +1,94 @@
+<?php
+/**
+ * @file
+ * Module file for fundraiser_commerce_cardonfile.
+ */
+
+/**
+ * Implements hook_views_api().
+ */
+function fundraiser_commerce_cardonfile_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'fundraiser_commerce_cardonfile') . '/includes/views',
+  );
+}
+
+/**
+ * Implements hook_fundraiser_donation_post_create().
+ */
+function fundraiser_commerce_cardonfile_fundraiser_donation_post_create($donation) {
+  fundraiser_commerce_cardonfile_fundraiser_donation_post_update($donation);
+}
+
+/**
+ * Implements hook_fundraiser_donation_post_update().
+ *
+ * This function will update the 'field_data_commerce_cardonfile_profile'
+ * field's value to the correct billing profile ID when a donation is created
+ * or updated.
+ *
+ * @todo This can be removed once the commerce_cardonfile module supports
+ * billing addresses for individual cards.
+ */
+function fundraiser_commerce_cardonfile_fundraiser_donation_post_update($donation) {
+  if (empty($donation->data['cardonfile']) || empty($donation->did)) {
+    return;
+  }
+
+  $card = commerce_cardonfile_load($donation->data['cardonfile']);
+  $card_wrapper = entity_metadata_wrapper('commerce_cardonfile', $card);
+
+  $order = commerce_order_load($donation->did);
+  $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+
+  $card_wrapper->commerce_cardonfile_profile = $order_wrapper->commerce_customer_billing->value();
+  $card_wrapper->save();
+}
+
+/**
+ * Implements hook_views_pre_render().
+ *
+ * Remove cards that have no used by entries; remove card name and billing
+ * profile label if the card name is the same as the billing profile name.
+ */
+function fundraiser_commerce_cardonfile_views_pre_render(&$view) {
+  if ($view->name != 'commerce_card_on_file_user_cards') {
+    return;
+  }
+
+  foreach ($view->result as $key => $result) {
+    // If this card isn't being used by quick donate or for a recurring donation
+    // unset it.
+    if (empty($result->used_by)) {
+      unset($view->result[$key]);
+      continue;
+    }
+
+    // Array of payment gateways used by cards that should not be displayed.
+    $blacklist = array(
+      'braintree_hostedfields|commerce_payment_braintree_hostedfields',
+      'commerce_psi_credit|commerce_payment_commerce_psi_credit',
+    );
+
+    // If the payment gateway is in the blacklist, unset this card.
+    $card = commerce_cardonfile_load($result->card_id);
+    if (in_array($card->instance_id, $blacklist)) {
+      return;
+    }
+
+    // If this card isn't of type "credit", unset it.
+    $gateway = _fundraiser_gateway_info($card->instance_id);
+    if ($gateway['payment_method'][0] != 'credit') {
+      unset($view->result[$key]);
+      continue;
+    }
+
+    // Unset the card name and billing profile label if the card name and name
+    // on the billing profile is the same.
+    if (!empty($result->field_commerce_cardonfile_profile) && strpos($result->field_commerce_cardonfile_profile[0]['rendered']['#markup'], $result->commerce_cardonfile_card_name) !== FALSE) {
+      unset($view->field['card_name']);
+      $view->field['commerce_cardonfile_profile']->options['label'] = '';
+    }
+  }
+}

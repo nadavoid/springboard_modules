@@ -1,0 +1,7 @@
+name = Springboard Data Warehouse
+description = Pushes Springboard data to long term storage for BI and reporting purposes.
+core = 7.x
+package = Springboard Data Warehouse
+dependencies[] = libraries
+
+configure = 'admin/config/services/springboard-dw/configure'

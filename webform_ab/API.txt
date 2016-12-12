@@ -21,10 +21,10 @@ Check if the form submission should be counted as a conversion. Only run the che
 Act on Events
 -------------
 ### `hook_webform_ab_conversion($test_node, $submitted_values)`
-Invoked when a form in the test is successfully submitted. This can be used to store information specific to your module when a form is submitted. For example, the `fundraiser_ab` module implements this hook to update stored aggregate stats about donations made on the forms included in an A/B test.
+Invoked when a form in the test is successfully submitted. This can be used to store information specific to your module when a form is submitted. For example, the `fundraiser_ab` module implements this hook to update stored aggregate stats about donations made on the forms included in an A/B (Multivariate) test.
 
 ### `hook_webform_ab_reset_data($test_nid)`
-Invoked when the Reset Data option is used on the Reports and Monitoring tab of a Webform A/B Test. This allows other modules to clear any data they might be storing about the test. For example, the `fundraiser_ab` module implements this hook to clear the aggregated donation stats when the A/B test data is reset.
+Invoked when the Reset Data option is used on the Reports and Monitoring tab of a Webform A/B (Multivariate) Test. This allows other modules to clear any data they might be storing about the test. For example, the `fundraiser_ab` module implements this hook to clear the aggregated donation stats when the (Multivariate) test data is reset.
 
 
 ### `hook_webform_ab_remove_form($test_nid, $webform_nid)`

@@ -660,7 +660,7 @@ function springboard_p2p_personal_campaign_field_default_field_instances() {
     'bundle' => 'p2p_personal_campaign',
     'default_value' => NULL,
     'deleted' => 0,
-    'description' => 'This is a Youtube or Vimeo video URL. Example: https://www.youtube.com/watch?v=kJ4CYbCGhLA',
+    'description' => 'This is a YouTube or Vimeo video URL. Example: https://www.youtube.com/watch?v=kJ4CYbCGhLA',
     'display' => array(
       'default' => array(
         'label' => 'hidden',
@@ -713,7 +713,7 @@ function springboard_p2p_personal_campaign_field_default_field_instances() {
   t('Search Engine');
   t('Submission Goal');
   t('Suggested Donation Amount');
-  t('This is a Youtube or Vimeo video URL. Example: https://www.youtube.com/watch?v=kJ4CYbCGhLA');
+  t('This is a YouTube or Vimeo video URL. Example: https://www.youtube.com/watch?v=kJ4CYbCGhLA');
   t('This will be the web address of your personal campaign page, which you can change here (letters and numbers only, please).');
   t('Upload a Campaign Image');
   t('Upload a Campaign Video');

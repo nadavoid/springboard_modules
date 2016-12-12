@@ -1,0 +1,6 @@
+name = Springboard Data Warehouse Queue Legacy Data
+description = Queues legacy Springboard data for submission to the Data Warehouse.
+core = 7.x
+package = Springboard Data Warehouse
+dependencies[] = libraries
+dependencies[] = springboard_dw

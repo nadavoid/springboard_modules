@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Install functions for the default form and email wrapper.
+ * Install functions for the default form and email template.
  */
 
 /**
@@ -71,7 +71,7 @@ function _fundraiser_sustainers_upgrade_add_example() {
   $confirmation['nid'] = $node->nid;
   $confirmation['confirmation_page_title'] = '';
   _webform_confirmations_update($confirmation);
-  // Save email wrapper details.
+  // Save email template details.
   foreach ($node->webform['components'] as $component) {
     if ($component['form_key'] == 'fsu_confirmation_email') {
       $cid = $component['cid'];
@@ -85,7 +85,7 @@ function _fundraiser_sustainers_upgrade_add_example() {
 }
 
 /**
- * Install the default email wrapper.
+ * Install the default email template.
  */
 function fundraiser_sustainers_upgrade_email_wrapper_add() {
   $node = new stdClass();
@@ -93,7 +93,7 @@ function fundraiser_sustainers_upgrade_email_wrapper_add() {
   $node->type = 'email_wrapper';
   $node->language = LANGUAGE_NONE;
   $node->uid = 1;
-  $node->title = 'Default Sustainers Upgrade Email Wrapper';
+  $node->title = 'Default Sustainers Upgrade Email Template';
   $node->status = 0;
   $node->promote = 0;
   $node->email_wrapper_from_name[LANGUAGE_NONE][0] = array(

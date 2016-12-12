@@ -148,6 +148,25 @@ class FundraiserSustainersLog {
   }
 
   /**
+   * Log that a sustainer has been omitted.
+   *
+   * @param int $did
+   *   The donation ID to log as omitted.
+   */
+  public function logOmittedDonation($did, $new_state = NULL) {
+    $log_record = array(
+      'did' => $did,
+    );
+
+    if (!is_null($new_state)) {
+      $log_record['new_state'] = $new_state;
+    }
+
+    $this->log($log_record);
+  }
+
+
+  /**
    * Marks all scheduled log entries for a sustainer as 'advance_charge'.
    *
    * This way it won't get counted in metrics for scheduled donations.

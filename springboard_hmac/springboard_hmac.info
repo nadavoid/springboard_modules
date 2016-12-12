@@ -4,3 +4,4 @@ package = Jackson River Springboard
 core = 7.x
 version = 7.x-4.x-dev
 dependencies[] = secure_prepopulate
+dependencies[] = springboard_cookie

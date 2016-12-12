@@ -67,3 +67,28 @@ function commerce_cybersource_requirements($phase) {
 
   return $requirements;
 }
+
+/**
+ * Moves the cardonfile setting to the appropriate place.
+ */
+function commerce_cybersource_update_7100() {
+  $query = db_select('rules_config', 'rc')
+    ->fields('rc', array('data'))
+    ->condition('rc.name', 'commerce_payment_cybersource_soap_cc', '=')
+    ->execute();
+  if (!$query->rowCount()) {
+    return;
+  }
+
+  $data = $query->fetchField();
+  $data = preg_replace_callback('/(payment_method.*)("settings";a:)([0-9]+)(.*)(s:11:"credit_card";a:)([0-9]+)(.*)(s:10:"cardonfile";i:[01];)/', function($matches) {
+    return $matches[1] . $matches[2] . (intval($matches[3]) + 1) . $matches[4] . $matches[8] . $matches[5] . (intval($matches[6]) - 1) . $matches[7];
+  }, $data);
+
+  db_merge('rules_config')
+    ->key(array('name' => 'commerce_payment_cybersource_soap_cc'))
+    ->fields(array(
+      'data' => $data,
+    ))
+    ->execute();
+}

@@ -5,8 +5,8 @@
  */
 function email_wrappers_example_menu() {
   $items['email_wrappers_example'] = array(
-    'title' => 'email wrappers example form',
-    'description' => 'email wrappers example form',
+    'title' => 'email templates example form',
+    'description' => 'email templates example form',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('email_wrappers_example_test_form'),
     'access callback' => TRUE,

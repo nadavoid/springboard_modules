@@ -1724,6 +1724,7 @@ function springboard_views_views_default_views() {
   $handler->display->display_options['fields']['nothing']['field'] = 'nothing';
   $handler->display->display_options['fields']['nothing']['label'] = 'Actions';
   $handler->display->display_options['fields']['nothing']['alter']['text'] = '<a href="/springboard/donations/[order_id]">View Order</a> | <a href="/springboard/donations/[order_id]/payment">Payments</a>';
+  $handler->display->display_options['fields']['nothing']['element_class'] = 'table-actions';
   /* Sort criterion: Commerce Order: Created date */
   $handler->display->display_options['sorts']['created']['id'] = 'created';
   $handler->display->display_options['sorts']['created']['table'] = 'commerce_order';
@@ -2016,6 +2017,7 @@ function springboard_views_views_default_views() {
   $handler->display->display_options['fields']['nothing']['alter']['text'] = '<a href="/springboard/donations/[order_id]">View Order</a> | <a href="/springboard/donations/[order_id]/payment">Payments</a>';
   $handler->display->display_options['fields']['nothing']['alter']['make_link'] = TRUE;
   $handler->display->display_options['fields']['nothing']['alter']['path'] = 'admin/commerce/orders/[order_id]/payment';
+  $handler->display->display_options['fields']['nothing']['element_class'] = 'table-actions';
   $handler->display->display_options['defaults']['arguments'] = FALSE;
   /* Contextual filter: Content: Nid */
   $handler->display->display_options['arguments']['nid']['id'] = 'nid';
@@ -4271,6 +4273,13 @@ function springboard_views_views_default_views() {
       'empty_column' => 0,
     ),
   );
+  /* Header: Global: Text area */
+  $handler->display->display_options['header']['area']['id'] = 'area';
+  $handler->display->display_options['header']['area']['table'] = 'views';
+  $handler->display->display_options['header']['area']['field'] = 'area';
+  $handler->display->display_options['header']['area']['content'] = '<a href="/admin/people/create" class="button add-button">Create User</a>';
+  $handler->display->display_options['header']['area']['format'] = 'full_html';
+
   /* Field: User: Uid */
   $handler->display->display_options['fields']['uid']['id'] = 'uid';
   $handler->display->display_options['fields']['uid']['table'] = 'users';

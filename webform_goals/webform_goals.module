@@ -488,15 +488,10 @@ function webform_goals_save_goal_nids($goal) {
  */
 function webform_goals_delete_goal($gid) {
   require_once 'includes/webform_goals.files.inc';
-  db_query('
-    DELETE FROM {webform_goals
-    WHERE gid = :gid
-  ', array(':gid' => $gid));
 
-  db_query('
-    DELETE FROM {webform_goals_node}
-    WHERE gid = :gid
-  ', array(':gid' => $gid));
+  db_query("DELETE FROM {webform_goals} WHERE gid = :gid", array(':gid' => $gid));
+  db_query("DELETE FROM {webform_goals_node} WHERE gid = :gid", array(':gid' => $gid));
+  db_query("DELETE FROM {webform_goals_widget} WHERE gid = :gid", array(':gid' => $gid));
 
   $path = _webform_goals_base_path();
   $uri = $path . '/template-' . $gid . '.txt';
@@ -1002,7 +997,7 @@ function _webform_goals_get_selected_metric($selected_context, $form_state, $goa
   if (!empty($form_state['values']['metrics'])) {
     $selected_metric = $metrics[$form_state['values']['metrics']];
   }
-  elseif (!empty($goal['metric'])) {
+  elseif (!empty($goal['metric']) && isset($metrics[$goal['metric']])) {
     $selected_metric = $metrics[$goal['metric']];
   }
   return $selected_metric;
@@ -1448,10 +1443,15 @@ function webform_goals_node_update($node) {
 /**
  * Implements hook_node_delete().
  *
- * Delete a quick goal when node is deleted.
+ * Delete all goal data related to the node being deleted.
  */
 function webform_goals_node_delete($node) {
   if (webform_goals_is_goal_type($node->type)) {
+    $gids_query = db_query("SELECT gid FROM {webform_goals_node} WHERE nid = :nid",
+      array(':nid' => $node->nid));
+    foreach ($gids_query as $gids_data) {
+      webform_goals_delete_goal($gids_data->gid);
+    }
     webform_goals_quick_goal_delete($node->nid);
   }
 }

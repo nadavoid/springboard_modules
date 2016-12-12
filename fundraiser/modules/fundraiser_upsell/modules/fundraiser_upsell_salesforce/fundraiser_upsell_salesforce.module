@@ -628,9 +628,31 @@ function fundraiser_upsell_salesforce_salesforce_sync_pass_item($item, $result) 
   }
 
   // Add to the queue.
-  if (is_object($sobject)) {
+  if (is_object($sobject) && !fundraiser_upsell_salesforce_upsell_is_exported($sobject)) {
     fundraiser_upsell_salesforce_queue_upsell($sobject);
   }
+}
+
+/**
+ * Determines if an upsell object has already been exported.
+ *
+ * @param $sobject
+ *   The upsell sobject being exported.
+ *
+ * @return int|bool
+ *   The id of the sync map record or FALSE if not found
+ */
+function fundraiser_upsell_salesforce_upsell_is_exported($sobject) {
+  $item = array(
+    'module' => 'fundraiser_upsell_salesforce',
+    'delta' => 'upsell',
+    'drupal_id' => $sobject->fields['Original_Order_Id__c'],
+    'object_type' => 'Donation_Upsell__c',
+  );
+
+  $rmid = _salesforce_sync_get_rmid($item);
+
+  return $rmid;
 }
 
 /**

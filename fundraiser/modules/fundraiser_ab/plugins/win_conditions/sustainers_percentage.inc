@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Provide a Webform A/B Test win condition: Minimum percentage of donations
+ * Provide a Multivariate Testing win condition: Minimum percentage of donations
  * that are from sustainers
  */
 
@@ -14,6 +14,7 @@ $plugin = array(
   'config form validation' => 'fundraiser_ab_sustainers_percentage_config_validate',
   'config summary' => 'fundraiser_ab_sustainers_percentage_config_summary',
   'check criteria' => 'fundraiser_ab_sustainers_percentage_check_win',
+  'current value' => 'fundraiser_ab_sustainers_percentage_current_value',
   'prep for save' => 'fundraiser_ab_sustainers_percentage_prep_save',
 );
 
@@ -64,7 +65,7 @@ function fundraiser_ab_sustainers_percentage_config_validate($config, $field_nam
 
 /**
  * Return a summary of the plugin config, for listing on the admin view of a
- * Webform A/B test node
+ * Multivariate Testing test node
  */
 function fundraiser_ab_sustainers_percentage_config_summary($config) {
   if ($config['percentage'] > 0) {
@@ -86,17 +87,37 @@ function fundraiser_ab_sustainers_percentage_prep_save(&$config) {
   }
 }
 
+/**
+ * Returns the current value this win condition is measuring for a given test.
+ *
+ * @param $webform_nid
+ *   Node ID of the webform currently being test.
+ */
+function fundraiser_ab_sustainers_percentage_current_value($webform_nid) {
+  $overall_donation_count = db_query("SELECT nid FROM {fundraiser_donation} d WHERE d.nid = :webform_nid",
+    array(':webform_nid' => $webform_nid))
+    ->rowCount();
+  $sustainer_donation_count = db_query("SELECT nid FROM {fundraiser_donation} d, {fundraiser_sustainers} s " .
+    "WHERE d.did = s.master_did AND d.nid = :webform_nid",
+    array(':webform_nid' => $webform_nid))
+    ->rowCount();
+  if (!$overall_donation_count) {
+    return 0;
+  }
+  return round($sustainer_donation_count / $overall_donation_count, 2);
+}
+
 
 /**
- * Check if the given Webform A/B Test node has a winner
+ * Check if the given Multivariate Testing Test node has a winner
  *
  * @param $config
- *   Array of config options for this plugin for the Webform A/B test being
+ *   Array of config options for this plugin for the Multivariate Testing test being
  *   checked for a win. In this case, the array will contain 'percentage'
  * @param $webform_details
  *   Array of info about the webform to check.
  * @param $test_node
- *   Webform A/B Test node
+ *   Multivariate Testing Test node
  */
 function fundraiser_ab_sustainers_percentage_check_win($config, $webform_details, $test_node) {
   if (isset($webform_details['fundraiser']) && is_array($webform_details['fundraiser']) && ($webform_details['fundraiser']['sustainer_count'] > 0)) {

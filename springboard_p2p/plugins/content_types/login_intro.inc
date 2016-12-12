@@ -45,36 +45,60 @@ function springboard_p2p_login_intro_render($subtype, $conf, $args, $contexts) {
   $logintext = variable_get('springboard_p2p_login_message_area');
 
   // Define the reg link passing the string id.
-  $loginlink = '/p2p/login';
+  $login_url = 'p2p/login';
+
+  $parameters = drupal_get_query_parameters();
+  $query = array();
+  $output = array();
 
   // Query the url string campaign id if it's not empty. Confirm
   // input is numeric to prevent XSS.
-  if (!empty($_GET['p2p_cid']) && is_numeric($_GET['p2p_cid'])) {
-    $urlstring = $_GET['p2p_cid'];
-    $loginlinkid = '?p2p_cid=' . $urlstring;
+  if (!empty($parameters['p2p_cid']) && is_numeric($parameters['p2p_cid'])) {
+    $query['p2p_cid'] = filter_xss($parameters['p2p_cid']);
+  }
+  if (isset($parameters['campaign_name'])) {
+    $query['campaign_name'] = filter_xss($parameters['campaign_name']);
+  }
+  if (isset($parameters['campaign_url'])) {
+    $query['campaign_url'] = filter_xss($parameters['campaign_url']);
+  }
+  if (isset($parameters['campaign_goal'])) {
+    $query['campaign_goal'] = filter_xss($parameters['campaign_goal']);
   }
 
-  $output = array();
-
-  // Create the output to be rendered.
-  if (empty($_GET['p2p_cid']) || !is_numeric($_GET['p2p_cid'])) {
-    $output[] = '<a class="get-started-link" href=" ' . $loginlink . ' ">' . t('Login') . '<i class="fa fa-cog  get-started-spinner"></i></a>';
-  }
-
-  else {
-    $output[] = '<a class="get-started-link" href=" ' . $loginlink . $loginlinkid . ' ">' . t('Login') . '<i class="fa fa-cog  get-started-spinner"></i></a>';
-  }
-
-  // Render the login message text.
-  $output[] = '<div class="login-text-wrapper"> ';
-  $output[] = $logintext['value'];
-  $output[] = '</div>';
+  $icon = array(
+    '#type' => 'html_tag',
+    '#tag' => 'i',
+    '#attributes' => array(
+      'class' => array('fa', 'fa-cog', 'get-started-spinner'),
+    ),
+    '#value' => '',
+  );
+  $link = array(
+    '#theme' => 'link',
+    '#path' => $login_url,
+    '#text' => t('Login') . render($icon),
+    '#options' => array(
+      'attributes' => array(
+        'class' => array('get-started-link'),
+      ),
+      'html' => TRUE,
+      'query' => $query,
+    ),
+  );
+  $output = array(
+    '#type' => 'container',
+    '#attributes' => array(
+      'class' => array('login-text-wrapper'),
+    ),
+    'link' => $link,
+  );
 
   // Initial content is blank.
   // Build the content type block.
   $block = new stdClass();
   $block->title = $title;
-  $block->content = implode('', $output);
+  $block->content = render($output);
   return $block;
 
 }

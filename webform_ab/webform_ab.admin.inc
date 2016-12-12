@@ -1,7 +1,7 @@
 <?php
 /**
  * @file
- * Webform A/B Testing admin functions
+ * Multivariate Testing admin functions
  */
 
 /**
@@ -40,129 +40,92 @@ function webform_ab_admin_settings($form, &$form_state) {
 }
 
 /**
- * Menu callback for the Reports and Monitoring tab on Test A/B
+ * Menu callback for the Reports and Monitoring tab on Multivariate Test
  *
  * @param $node Node object
  */
 function webform_ab_test_reports($node) {
+  if (empty($node->included_webforms) || !is_array($node->included_webforms)) {
+    return t('No webforms have been added to this Multivariate test. Visit the !forms_tab tab to add webforms.',
+        array('!forms_tab' => l(t('Included Webforms'), 'node/' . $node->nid . '/webforms')));
+  }
+
   $return = '';
 
-  // Get total hit counts for all webforms
-  $hit_counts_result = db_query('SELECT webform_nid, count(hit_id) hits FROM {webform_ab_hits} ' .
-    'WHERE test_nid = :test_nid ' .
-    'GROUP BY test_nid, webform_nid',
-    array(':test_nid' => $node->nid));
-  $hit_counts = array();
-  foreach ($hit_counts_result as $row) {
-    $hit_counts[$row->webform_nid] = $row->hits;
-  }
-
-  // Get total conversions for all webforms
-  $conversion_counts_result = db_query('SELECT webform_nid, count(sid) conversions FROM {webform_ab_conversion} ' .
-    'WHERE test_nid = :test_nid ' .
-    'GROUP BY test_nid, webform_nid',
-    array(':test_nid' => $node->nid));
-  $conversion_counts = array();
-  foreach ($conversion_counts_result as $row) {
-    $conversion_counts[$row->webform_nid] = $row->conversions;
-  }
-
-  // If one of the webforms won, determine pre-win and post-win conversions
-  if (($winning_webform_nid = _webform_ab_has_winner_already($node)) > 0) {
-    // Get pre- and post-win hit counts
-    $post_win_hit_data = db_query('SELECT SUM(IF(hits.time > f.win_time, 1, 0)) AS post_win, SUM(IF(hits.time <= f.win_time, 1, 0)) AS pre_win ' .
-      'FROM {webform_ab_forms} f ' .
-      'LEFT JOIN {webform_ab_hits} hits ON hits.test_nid = f.test_nid AND hits.webform_nid = f.webform_nid ' .
-      'WHERE f.test_nid = :test_nid AND f.webform_nid = :webform_nid ' .
-      'GROUP BY f.test_nid, f.webform_nid',
-      array(':test_nid' => $node->nid, ':webform_nid' => $winning_webform_nid))->fetchAssoc();
-
-    // Get pre- and post-win conversions counts
-    $post_win_conversion_data = db_query('SELECT SUM(IF(sub.submitted > f.win_time, 1, 0)) AS post_win, SUM(IF(sub.submitted <= f.win_time, 1, 0)) AS pre_win ' .
-      'FROM {webform_ab_forms} f ' .
-      'LEFT JOIN {webform_ab_conversion} con ON con.test_nid = f.test_nid AND con.webform_nid = f.webform_nid ' .
-      'LEFT JOIN {webform_submissions} sub ON con.sid = sub.sid ' .
-      'WHERE f.test_nid = :test_nid AND f.webform_nid = :webform_nid ' .
-      'GROUP BY f.test_nid, f.webform_nid',
-      array(':test_nid' => $node->nid, ':webform_nid' => $winning_webform_nid))->fetchAssoc();
-  }
-
   // Status labels
-  $webform_ab_status_labels = array(
+  $status_labels = array(
     WEBFORM_AB_WEBFORM_STATUS_ACTIVE => t('Active'),
     WEBFORM_AB_WEBFORM_STATUS_WINNER => t('Winner'),
     WEBFORM_AB_WEBFORM_STATUS_RETIRED => t('Retired'),
   );
-  // Show the list of currently-included forms
+
+  // Set headers present for all Multivariate reports:
   $headers = array(
     t('Status'),
     t('Name'),
-    t('Hits'),
-    t('Conversions'),
-    t('Conversion %'),
-    t('Pre-win Hits'),
-    t('Pre-win Conversions'),
-    t('Pre-win Conversion %'),
-    t('Post-win Hits'),
-    t('Post-win Conversions'),
-    t('Post-win Conversion %'),
   );
-  $rows = array();
 
-  // Loop over the webforms and add a row to the report table
-  if (!empty($node->included_webforms) && is_array($node->included_webforms)) {
-    foreach ($node->included_webforms as $webform_nid => $webform_details) {
-      $this_hit_count = isset($hit_counts[$webform_nid]) ? $hit_counts[$webform_nid] : 0;
-      $this_conversion_count = isset($conversion_counts[$webform_nid]) ? $conversion_counts[$webform_nid] : 0;
-      $line = array(
-        $webform_ab_status_labels[$webform_details['status']],
-        $webform_details['title'],
-        isset($hit_counts[$webform_nid]) ? $hit_counts[$webform_nid] : 0,
-        isset($conversion_counts[$webform_nid]) ? $conversion_counts[$webform_nid] : 0,
-        ($this_hit_count > 0) ? round(100 * $this_conversion_count / $this_hit_count) . '%' : '0%',
-      );
+  // Add columns for the currently enabled win conditions and gather progress data:
+  $enabled_win_conditions = array();
+  $all_win_conditions = _webform_ab_get_win_condition_plugins();
+  $enabled_win_conditions_query = db_query("SELECT plugin_key, options FROM {webform_ab_win_conditions} " .
+    "WHERE test_nid = :webform_ab_nid", array(':webform_ab_nid' => $node->nid));
+  foreach ($enabled_win_conditions_query as $condition_data) {
+    $plugin_options = unserialize($condition_data->options);
+    $enabled_win_conditions[$condition_data->plugin_key]['value_to_win'] = array_pop($plugin_options);
+    $headers[] = $all_win_conditions[$condition_data->plugin_key]['title'];
+  }
 
-      // If this webform is the winner, show pre- and post-win conversion percentages
-      if ($winning_webform_nid == $webform_nid) {
-        $line[] = isset($post_win_hit_data['pre_win']) ? $post_win_hit_data['pre_win'] : 0;
-        $line[] = isset($post_win_conversion_data['pre_win']) ? $post_win_conversion_data['pre_win'] : 0;
-        // Only divide if greater than 0
-        if (isset($post_win_hit_data['pre_win']) && $post_win_hit_data['pre_win'] > 0) {
-          $line[] = round(100 * $post_win_conversion_data['pre_win'] / $post_win_hit_data['pre_win']) . '%';
-        }
-        else {
-          $line[] = '0%';
-        }
-        $line[] = isset($post_win_hit_data['post_win']) ? $post_win_hit_data['post_win'] : 0;
-        $line[] = isset($post_win_conversion_data['post_win']) ? $post_win_conversion_data['post_win'] : 0;
-        $post_win_hit_data = isset($post_win_hit_data['post_win']) ? $post_win_hit_data['post_win'] : 0;
-        $post_win_conversion_data = isset($post_win_conversion_data['post_win']) ? $post_win_conversion_data['post_win'] : 0;
-        $line[] = ($post_win_hit_data > 0) ? round(100 * $post_win_conversion_data / $post_win_hit_data) . '%' : '0%';
-      }
-      else {
-        // Not the winning webform. Pad out into the columns for win data
-        while (count($line) < count($headers)) {
-          $line[] = '';
-        }
-      }
-      $rows[] = $line;
+  // Loop over this test's webforms, adding a row for each webform being tested:
+  foreach ($node->included_webforms as $webform_nid => $webform_details) {
+    $line = array('status' => 'N/A', 'title' => 'N/A');
+
+    // Get this test's webform_ab status and node title:
+    if (isset($webform_details['status']) && isset($status_labels[$webform_details['status']])) {
+      $line['status'] = $status_labels[$webform_details['status']];
     }
+    if ($internal_name = _webform_ab_get_internal_name($webform_details['webform_nid'])) {
+      $title_value = $internal_name;
+    }
+    else {
+      $title_value = $webform_details['title'];
+    }
+    $line['title'] = l($title_value, 'node/' . $webform_details['webform_nid']);
+
+    // Add values for each win condition column:
+    foreach ($enabled_win_conditions as $plugin_key => $condition_data) {
+      $condition_current_value = '?';
+      $current_value_function = ctools_plugin_get_function($all_win_conditions[$plugin_key], 'current value');
+      if (is_string($current_value_function)) {
+        $current_value = $current_value_function($webform_nid, $webform_details, $node);
+      } 
+      else {
+        // Output an error value if this win condition plugin is missing its "current value" function:
+        $current_value = t('Plugin Error');
+        drupal_set_message(t('The win condition plugin, ":plugin_key" is missing its "current value" function. Please try clearing cache.',
+          array(':plugin_key' => $plugin_key)), 'error');
+      }
+      // Account for values that should be displayed in percentage format:
+      if (stripos($plugin_key, 'percent') !== FALSE) {
+        $line[$plugin_key] = ($current_value * 100) . '% ' . t('of') . ' ' . ($condition_data['value_to_win'] * 100) . '%';
+      }
+      // Account for boolean values:
+      elseif (in_array($plugin_key, array('donations_highest_avg', 'donations_highest_gross'))) {
+        $line[$plugin_key] = $current_value ? 'Yes' : 'No';
+      }
+      else {  
+        $line[$plugin_key] = $current_value . ' ' . t('of') . ' ' . $condition_data['value_to_win'];
+      }
+    }
+    $rows[] = $line;
   }
 
-  // If there were no rows, show an empty message
-  if (count($rows) == 0) {
-    $rows[] = array(array(
-        'data' => t('No webforms have been added to this A/B test. Visit the !forms_tab tab to add webforms.',
-          array('!forms_tab' => l(t('Included Webforms'), 'node/' . $node->nid . '/webforms'))),
-        'colspan' => count($headers),
-      ));
-  }
   $return .= theme('table', array('header' => $headers, 'rows' => $rows));
   return $return;
 }
 
 /**
- * Menu callback for the Included Forms tab on A/B Test nodes
+ * Menu callback for the Included Forms tab on Multivariate test nodes
  *
  * @param $node Node object
  */
@@ -170,7 +133,7 @@ function webform_ab_test_webforms($node) {
   $return = '';
 
   // Status labels
-  $webform_ab_status_labels = array(
+  $status_labels = array(
     WEBFORM_AB_WEBFORM_STATUS_ACTIVE => t('Active'),
     WEBFORM_AB_WEBFORM_STATUS_WINNER => t('Winner'),
     WEBFORM_AB_WEBFORM_STATUS_RETIRED => t('Retired'),
@@ -182,15 +145,26 @@ function webform_ab_test_webforms($node) {
     t('Status'),
     t('Operations'),
   );
+
+  // Prevent removal of tests if any tests have recorded data already:
+  $testing_has_started = _webform_ab_has_testing_started($node);
   $rows = array();
   if (!empty($node->included_webforms) && is_array($node->included_webforms)) {
     foreach ($node->included_webforms as $webform_nid => $webform_details) {
+      $webform_node = node_load($webform_nid);
+      if ($internal_name = _webform_ab_get_internal_name($webform_details['webform_nid'])) {
+        $title = $internal_name;
+      }
+      else {
+        $title = $webform_details['title'];
+      }
+      $removal_link = l(t('remove from test'), 'node/' . $node->nid . '/webforms/remove/' . $webform_nid);
       $rows[] = array(
-        $webform_details['title'],
-        $webform_ab_status_labels[$webform_details['status']],
+        l($title, 'node/' . $webform_nid),
+        $status_labels[$webform_details['status']],
         l(t('view'), 'node/' . $webform_nid) . ' ' .
         l(t('edit'), 'node/' . $webform_nid . '/edit') . ' ' .
-        l(t('remove from test'), 'node/' . $node->nid . '/webforms/remove/' . $webform_nid),
+        ($testing_has_started ? '&nbsp;' : $removal_link),
       );
     }
   }
@@ -198,7 +172,7 @@ function webform_ab_test_webforms($node) {
   // If there are no webforms included, show an empty message
   if (count($rows) == 0) {
     $rows[] = array(array(
-        'data' => t('No webforms have been added to this A/B test. ' .
+        'data' => t('No webforms have been added to this Multivariate test. ' .
           'Select a webform in the dropdown below and click the Add button.'),
         'colspan' => count($headers),
       ));
@@ -211,10 +185,10 @@ function webform_ab_test_webforms($node) {
 }
 
 /**
- * Form to add webforms to the A/B Test
+ * Form to add webforms to the Multivariate Test
  *
  * @param $form_state
- * @param $node   Node object
+ * @param $node Node object
  */
 function webform_ab_webform_list_add($form, &$form_state, $node) {
   // Get all valid forms for the form type from other modules
@@ -252,17 +226,26 @@ function webform_ab_webform_list_add($form, &$form_state, $node) {
     '#value' => t('Add'),
   );
 
-  // If there are no more webforms that may be added, disable the form
-  if (count($indexed_forms) == 0) {
-    $form['add_form_id']['#disabled'] = TRUE;
-    $form['add_form_id']['#description'] = 'There are no more webforms available to be added to this A/B test.';
+  // If there are no more webforms that may be added or testing has started, disable the form
+  if (count($indexed_forms) == 0 || _webform_ab_has_testing_started($node)) {
     unset($form['add']);
+    $form['add_form_id']['#title'] = '';
+    $form['add_form_id']['#disabled'] = TRUE;
+    $form['add_form_id']['#type'] = 'fieldset';
+    if (count($indexed_forms) == 0) {
+      $disabled_descr = t('There are no more webforms available to be added to this Multivariate test.');
+    }
+    else {
+      $disabled_descr = t('Webforms cannot be added or removed because testing has started.');
+    }
+    $form['add_form_id']['#description'] = $disabled_descr;
   }
+
   return $form;
 }
 
 /**
- * Handle submission of the form to add a webform to an A/B Test
+ * Handle submission of the form to add a webform to an Multivariate Test
  */
 function webform_ab_webform_list_add_submit($form, &$form_state) {
   // Only continue if they actually selected a webform
@@ -302,7 +285,7 @@ function webform_ab_test_remove_webform($node, $webform_nid) {
   }
   else {
     // Somehow tried to remove a webform that isn't in the test
-    drupal_set_message(t('That form is not in this A/B test.'), 'error');
+    drupal_set_message(t('That form is not in this Multivariate test.'), 'error');
     drupal_goto('node/' . $node->nid . '/webforms');
   }
 }
@@ -318,7 +301,7 @@ function webform_ab_test_remove_webform_confirm($form, &$form_state, $test_nid, 
     array(':nid' => $webform_nid))->fetchField();
   return confirm_form(
     $form,
-    t('Are you sure you want to remove webform %title from the A/B test?', array('%title' => $title)),
+    t('Are you sure you want to remove webform %title from the Multivariate test?', array('%title' => $title)),
     'node/' . $test_nid . '/webforms',
     t('This action cannot be undone.'),
     t('Remove'),
@@ -330,7 +313,7 @@ function webform_ab_test_remove_webform_confirm($form, &$form_state, $test_nid, 
  * Remove a webform from a test
  */
 function webform_ab_test_remove_webform_confirm_submit($form, &$form_state) {
-  // Remove data specific to the form that is being removed from this A/B test:
+  // Remove data specific to the form that is being removed from this Multivariate test:
   $tables_to_update = array(
     'webform_ab_forms',
     'webform_ab_conversion',
@@ -345,7 +328,7 @@ function webform_ab_test_remove_webform_confirm_submit($form, &$form_state) {
 
   // Notify other modules that the webform is being removed
   module_invoke_all('webform_ab_remove_form', $form['#test_nid'], $form['#webform_nid']);
-  drupal_set_message(t('The form has been removed from the A/B test.'));
+  drupal_set_message(t('The form has been removed from the Multivariate test.'));
   $form_state['redirect'] = 'node/' . $form['#test_nid'] . '/webforms';
 }
 
@@ -361,7 +344,7 @@ function webform_ab_clear_test_data_confirm($form, &$form_state, $node) {
       'node/' . $node->nid . '/reports',
     t('This action will remove all hit and conversion records saved for this test, return all included webforms to ' .
       'the Active status, and it cannot be undone. Note that any data submitted to the included webforms will remain ' .
-      'intact, it just won\'t be associated with this A/B Test or used to declare a winning webform.'),
+      'intact, it just won\'t be associated with this MultivariateTest or used to declare a winning webform.'),
     t('Reset'),
     t('Cancel'));
 }
@@ -388,4 +371,62 @@ function webform_ab_clear_test_data_confirm_submit($form, &$form_state) {
   module_invoke_all('webform_ab_reset_data', $form['#test_nid']);
   drupal_set_message(t('The data has been cleared.'));
   $form_state['redirect'] = 'node/' . $form['#test_nid'] . '/reports';
+}
+
+/**
+ * Get the internal name for a given webform, which is located within
+ * a node field.  Return FALSE if no internal name is found.
+ * @param $nid
+ *   The node ID of the webform in question.
+ */
+function _webform_ab_get_internal_name($nid) {
+  $node_type = db_query("SELECT type FROM {node} WHERE nid = :nid", array(':nid' => $nid))
+    ->fetchField();
+  if (!$node_type) {
+    return FALSE;
+  }
+  $field_info = field_info_instances('node', $node_type);
+  foreach ($field_info as $field_name => $data) {
+    if (strpos($field_name, 'internal_name') !== FALSE) {
+      $db_table = 'field_data_' . $field_name; 
+      $value_column = $field_name . '_value';
+    }
+  }
+  // Get the internal mame, if possible:
+  return $internal_name_query = db_query("SELECT $value_column FROM {$db_table} WHERE entity_id = :nid",
+    array(':nid' => $nid))
+    ->fetchField();
+}
+
+/**
+ * Returns TRUE if any webform_ab tests are populated with data.
+ *
+ * @param $test__node
+ *   Node Object of the a/b test node.
+ *
+ */
+function _webform_ab_has_testing_started($test_node) {
+  $enabled_win_conditions = array();
+  $enabled_win_conditions_query = db_query("SELECT plugin_key FROM {webform_ab_win_conditions} " .
+    "WHERE test_nid = :webform_ab_nid", array(':webform_ab_nid' => $test_node->nid));
+  foreach ($enabled_win_conditions_query as $condition_data) {
+    $enabled_win_conditions[] = $condition_data->plugin_key;;
+  }
+
+  $win_conditions = _webform_ab_get_win_condition_plugins();
+  foreach ($win_conditions as $plugin_key => $plugin) {
+    if (!in_array($plugin_key, $enabled_win_conditions)) {
+      continue;
+    }
+    if ($has_ab_test_started_function = ctools_plugin_get_function($plugin, 'current value')) {
+      foreach ($test_node->included_webforms as $webform_nid => $data) {
+        if (function_exists($has_ab_test_started_function)) {
+          if ($has_ab_test_started_function($webform_nid, array(), $test_node)) {
+            return TRUE;
+          }
+        }
+      }
+    }
+  }
+  return FALSE;
 }

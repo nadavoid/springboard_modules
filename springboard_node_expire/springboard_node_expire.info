@@ -1,0 +1,5 @@
+name = Springboard Node Expire
+description = Module for Springboard that extends functionality for the node_expire module.
+core = 7.x
+package = Jackson River Springboard
+dependencies[] = node_expire

@@ -3,7 +3,7 @@
  * @file
  * Fundraiser A/B Test
  *
- * Adds special functionality to the Webform A/B Test module for use with
+ * Adds special functionality to the Multivariate Testing module for use with
  * Fundraising forms.
  */
 
@@ -92,7 +92,7 @@ function fundraiser_ab_webform_ab_valid_webforms($webform_types) {
 
 /**
  * Implements hook_webform_ab_valid_webforms_alter().
- * For non-Fundraiser Webform A/B tests, do NOT include donation forms
+ * For non-Fundraiser Multivariate Testing tests, do NOT include donation forms
  */
 function fundraiser_ab_webform_ab_valid_webforms_alter(&$forms, $webform_type) {
   // Only remove if it's a non-Fundraiser A/B test

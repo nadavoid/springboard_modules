@@ -1,0 +1,61 @@
+<?php
+/**
+ * @file
+ * Springboard data warehouse installation functions.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function springboard_dw_schema() {
+
+  $schema['springboard_data_warehouse'] = array(
+    'description' => 'The base table for data warehousing',
+    'fields' => array(
+      'id' => array(
+        'description' => 'The auto-increment field identifier for this data warehouse record.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'type' => array(
+        'description' => 'The type of item that has been warehoused.',
+        'type' => 'varchar',
+        'length' => '64',
+        'not null' => FALSE,
+      ),
+      'drupal_id' => array(
+        'description' => 'The unique Drupal id for this item.',
+        'type' => 'varchar',
+        'length' => '64',
+        'not null' => FALSE,
+      ),
+      'created' => array(
+        'description' => 'The timestamp this record was created.',
+        'type' => 'numeric',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+        'precision' => '10',
+        'scale' => '0',
+      ),
+    ),
+    'primary key' => array('id'),
+    'indexes' => array(
+      'warehouse_id_type' => array('drupal_id', 'type'),
+    ),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implements hook_update().
+ */
+function springboard_dw_update_7001() {
+
+  $schema = module_invoke('springboard_dw', 'schema');
+
+  if (db_table_exists('springboard_data_warehouse') == FALSE) {
+    db_create_table('springboard_data_warehouse', $schema['springboard_data_warehouse']);
+  }
+}

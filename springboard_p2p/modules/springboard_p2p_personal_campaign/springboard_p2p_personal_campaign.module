@@ -20,7 +20,50 @@ function springboard_p2p_personal_campaign_menu() {
     'file' => 'springboard_p2p_personal_campaign.pages.inc',
     'file path' => drupal_get_path('module', 'springboard_p2p_personal_campaign') . '/includes',
   );
+  $items['node/%node/campaign-donors'] = array(
+    'title' => 'Campaign Donors',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('springboard_p2p_personal_campaign_donors_edit', 1),
+    'access callback' => 'springboard_p2p_personal_campaign_donors_edit_access',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'springboard_p2p_personal_campaign.pages.inc',
+    'file path' => drupal_get_path('module', 'springboard_p2p_personal_campaign') . '/includes',
+    'weight' => 10,
+  );
   return $items;
+}
+
+/**
+ * Access callback for /campaign-donors menu callback.
+ */
+function springboard_p2p_personal_campaign_donors_edit_access($node) {
+  $is_personal_campaign = $node->type == 'p2p_personal_campaign';
+  return user_access('administer springboard p2p') && $is_personal_campaign;
+}
+
+/**
+ * Implements hooK_theme().
+ */
+function springboard_p2p_personal_campaign_theme($existing, $type, $theme, $path) {
+  return array(
+    'springboard_p2p_personal_campaign_textfield_table' => array(
+      'render element' => 'element',
+      'file' => 'springboard_p2p_personal_campaign.pages.inc',
+      'path' => drupal_get_path('module', 'springboard_p2p_personal_campaign') . '/includes',
+    ),
+  );
+}
+
+/**
+ * Implements hook_admin_paths().
+ */
+function springboard_p2p_personal_campaign_admin_paths() {
+  if (variable_get('node_admin_theme')) {
+    return array(
+      'node/*/campaign-donors' => TRUE
+    );
+  }
 }
 
 /**
@@ -318,7 +361,7 @@ function springboard_p2p_personal_campaign_webform_confirmations_token_replace_a
  * Implements hook_email_wrappers_token_set_alter().
  */
 function springboard_p2p_personal_campaign_email_wrappers_token_set_alter(&$token_set, $message) {
-  // Not all email wrapper messages come with a submission.
+  // Not all email template messages come with a submission.
   if (!isset($message['params']['submission'])) {
     return;
   }

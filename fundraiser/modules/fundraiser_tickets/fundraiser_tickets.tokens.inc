@@ -11,6 +11,10 @@
 function fundraiser_tickets_token_info_alter(&$data) {
   if (!empty($data['tokens']['donation'])) {
     // Add some info from the ticket
+    $data['tokens']['donation']['tickets-total-amount'] = array(
+      'name' => t('Ticket Total Amount'),
+      'description' => t('Ticket purchase amount plus the add-on donation amount.'),
+    );
     $data['tokens']['donation']['tickets-quantity-all'] = array(
       'name' => t('Ticket Quantity'),
       'description' => t('Quantity of all tickets purchased.'),
@@ -36,7 +40,7 @@ function fundraiser_tickets_tokens_alter(&$replacements, $context) {
     // Load the order
     $order = !empty($donation->order) ? $donation->order : commerce_order_load($donation->did);
     $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
-
+    $currency = commerce_currency_load($donation->currency);   
     $total_count = 0;
     $type_count = 0;
     // Get totals for the line items
@@ -44,11 +48,11 @@ function fundraiser_tickets_tokens_alter(&$replacements, $context) {
       $total_count = $total_count + $line_item_wrapper->quantity->value();
       $type_count++;
     }
-
     // Add additional tokens for specific ticket information
     $data['tickets-quantity-all'] = $total_count;
-    $data['tickets-quantity-types'] = $type_count;    
-
+    $data['tickets-quantity-types'] = $type_count;
+    $data['tickets-total-amount'] =  number_format($donation->amount, $currency['decimals'], $currency['decimal_separator'], '');
+   
     // Replace the given tokens.
     foreach ($context['tokens'] as $key => $token) {
       if (isset($data[$key])) {

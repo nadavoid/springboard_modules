@@ -109,7 +109,7 @@ function sba_message_action_email_wrapper_add() {
   $node->type = 'email_wrapper';
   $node->language = LANGUAGE_NONE;
   $node->uid = 1;
-  $node->title = 'Example Message Action Email Wrapper';
+  $node->title = 'Example Message Action Email Template';
   $node->status = 0;
   $node->promote = 0;
   $node->email_wrapper_from_name[LANGUAGE_NONE][0] = array(

@@ -1,0 +1,17 @@
+<?php
+/** 
+ * @file
+ * Springboard Message Action A/B
+ *
+ * Extends multivariate a/b testing so message action webforms can be tested. 
+ */
+
+/**
+ * Implements hook_ctools_plugin_directory().
+ * Tell ctools where this module's plugins live
+ */
+function sba_message_action_ab_ctools_plugin_directory($owner, $plugin_type) {
+  if ($owner == 'webform_ab') {
+    return 'plugins/' . $plugin_type;
+  }
+}

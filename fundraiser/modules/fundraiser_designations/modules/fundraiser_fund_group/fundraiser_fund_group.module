@@ -1,0 +1,773 @@
+<?php
+
+/**
+ * @file
+ * Module for the Fundraiser Fund Group Entity.
+ */
+
+/**
+ * Implements hook_menu().
+ *
+ * Set the designations tab.
+ */
+function fundraiser_fund_group_menu() {
+  $items['node/%node/designations'] = array(
+    'title' => 'Designations',
+    'page arguments' => array(1),
+    'access callback' => 'fundraiser_fund_group_access',
+    'access arguments' => array('manage-groups'),
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'fundraiser_fund_group_dashboard',
+    'file' => 'fundraiser_fund_group.dashboard.inc',
+    'file path' => drupal_get_path('module', 'fundraiser_fund_group') . '/includes',
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+  );
+
+  $items['node/%node/designations/groups'] = array(
+    'title' => 'Designation Groups',
+    'page arguments' => array(1),
+    'access callback' => 'fundraiser_fund_group_access',
+    'access arguments' => array('manage-groups'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'page callback' => 'fundraiser_fund_group_dashboard',
+    'file' => 'fundraiser_fund_group.dashboard.inc',
+    'file path' => drupal_get_path('module', 'fundraiser_fund_group') . '/includes',
+  );
+
+  $items['node/%node/designations/add-ons'] = array(
+    'title' => 'Add On Donation',
+    'access callback' => 'fundraiser_fund_group_access',
+    'access arguments' => array('manage-groups'),
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('fundraiser_fund_groups_addon_form', 1),
+    'file' => 'fundraiser_fund_group.addon.inc',
+    'file path' => drupal_get_path('module', 'fundraiser_fund_group') . '/includes',
+    'weight' => 10,
+  );
+
+  $items['fund_groups/autocomplete_callback'] = array(
+    'title' => 'Simplest AJAX Example',
+    'page callback' => 'fundraiser_fund_groups_autocomplete_callback',
+    'file' => 'fundraiser_fund_group.addon.inc',
+    'file path' => drupal_get_path('module', 'fundraiser_fund_group') . '/includes',
+    'type' => MENU_CALLBACK,
+    'access callback' => TRUE,
+  );
+
+  return $items;
+}
+
+/**
+ * Determines whether the given user has access to fundraiser_fund_groups.
+ *
+ * @param string $op
+ *   The operation being performed. One of 'view', 'update', 'create', 'delete'
+ *   or just 'edit' (being the same as 'create' or 'update').
+ * @param mixed $fundraiser_fund_group
+ *   Optionally a fundraiser_fund_group to check access for.
+ * @param mixed $account
+ *   The user to check for. Leave it to NULL to check for the global user.
+ *
+ * @return bool
+ *   Whether access is allowed or not.
+ */
+function fundraiser_fund_group_access($op, $fundraiser_fund_group = NULL, $account = NULL) {
+  // Groups will inherit create/edit/delete permissions from
+  // their parent node permissions.
+  global $user;
+  if (arg(0) == 'node' && is_numeric(arg(1))) {
+    $node = node_load(arg(1));
+    if (!variable_get('fundraiser_designations_' . $node->type, FALSE)) {
+      return FALSE;
+    }
+
+    if (user_access('administer fund groups', $account)) {
+      return TRUE;
+    }
+
+    if (user_access("{$op} any {$node->type} content")) {
+      return TRUE;
+    }
+
+    // Designations tab on node view page.
+    $arg = arg(3);
+    if ($op == 'manage-groups' && empty($arg)) {
+      if (user_access("create {$node->type} content")) {
+        return TRUE;
+      }
+    }
+
+    if ($op == 'create' && user_access("create {$node->type} content")) {
+      if (user_access("edit own {$node->type} content") &&  $node->uid == $user->uid) {
+        return TRUE;
+      }
+      if (user_access("edit any {$node->type} content")) {
+        return TRUE;
+      }
+    }
+
+    if (user_access("{$op} own {$node->type} content") &&  $node->uid == $user->uid) {
+      return TRUE;
+    }
+    elseif (user_access("{$op} own {$node->type} content") &&  $node->uid != $user->uid) {
+      return FALSE;
+    }
+  }
+
+  return FALSE;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Add css and js to the fund group edit form.
+ */
+function fundraiser_fund_group_form_fundraiser_fund_group_edit_form_alter(&$form, $form_state, $form_id) {
+  $form['field_ffg_fd_reference']['#theme'] = 'fundraiser_fund_group_form';
+  $form['#attached']['js'][] = drupal_get_path('module', 'fundraiser_fund_group') . '/js/fund-groups.js';
+  $form['#attached']['css'][] = drupal_get_path('module', 'fundraiser_fund_group') . '/css/fund-groups.css';
+}
+
+
+/**
+ * Themes the funding designation reference field checkboxes.
+ *
+ * Loads the fund taxonomy terms and puts the fund checkboxes in unordered lists
+ * categorized by term.
+ *
+ * @param array $variables
+ *   The funding designation reference field form element.
+ *
+ * @return string
+ *    The rendered form.
+ */
+function theme_fundraiser_fund_group_form(&$variables) {
+  $form = $variables['form'];
+  $element = $form['und'];
+  unset($form['und']);
+  $checkboxes = form_process_checkboxes($element);
+  $children = element_children($checkboxes);
+  $products_with_tags = db_query("
+    SELECT ttd.name AS category,
+    ttd.tid AS tid,
+    cp.product_id AS product_id,
+    cp.title AS product_title
+    FROM
+    {taxonomy_term_data} ttd
+    LEFT JOIN {field_data_field_fd_designation_categories} dc
+      ON ttd.tid = dc.field_fd_designation_categories_tid
+      AND (dc.entity_type = 'commerce_product'
+      AND dc.deleted = '0')
+    INNER JOIN {commerce_product} cp ON dc.entity_id = cp.product_id
+    LEFT JOIN {taxonomy_vocabulary} tv ON ttd.vid = tv.vid
+    WHERE cp.status = 1 AND tv.machine_name IN ('fd_designation_categories')
+    ORDER BY ttd.weight, cp.title ASC
+  ")->fetchAll();
+
+  $products_by_tag = array();
+  foreach ($products_with_tags as $pwt) {
+    $products_by_tag[$pwt->category]['tid'] = $pwt->tid;
+    $products_by_tag[$pwt->category]['product'][] = array(
+      'title' => $pwt->product_title,
+      'id' => $pwt->product_id,
+    );
+  }
+
+  $output = '';
+  foreach ($products_by_tag as $name => $values) {
+    $items = [];
+    $items[] = '<div class="form-item control-group form-type-checkbox"><input class="select-all" name="' . $name . '" type="checkbox"><label class="option">Select all</label></div>';
+    foreach ($values['product'] as $pwt) {
+      $key = array_search($pwt['id'], $children);
+      if (!empty($element[$children[$key]]['#printed'])) {
+        unset($element[$children[$key]]['#printed']);
+      }
+      $items[] = drupal_render($element[$children[$key]]);
+    }
+    $output .= theme('item_list', array('items' => $items, 'title' => $name));
+  }
+
+  $output .= drupal_render_children($form);
+  return $output;
+}
+
+/**
+ * Implements hook_entityreference_prepopulate_providers_info().
+ *
+ * Grab our entity reference from the node url rather than query string.
+ */
+function fundraiser_fund_group_entityreference_prepopulate_providers_info() {
+  return array(
+    'ffg_node_url' => array(
+      'title' => t('Node URL'),
+      'description' => t('Prepopulate reference ID from node/%/designations URL.'),
+      'callback' => 'fundraiser_fund_group_prepopulate_get_values_from_node_url',
+    ),
+  );
+}
+
+/**
+ * Get values for pre-populating fields via URL.
+ *
+ * @param array $field
+ *   The field info array.
+ * @param array $instance
+ *   The instance info array.
+ *
+ * @return array
+ *   An array containing the node ID
+ *
+ * @see entityreference_prepopulate_get_values()
+ */
+function fundraiser_fund_group_prepopulate_get_values_from_node_url($field, $instance) {
+  $id = array();
+  if (arg(0) == 'node' && arg(2) == 'designations' && is_numeric(arg(1))) {
+    $id = array(arg(1));
+  }
+  return $id;
+}
+
+
+/**
+ * Implements hook_form_FORMID_alter().
+ *
+ * Add a submit function for the draggable view.
+ */
+function fundraiser_fund_group_form_alter(&$form, &$form_state, $form_id) {
+  $forms = array('views_form_fundraiser_fund_group_block_1');
+  if (in_array($form_id, $forms)) {
+    $groups = $form_state['build_info']['args'][0]->result;
+    if (isset($groups) && count($groups) > 1) {
+      $form['actions']['submit']['#submit'][] = 'fundraiser_fund_group_drag_submit';
+    }
+    else {
+      // Don't show save button if only one item in the draggable table.
+      unset($form['actions']);
+    }
+  }
+}
+
+/**
+ * Imlements hook_form_submit().
+ *
+ * Save the weight after dragging.
+ */
+function fundraiser_fund_group_drag_submit(&$form, &$form_state) {
+  $groups = $form_state['values']['draggableviews'];
+  foreach ($groups as $group) {
+    if (isset($group['id'])) {
+      $fundraiser_fund_group = fundraiser_fund_group_load($group['id']);
+      $fundraiser_fund_group->data['weight'] = $group['weight'];
+      $fundraiser_fund_group->save();
+    }
+  }
+}
+
+/**
+ * Save a draggable views record.
+ *
+ * @todo implement hook_node_insert for cloning and call this from there.
+ *
+ * @param int $arg
+ *    The node id.
+ * @param int $fundraiser_fund_group_id
+ *   The fund group id.
+ * @param int $weight
+ *   The draggable weight.
+ */
+function fundraiser_fund_group_draggable_save($arg, $fundraiser_fund_group_id, $weight) {
+  $record = array(
+    'view_name' => 'fundraiser_fund_groups_node',
+    'view_display' => 'block_1',
+    'args' => $arg,
+    'entity_id' => $fundraiser_fund_group_id,
+    'weight' => $weight,
+  );
+  drupal_write_record('draggableviews_structure', $record);
+}
+
+/**
+ * Implements hook_node_delete().
+ *
+ * When an designation node is deleted, delete its groups and extras.
+ */
+function fundraiser_fund_group_node_delete($node) {
+  if (fundraiser_designations_is_designation_type($node->type)) {
+
+    db_delete('fundraiser_fund_group_addon')
+      ->condition('nid', $node->nid, '=')
+      ->execute();
+
+    $fundraiser_fund_group_ids = db_query(
+      'SELECT entity_id FROM {field_data_field_ffg_form_id} a WHERE a.field_ffg_form_id_target_id = :nid',
+      array(':nid' => $node->nid))
+      ->fetchAllAssoc('entity_id');
+
+    if (!empty($fundraiser_fund_group_ids)) {
+
+      fundraiser_fund_group_delete_multiple(array_keys($fundraiser_fund_group_ids));
+
+      db_delete('draggableviews_structure')
+        ->condition('entity_id', array_keys($fundraiser_fund_group_ids), 'IN')
+        ->execute();
+
+      db_delete('fundraiser_fund_group_overrides')
+        ->condition('gid', array_keys($fundraiser_fund_group_ids), 'IN')
+        ->execute();
+    }
+  }
+}
+
+
+/**
+ * Implements hook_entity_info().
+ *
+ * We define two entities here - Fund Group Type and Fundraiser Fund Group.
+ * Different Action types will have different group types.
+ */
+function fundraiser_fund_group_entity_info() {
+  $return['fundraiser_fund_group'] = array(
+    'label' => t('Fund group'),
+    // The entity class and controller class extend the classes provided by the
+    // Entity API.
+    'entity class' => 'FundGroup',
+    'controller class' => 'FundGroupController',
+    'base table' => 'fundraiser_fund_group',
+    'fieldable' => TRUE,
+    'entity keys' => array(
+      'id' => 'fundraiser_fund_group_id',
+      'bundle' => 'type',
+    ),
+    // Bundles are defined by the fundraiser_fund_group types below.
+    'bundles' => array(),
+    // Bundle keys tell the FieldAPI how to extract information from
+    // the bundle objects.
+    'bundle keys' => array(
+      'bundle' => 'type',
+    ),
+    'redirect' => FALSE,
+    'label callback' => 'entity_class_label',
+    'uri callback' => 'entity_class_uri',
+    'creation callback' => 'fundraiser_fund_group_create',
+    'access callback' => 'fundraiser_fund_group_access',
+    'module' => 'fundraiser_fund_group',
+    // The information below is used by the SBA MessageUIController
+    // (which extends the EntityDefaultUIController).
+    'admin ui' => array(
+      'path' => 'node/%node/designations',
+      'file' => 'fundraiser_fund_group.admin.inc',
+      'controller class' => 'FundGroupUIController',
+      'menu wildcard' => '%fundraiser_fund_group',
+    ),
+  );
+
+  // The entity that holds information about the entity types.
+  $return['fundraiser_fund_group_type'] = array(
+    'label' => t('Fund Group Type'),
+    'entity class' => 'FundGroupType',
+    'controller class' => 'FundGroupTypeController',
+    'base table' => 'fundraiser_fund_group_type',
+    'fieldable' => FALSE,
+    'bundle of' => 'fundraiser_fund_group',
+    'exportable' => TRUE,
+    'entity keys' => array(
+      'id' => 'id',
+      'name' => 'type',
+      'label' => 'label',
+    ),
+    'module' => 'fundraiser_fund_group',
+  );
+
+  return $return;
+}
+
+/**
+ * Implements hook_entity_info_alter().
+ *
+ * We are adding the info about the fundraiser_fund_group types via a hook
+ * to avoid a recursion issue as loading the fundraiser_fund_group types
+ * requires the entity info as well.
+ *
+ * @TODO items defining admin paths for the group entities will
+ * be removed, eventually.
+ */
+function fundraiser_fund_group_entity_info_alter(&$entity_info) {
+  foreach (fundraiser_fund_group_get_types() as $type => $info) {
+    $entity_info['fundraiser_fund_group']['bundles'][$type] = array(
+      'label' => $info->label,
+    );
+  }
+}
+
+/**
+ * Implements hook_permission().
+ *
+ * @TODO Admin perms are to be removed.
+ */
+function fundraiser_fund_group_permission() {
+  // We set up permissions to manage entity types, manage all entities and the
+  // permissions for each individual entity.
+  $permissions = array(
+    'administer fund groups' => array(
+      'title' => t('Administer fundraiser_fund_groups'),
+      'description' => t('Edit and delete all fundraiser_fund_groups'),
+    ),
+  );
+  return $permissions;
+}
+
+/**
+ * Gets an array of all fundraiser_fund_group types, keyed by the type name.
+ *
+ * @param string $type_name
+ *   If set, the type with the given name is returned.
+ *
+ * @return mixed
+ *   FundGroupType[] Depending whether $type isset, an array of
+ *   types or a single one.
+ */
+function fundraiser_fund_group_get_types($type_name = NULL) {
+  // Entity_load will get the Entity controller for our
+  // fundraiser_fund_group entity
+  // and call the load function of that object - we are loading
+  // entities by name here.
+  $types = entity_load_multiple_by_name('fundraiser_fund_group_type', isset($type_name) ? array($type_name) : FALSE);
+  return isset($type_name) ? reset($types) : $types;
+}
+
+/**
+ * Menu argument loader; Load a fundraiser_fund_group type by string.
+ *
+ * @param string $type
+ *   The machine-readable name of a fundraiser_fund_group type to load.
+ *
+ * @return mixed
+ *   A fundraiser_fund_group type array or FALSE if $type does not exist.
+ */
+function fundraiser_fund_group_type_load($type) {
+  return fundraiser_fund_group_get_types($type);
+}
+
+/**
+ * Fetch a fundraiser_fund_group object.
+ *
+ * @param int $fundraiser_fund_group_id
+ *   Integer specifying the fundraiser_fund_group id.
+ * @param bool $reset
+ *   A boolean indicating that the internal cache should be reset.
+ *
+ * @return mixed
+ *   A fully-loaded $fundraiser_fund_group object or FALSE if
+ *   it cannot be loaded.
+ *
+ * @see fundraiser_fund_group_load_multiple()
+ */
+function fundraiser_fund_group_load($fundraiser_fund_group_id, $reset = FALSE) {
+  $fundraiser_fund_groups = fundraiser_fund_group_load_multiple(array($fundraiser_fund_group_id), array(), $reset);
+  return reset($fundraiser_fund_groups);
+}
+
+/**
+ * Load multiple fundraiser_fund_groups based on certain conditions.
+ *
+ * @param array $fundraiser_fund_group_ids
+ *   An array of fundraiser_fund_group IDs.
+ * @param array $conditions
+ *   An array of conditions to match against the {fundraiser_fund_group} table.
+ * @param bool $reset
+ *   A boolean indicating that the internal cache should be reset.
+ *
+ * @return array
+ *   An array of fundraiser_fund_group objects,
+ *   indexed by fundraiser_fund_group_id.
+ *
+ * @see entity_load()
+ * @see fundraiser_fund_group_load()
+ */
+function fundraiser_fund_group_load_multiple($fundraiser_fund_group_ids = array(), $conditions = array(), $reset = FALSE) {
+  $groups = entity_load('fundraiser_fund_group', $fundraiser_fund_group_ids, $conditions, $reset);
+  $overrides = db_query('SELECT * FROM {fundraiser_fund_group_overrides}');
+  foreach ($overrides as $override) {
+    if (!empty($groups[$override->gid])) {
+      $groups[$override->gid]->fd_overrides['pid'] = $override->gid;
+      $groups[$override->gid]->fd_overrides['status'] = $override->status;
+      $groups[$override->gid]->fd_overrides['price_set'] = $override->price_set;
+    }
+  }
+
+  return $groups;
+}
+
+
+/**
+ * Deletes a fundraiser_fund_group.
+ *
+ * @param FundGroup $fundraiser_fund_group
+ *   The group entity.
+ */
+function fundraiser_fund_group_delete(FundGroup $fundraiser_fund_group) {
+  $fundraiser_fund_group->delete();
+  // Cleanup draggableviews table.
+  db_delete('draggableviews_structure')
+    ->condition('entity_id', $fundraiser_fund_group->fundraiser_fund_group_id)
+    ->execute();
+  // Clean up price overrides.
+  db_delete('fundraiser_fund_group_overrides')
+    ->condition('gid', $fundraiser_fund_group->fundraiser_fund_group_id)
+    ->execute();
+}
+
+/**
+ * Delete multiple fundraiser_fund_groups.
+ *
+ * @param array $fundraiser_fund_group_ids
+ *   An array of fundraiser_fund_group IDs.
+ */
+function fundraiser_fund_group_delete_multiple(array $fundraiser_fund_group_ids) {
+  entity_get_controller('fundraiser_fund_group')->delete($fundraiser_fund_group_ids);
+}
+
+/**
+ * Create a fundraiser_fund_group object.
+ *
+ * @param array $values
+ *   The properties for the group entity.
+ */
+function fundraiser_fund_group_create($values = array()) {
+  return entity_get_controller('fundraiser_fund_group')->create($values);
+}
+
+/**
+ * Saves a fundraiser_fund_group to the database.
+ *
+ * @param FundGroup $fundraiser_fund_group
+ *   The fundraiser_fund_group object.
+ */
+function fundraiser_fund_group_save(FundGroup $fundraiser_fund_group) {
+  return $fundraiser_fund_group->save();
+}
+
+/**
+ * Saves a fundraiser_fund_group type to the db.
+ *
+ * @param FundGroupType $type
+ *   The group type entity.
+ */
+function fundraiser_fund_group_type_save(FundGroupType $type) {
+  $type->save();
+}
+
+/**
+ * Deletes a fundraiser_fund_group type from the db.
+ *
+ * @param FundGroupType $type
+ *   The message type entity.
+ */
+function fundraiser_fund_group_type_delete(FundGroupType $type) {
+  $type->delete();
+}
+
+/**
+ * Implements hook_views_api().
+ */
+function fundraiser_fund_group_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'fundraiser_fund_group') . '/views',
+  );
+}
+
+/**
+ * Implements hook_theme().
+ *
+ * Dashboad and edit form theme functions.
+ */
+function fundraiser_fund_group_theme($existing, $type, $theme, $path) {
+  $templates = array(
+    'fundraiser_fund_group_dashboard' => array(
+      'variables' => array('sections' => array()),
+      'template' => 'templates/fundraiser-fund-group-dashboard',
+    ),
+    'fundraiser_fund_group_form' => array(
+      'render element' => 'form',
+    ),
+  );
+  // Look for theme templates in fundraiser_fund_group.
+  $templates += drupal_find_theme_functions($existing, array($theme));
+  $templates += drupal_find_theme_templates($existing, '.tpl.php', $path);
+  return $templates;
+}
+
+
+/**
+ * Implements hook_element_info_alter().
+ */
+function fundraiser_fund_group_element_info_alter(&$type) {
+  $type['text_format']['#process'][] = 'fundraiser_fund_group_element_process_text_format';
+}
+
+/**
+ * Process function for text_format element.
+ *
+ * @see fundraiser_fund_group_element_info_alter()
+ * @see https://drupal.org/node/2104275
+ */
+function fundraiser_fund_group_element_process_text_format($element) {
+  if (isset($element['#bundle']) && $element['#bundle'] == 'fundraiser_fund_group_default') {
+    $prefix = isset($element['format']['#prefix']) ? $element['format']['#prefix'] : '';
+    $element['format']['#prefix'] = $element['#description'] . $prefix;
+    unset($element['#description']);
+    $element['format']['#collapsible'] = TRUE;
+    $element['format']['#collapsed'] = TRUE;
+    $element['format']['#title'] = t('Text format');
+  }
+  return $element;
+}
+
+/**
+ * The class used for fundraiser_fund_group entities.
+ */
+class FundGroup extends Entity {
+
+  public $name;
+  public $fundraiser_fund_group_id;
+
+  /**
+   * Constructor.
+   *
+   * @param array $values
+   *   Db column names as entity properties.
+   */
+  public function __construct($values = array()) {
+    parent::__construct($values, 'fundraiser_fund_group');
+  }
+
+  /**
+   * Label callback.
+   *
+   * @return string
+   *   The name of the entity.
+   */
+  protected function defaultLabel() {
+    return $this->name;
+  }
+
+}
+
+
+/**
+ * The class used for fundraiser_fund_group type entities.
+ */
+class FundGroupType extends Entity {
+
+  /**
+   * Machine name.
+   *
+   * @var
+   */
+  public $type;
+
+  /**
+   * Human readable name.
+   *
+   * @var
+   */
+  public $label;
+
+  /**
+   * Message constructor.
+   *
+   * @param array $values
+   *   The db column names as message properties.
+   */
+  public function __construct($values = array()) {
+    parent::__construct($values, 'fundraiser_fund_group_type');
+  }
+
+}
+
+/**
+ * The Controller for SBA Message entities.
+ */
+class FundGroupController extends EntityAPIController {
+  /**
+   * Message controller constructor.
+   *
+   * @param string $entityType
+   *   The machine name.
+   */
+  public function __construct($entityType) {
+    parent::__construct($entityType);
+  }
+
+
+  /**
+   * Create function.
+   *
+   * Create a fundraiser_fund_group - we first set up the values that
+   * are specific to our fundraiser_fund_group schema but then also
+   * go through the EntityAPIController function.
+   *
+   * @param array $values
+   *   Db column names as entity properties.
+   *
+   * @return object
+   *   A fundraiser_fund_group object with all default fields initialized.
+   */
+  public function create(array $values = array()) {
+    // Add values that are specific to our SBA Message.
+    $values += array(
+      'fundraiser_fund_group_id' => '',
+      'is_new' => TRUE,
+      'title' => '',
+      'created' => '',
+      'changed' => '',
+      'data' => '',
+    );
+
+    $fundraiser_fund_group = parent::create($values);
+    return $fundraiser_fund_group;
+  }
+
+}
+
+/**
+ * The Controller for SBA Message entities.
+ */
+class FundGroupTypeController extends EntityAPIControllerExportable {
+  /**
+   * Type constructor.
+   *
+   * @param string $entityType
+   *   The name of the entity type.
+   */
+  public function __construct($entityType) {
+    parent::__construct($entityType);
+  }
+
+  /**
+   * Create a fundraiser_fund_group type.
+   *
+   * We first set up the values that are specific
+   * to our fundraiser_fund_group type schema but then also go
+   * through the EntityAPIController function.
+   *
+   * @param array $values
+   *   The db column names as entity properties.
+   *
+   * @return object
+   *   A fundraiser_fund_group type object with all default fields initialized.
+   */
+  public function create(array $values = array()) {
+
+    // Add values that are specific to our SBA Message.
+    $values += array(
+      'id' => '',
+      'is_new' => TRUE,
+      'data' => '',
+    );
+    $fundraiser_fund_group_type = parent::create($values);
+    return $fundraiser_fund_group_type;
+  }
+}

@@ -1,0 +1,212 @@
+<?php
+
+/**
+ * @file
+ * Sets up the base table for our entity and a table to store information about
+ * the entity types.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function fundraiser_fund_group_schema() {
+  $schema = array();
+
+  $schema['fundraiser_fund_group'] = array(
+    'description' => 'The base table for fundraiser_fund_group entities.',
+    'fields' => array(
+      'fundraiser_fund_group_id' => array(
+        'description' => 'Primary Key: Identifier for a fundraiser_fund_group.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'type' => array(
+        'description' => 'The {fundraiser_fund_group_type}.type of this fundraiser_fund_group.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'language' => array(
+        'description' => 'The language of the fundraiser_fund_group.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'name' => array(
+        'description' => 'The name of the fundraiser_fund_group - a human-readable identifier.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the fundraiser_fund_group was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'changed' => array(
+        'description' => 'The Unix timestamp when the fundraiser_fund_group was most recently saved.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'data' => array(
+        'type' => 'blob',
+        'not null' => FALSE,
+        'size' => 'big',
+        'serialize' => TRUE,
+        'description' => 'A serialized array of additional data.',
+      ),
+    ),
+    'primary key' => array('fundraiser_fund_group_id'),
+    'indexes' => array(
+      'type' => array('type'),
+    ),
+  );
+
+  $schema['fundraiser_fund_group_type'] = array(
+    'description' => 'Stores information about defined fundraiser_fund_group types.',
+    'fields' => array(
+      'id' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique fundraiser_fund_group type identifier.',
+      ),
+      'type' => array(
+        'description' => 'The machine-readable name of this fundraiser_fund_group type.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'label' => array(
+        'description' => 'The human-readable name of this fundraiser_fund_group type.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'weight' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'size' => 'tiny',
+        'description' => 'The weight of this fundraiser_fund_group type in relation to others.',
+      ),
+      'data' => array(
+        'type' => 'text',
+        'not null' => FALSE,
+        'size' => 'big',
+        'serialize' => TRUE,
+        'description' => 'A serialized array of additional data related to this fundraiser_fund_group type.',
+      ),
+    ) + entity_exportable_schema_fields(),
+    'primary key' => array('id'),
+    'unique keys' => array(
+      'type' => array('type'),
+    ),
+  );
+
+  $schema['fundraiser_fund_group_addon'] = array(
+    'description' => 'An addon donation for fund groups',
+    'fields' => array(
+      'nid' => array(
+        'description' => 'Donation form ID',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'pid' => array(
+        'description' => 'product ID',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'status' => array(
+        'description' => 'status',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'cart_text' => array(
+        'description' => 'The text that will appear in the cart..',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'price_set' => array(
+        'type' => 'blob',
+        'not null' => FALSE,
+        'size' => 'big',
+        'serialize' => TRUE,
+        'description' => 'A serialized array of additional data.',
+      ),
+    ),
+    'primary key' => array('nid', 'pid'),
+  );
+
+  $schema['fundraiser_fund_group_overrides'] = array(
+    'description' => 'Price overrides for funding designations',
+    'fields' => array(
+      'gid' => array(
+        'description' => 'group ID',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'status' => array(
+        'description' => 'status',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'price_set' => array(
+        'type' => 'blob',
+        'not null' => FALSE,
+        'size' => 'big',
+        'serialize' => TRUE,
+        'description' => 'A serialized array of additional data.',
+      ),
+    ),
+    'primary key' => array('gid'),
+  );
+
+  return $schema;
+}
+
+/**
+ *
+ */
+function fundraiser_fund_group_install() {
+  module_load_include('inc', 'fundraiser_fund_group', 'includes/install/fundraiser_fund_group.install_group');
+  _fundraiser_fund_group_install_default_entity();
+}
+
+/**
+ * Add cart text field.
+ */
+function fundraiser_fund_group_update_7001() {
+  $field = array(
+    'description' => 'The text that will appear in the cart..',
+    'type' => 'varchar',
+    'length' => 255,
+    'not null' => TRUE,
+    'default' => '',
+  );
+  db_add_field('fundraiser_fund_group_addon', 'cart_text', $field);
+}
+
+/**
+ * Update ffg_image field to not restrict image size.
+ */
+function fundraiser_fund_group_update_7002() {
+  // Update just the default created Fund Group bundle.
+  $instance_info = field_info_instance('fundraiser_fund_group', 'field_ffg_image', 'fundraiser_fund_group_default');
+  $instance_info['settings']['max_resolution'] = '';
+  $instance_info['settings']['min_resolution'] = '';
+  field_update_instance($instance_info);
+}

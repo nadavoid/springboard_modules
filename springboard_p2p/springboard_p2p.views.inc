@@ -301,6 +301,23 @@ function springboard_p2p_views_data() {
         'handler' => 'views_handler_sort',
       ),
     ),
+    'donor_name' => array(
+      'title' => t('Donor Name'),
+      'help' => t('Name of user who donated to the campaign.'),
+      'field' => array(
+        'handler' => 'views_handler_field',
+        'click sortable' => TRUE,
+      ),
+      'filter' => array(
+        'handler' => 'views_handler_filter_string',
+      ),
+      'sort' => array(
+        'handler' => 'views_handler_sort',
+      ),
+      'argument' => array(
+        'handler' => 'views_handler_argument_string',
+      ),
+    ),
   );
 
   return $data;

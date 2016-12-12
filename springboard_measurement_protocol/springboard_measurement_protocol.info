@@ -1,0 +1,4 @@
+name = Springboard Measurement Protocol
+description = A module that acts as a bridge for sending analytic information to Google's Measurement Protocol.
+package = Jackson River Springboard - extras
+core = 7.x

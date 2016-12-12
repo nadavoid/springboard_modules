@@ -12,13 +12,14 @@
 function springboard_taxonomy_menu() {
   $items = array();
 
-  // Our custom path/version of the taxonomy overview page
+  // Our custom path/version of the taxonomy overview page.
   $items['admin/springboard/taxonomy/%springboard_taxonomy_vocab_name'] = array(
     'title callback' => 'entity_label',
     'title arguments' => array('taxonomy_vocabulary', 3),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('taxonomy_overview_terms', 3),
-    'access arguments' => array('administer organization issues'),
+    'access callback' => 'springboard_taxonomy_access_check',
+    'access arguments' => array(3),
     'file path' => drupal_get_path('module', 'taxonomy'),
     'file' => 'taxonomy.admin.inc',
   );
@@ -28,12 +29,13 @@ function springboard_taxonomy_menu() {
     'weight' => -20,
   );
 
-  // Our custom path for the add terms page
+  // Our custom path for the add terms page.
   $items['admin/springboard/taxonomy/%springboard_taxonomy_vocab_name/add'] = array(
     'title' => 'Add term',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('taxonomy_form_term', array(), 3),
-    'access arguments' => array('administer organization issues'),
+    'access callback' => 'springboard_taxonomy_access_check',
+    'access arguments' => array(3),
     'file path' => drupal_get_path('module', 'taxonomy'),
     'file' => 'taxonomy.admin.inc',
     'type' => MENU_LOCAL_TASK,
@@ -44,12 +46,13 @@ function springboard_taxonomy_menu() {
     'title' => 'Settings',
     'description' => 'Configuration settings for Springboard Taxonomy.',
     'page callback' => 'springboard_taxonomy_settings_page',
-    'access arguments' => array('administer springboard taxonomy settings'),
+    'access callback' => 'springboard_taxonomy_access_check',
+    'access arguments' => array(3, 4),
     'type' => MENU_LOCAL_TASK,
     'file' => 'springboard_taxonomy.admin.inc',
   );
 
-  // Custom path for user permissions
+  // Custom path for user permissions.
   $items['admin/springboard/taxonomy/%springboard_taxonomy_vocab_name/permissions'] = array(
     'title' => 'Taxonomy Permissions',
     'description' => 'Permissions for springboard taxonomy.',
@@ -66,13 +69,51 @@ function springboard_taxonomy_menu() {
 }
 
 /**
- * Load the vocab object from the wildcard argument
- * @param $name
+ * Load the vocab object from the wildcard argument.
+ *
+ * @param string $name
+ *   The name of the vocab.
+ *
  * @return mixed
  */
 function springboard_taxonomy_vocab_name_load($name) {
-  $vocabularies = taxonomy_vocabulary_load_multiple(NULL, array('machine_name' => 'sba_organization_issues'));
+  $vocabularies = taxonomy_vocabulary_load_multiple(NULL, array('machine_name' => $name));
   return reset($vocabularies);
+}
+
+/**
+ * Check access to springboard taxonomy.
+ *
+ * @param object $vocab
+ *   The vocab object.
+ * @param null $path
+ *   Uri.
+ *
+ * @return bool
+ *   True if accessible.
+ */
+function springboard_taxonomy_access_check($vocab, $path = NULL) {
+  if (user_access('administer organization issues') && empty($path)) {
+    $allowed = springboard_taxonomy_allowed_vocabularies();
+    if (in_array($vocab->machine_name, $allowed)) {
+      return TRUE;
+    }
+  }
+  if (user_access('administer springboard taxonomy settings') && $path == 'settings') {
+    if ($vocab->machine_name == 'sba_organization_issues') {
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
+/**
+ * Restricts the springboard taxonomy UI to specific vocabularies.
+ */
+function springboard_taxonomy_allowed_vocabularies() {
+  $allowed = array('sba_organization_issues');
+  drupal_alter('springboard_taxonomy_allowed_vocabularies', $allowed);
+  return $allowed;
 }
 
 /**
@@ -81,7 +122,7 @@ function springboard_taxonomy_vocab_name_load($name) {
 function springboard_taxonomy_permission() {
   return array(
     'administer organization issues' => array(
-      'title' => t('View term listing and add new organization issues'),
+      'title' => t('View term listings and add new terms'),
     ),
     'administer springboard taxonomy settings' => array(
       'title' => t('Assign or remove the organization issues taxonomy to/from content types.'),

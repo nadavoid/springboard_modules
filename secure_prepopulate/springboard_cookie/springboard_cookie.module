@@ -19,7 +19,53 @@ function springboard_cookie_menu() {
     'type' => MENU_CALLBACK,
   );
 
+  $items['user/%/springboard_cookie'] = array(
+    'title' => 'Springboard cookie',
+    'page callback' => 'springboard_cookie_inspect',
+    'page arguments' => array(1),
+    'access callback' => 'user_access',
+    'access arguments' => array('inspect springboard cookie'),
+    'type' => MENU_LOCAL_TASK,
+  );
+
   return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function springboard_cookie_permission() {
+  return array(
+    'inspect springboard cookie' => array(
+      'title' => t('Inspect Springboard cookie'),
+      'description' => t('Inspect the content of the Springboard cookie for the current user.'),
+    ),
+  );
+}
+
+/**
+ * Renders information stored in the current computer's
+ * Springboard cookie.
+ */
+function springboard_cookie_inspect($uid) {
+  $cookie = springboard_cookie_get_cookie();
+  $output = array();
+  
+  $output['header'] = array(
+    '#type' => 'markup',
+    '#markup' => 'Springboard cookie debug info',
+    '#prefix' => '<h2>',
+    '#suffix' => '</h2>',
+  );
+
+  $output['cookie'] = array(
+    '#type' => 'markup',
+    '#markup' => print_r($cookie, TRUE),
+    '#prefix' => '<pre>',
+    '#suffix' => '</pre>',
+  );
+
+  return $output;  
 }
 
 /**
@@ -34,8 +80,17 @@ function springboard_cookie_init() {
       // Quietly create a user account for this email, if there isn't one already.
       $account = user_load_by_mail($email);
       if (!$account) {
+          if (module_exists('email_registration')) {
+            // Strip off everything after the @ sign.
+            $name = preg_replace('/@.*$/', '', $name);
+            $name = email_registration_cleanup_username($name);
+            $name = email_registration_unique_username($name);
+          }
+          else {
+            $name = $email;
+          }
         $user_fields = array(
-          'name' => $email,
+          'name' => $name,
           'mail' => $email,
           'init' => $email,
           'pass' => user_password(8),
@@ -79,6 +134,9 @@ function springboard_cookie_user_login(&$edit, $account) {
     'uid' => $account->uid,
     'last_login' => time(),
   ));
+
+  // When a user logs in rehydrate the entire cookie.
+  springboard_cookie_add_profile_values($account);
 }
 
 /**
@@ -93,6 +151,7 @@ function springboard_cookie_fundraiser_donation_post_submit_alter(&$form, &$form
   if (!empty($donation->donation['mail'])) {
     $new_data['email'] = $donation->donation['mail'];
   }
+
   springboard_cookie_tag_client($new_data);
 }
 
@@ -106,6 +165,96 @@ function springboard_cookie_sb_social_share_event_save($share_data) {
       'share_ids' => array($share_data['share_id'])
     ));
   }
+}
+
+/**
+ * Implements hook_springboard_quick_donate_optin_create().
+ */
+function springboard_cookie_springboard_quick_donate_optin_create($account, $donation, $card_id) {
+  springboard_cookie_tag_client(array(
+    'quick_donate' => array(
+      'optin_date' => time(),
+      'card_id' => $card_id,
+    ),
+  ));
+}
+
+/**
+ * Implements hook_action_success().
+ */
+function springboard_cookie_action_success($node, $contact, $data, $sid) {
+  // Add advocacy information to the cookie.
+  $action_data = array(
+    'advocacy' => array(
+      'last_action_nid' => $node->nid,
+      'last_action_sid' => $sid,
+      'last_action_date' => time(),
+      'last_action_type' => $node->type,
+    ),
+  );
+
+  springboard_cookie_tag_client($action_data);
+}
+
+/**
+ * Implements hook_user_update().
+ */
+function springboard_cookie_user_update(&$edit, $account, $category) {
+  global $user;
+
+  // This should prevent the cookie from being updated with someone
+  // elses information when using the user edit feature.
+  if ($user->uid == $account->uid) {
+    springboard_cookie_add_profile_values($account);
+  }
+}
+
+/**
+ * Extracts data from the account object and adds it to the profile
+ * array in the Springboard cookie.
+ *
+ * @param $account
+ *   The user account from which to extract profile values.
+ */
+function springboard_cookie_add_profile_values($account) {
+  $profile_data = array('profile' => array());
+  try {
+    $user_wrapper = entity_metadata_wrapper('user', $account);
+    $properties = $user_wrapper->getPropertyInfo();
+    
+    if (array_key_exists('sbp_salutation', $properties)) {
+      $profile_data['profile']['salutation'] = $user_wrapper->sbp_salutation->value();
+    }
+    if (array_key_exists('sbp_first_name', $properties)) {
+      $profile_data['profile']['first_name'] = $user_wrapper->sbp_first_name->value();
+    }
+    if (array_key_exists('sbp_last_name', $properties)) {
+      $profile_data['profile']['last_name'] = $user_wrapper->sbp_last_name->value();
+    }
+    if (array_key_exists('sbp_address', $properties)) {
+      $profile_data['profile']['address'] = $user_wrapper->sbp_address->value();
+    }
+    if (array_key_exists('sbp_address_line_2', $properties)) {
+      $profile_data['profile']['address_line_2'] = $user_wrapper->sbp_address_line_2->value();
+    }
+    if (array_key_exists('sbp_city', $properties)) {
+      $profile_data['profile']['city'] = $user_wrapper->sbp_city->value();
+    }
+    if (array_key_exists('sbp_state', $properties)) {
+      $profile_data['profile']['state'] = $user_wrapper->sbp_state->value();
+    }
+    if (array_key_exists('sbp_zip', $properties)) {
+      $profile_data['profile']['zip'] = $user_wrapper->sbp_zip->value();
+    }
+    if (array_key_exists('sbp_phone', $properties)) {
+      $profile_data['profile']['phone'] = $user_wrapper->sbp_phone->value();
+    }    
+  }
+  catch (EntityMetadataWrapperException $exc) {
+    watchdog('springboard_cookie', 'Error loading user profile data into cookie for card id %uid.', array('%uid' => $account->uid), WATCHDOG_ERROR);
+  }
+
+  springboard_cookie_tag_client($profile_data);
 }
 
 /**
@@ -227,7 +376,7 @@ function springboard_cookie_tag_client($new_data = array()) {
         // If the existing and new values are arrays, simply combine them.
         $new_cookie[$name] = array_unique(array_merge($new_cookie[$name], $new_data[$name]));
       }
-      else if ($new_cookie[$name] != $new_data[$name]) {
+      elseif (strtolower($new_cookie[$name]) != strtolower($new_data[$name])) {  // Non-case-sensitive comparison.
         // New data doesn't match data already in the client's cookie, so throw out the old cookie data and start fresh.
         $new_cookie = $new_data;
         break;

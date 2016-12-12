@@ -44,6 +44,17 @@ function fundraiser_recent_donors_form_alter(&$form, &$form_state, $form_id) {
       '#collapsible' => TRUE,
       '#collapsed' => FALSE,
     );
+
+    // Display a helpful message about form layouts being required at the content type level if it is not enabled there:
+    $form_layouts_is_enabled = variable_get('form_layouts_' . $form['#node']->type, 0);
+    if (!$form_layouts_is_enabled && !$opt_in_enabled) {
+      $type_settings_path = 'admin/structure/types/manage/' . str_replace('_', '-', $form['#node']->type);
+      $type_name = node_type_get_name($form['#node']->type);
+      $form['springboard_display']['recent_donors_list']['#description'] =
+        t('The Recent Donors List requires Form Layouts to be enabled on the') . ' ' . $type_name . ' ' . t('content type settings form.');
+      return;
+    }
+
     $form['springboard_display']['recent_donors_list']['allow_recent_donations_opt_in'] = array(
       '#type' => 'checkbox',
       '#title' => t('Allow donors to opt-in and show the recent, opt-in donors list.'),
@@ -148,8 +159,8 @@ function fundraiser_recent_donors_commerce_paypal_ipn_process($order, $payment_m
     $donation = fundraiser_donation_get_donation($order->order_id);
 
     // Track this donation's opt-in if the opt-in box was checked:
-    if (isset($donation->submission_data['recent_donors_list_optin']) &&
-      !empty($donation->submission_data['recent_donors_list_optin'])) {
+    if (isset($donation->submission_data[FUNDRAISER_RECENT_DONORS_OPT_IN_FORM_KEY])
+      && !empty($donation->submission_data[FUNDRAISER_RECENT_DONORS_OPT_IN_FORM_KEY])) {
       _fundraiser_recent_donors_insert_donor_optin(
         $donation->sid,
         $donation->nid,
@@ -163,6 +174,15 @@ function fundraiser_recent_donors_commerce_paypal_ipn_process($order, $payment_m
  * Form validation for the "Recent Donors List" node edit form fields:
  */
 function _fundraiser_recent_donors_node_edit_validate($form, &$form_state) {
+  $form_layouts_is_enabled = variable_get('form_layouts_' . $form['#node']->type, 0);
+  $recent_donors_is_enabled = $form_state['values']['allow_recent_donations_opt_in'];
+  if (!$form_layouts_is_enabled && $form_state['values']['allow_recent_donations_opt_in']) {
+    $type_settings_path = 'admin/structure/types/manage/' . str_replace('_', '-', $form['#node']->type);
+    $type_name = node_type_get_name($form['#node']->type);
+    form_set_error('allow_recent_donations_opt_in',
+      t('The Recent Donors List requires Form Layouts') . ' ' .
+      l('to be enabled', $type_settings_path) . ' ' . t('on the ' . $type_name . ' content type settings form.'));
+  }
   if (isset($form_state['values']['show_recent_donation_greater_than'])) {
     $min_amount = $form_state['values']['show_recent_donation_greater_than'];
     if (!is_numeric($min_amount) || $min_amount < 0) {
@@ -238,10 +258,12 @@ function fundraiser_recent_donors_node_insert($node) {
  * Implements hook_node_update().
  */
 function fundraiser_recent_donors_node_update($node) {
-  // Add the opt-in checkbox if it does not already exist and opt-in is enabled for this node:
-  // Do nothing if recent opt-in donations support is disabled:
+  // Add or remove the opt-in component as needed:
   if (_fundraiser_recent_donors_opt_in_enabled($node->nid)) {
     _fundraiser_recent_donors_add_opt_in_webform_component($node);
+  }
+  else {
+    _fundraiser_recent_donors_remove_opt_in_webform_component($node);
   }
 }
 
@@ -467,17 +489,21 @@ function _fundraiser_recent_donors_set_node_opt_in_data($nid, $is_enabled, $min_
  *   Timestamp of when the donation was made.
  */
 function _fundraiser_recent_donors_insert_donor_optin($sid, $nid, $did, $donation_timestamp = FALSE) {
-  if (!$donation_timestamp) {
-    $donation_timestamp = time();
+  $donation_timestamp = !$donation_timestamp ? time() : $donation_timestamp;
+
+  $exists = db_query("SELECT did FROM {fundraiser_donor_opt_in} WHERE did = :did", array(':did' => $did))
+   ->fetchField();
+
+  if (!$exists) {
+    db_query("INSERT INTO {fundraiser_donor_opt_in} VALUES (:sid, :nid, :did, :created)", 
+      array(
+        ':sid' => $sid,
+        ':nid' => $nid,
+        ':did' => $did,
+        ':created' => $donation_timestamp,
+      )
+    );
   }
-  db_query("INSERT INTO {fundraiser_donor_opt_in} VALUES (:sid, :nid, :did, :created)",
-    array(
-      ':sid' => $sid,
-      ':nid' => $nid,
-      ':did' => $did,
-      ':created' => $donation_timestamp,
-    )
-  );
 }
 
 /**
@@ -534,4 +560,22 @@ function _fundraiser_recent_donors_add_opt_in_webform_component($node) {
   ); 
 
   return webform_component_insert($component);
+}
+
+/**
+ * Deletes the opt-in checkbox from the donation webform if it exists.
+ *
+ * @params $node
+ *   The node object for the webform on which the opt-in checkbox will be added.
+ */
+function _fundraiser_recent_donors_remove_opt_in_webform_component($node) {
+  if (!isset($node->webform['components']) || !is_array($node->webform['components'])) {
+    return;
+  }
+  foreach ($node->webform['components'] as $cid => $component) {
+    if ($component['form_key'] == FUNDRAISER_RECENT_DONORS_OPT_IN_FORM_KEY) {
+      webform_component_delete($node, $component);
+      return;
+    }
+  } 
 }

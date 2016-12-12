@@ -65,9 +65,9 @@ function springboard_p2p_personal_campaign_comments_render($subtype, $conf, $pan
 
     $output[] = '<span class="p2p-comment-name-amount-wrapper">';
 
-    if ($comment['show_name']) {
+    if ($comment['show_name'] && !empty($comment['donor_name'])) {
       $output[] = '<h3 class="p2p-comment-name">';
-      $output[] = springboard_p2p_format_user_full_name(user_load($comment['uid']));
+      $output[] = $comment['donor_name'];
       $output[] = '</h3>';
     }
     else {

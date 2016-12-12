@@ -1,0 +1,21 @@
+<?php
+/**
+ * @file
+ * Sets default values for salesforce_login.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function salesforce_login_install() {
+  variable_set('salesforce_login_multiple_contacts_error', t('More than one contact exists for this email. Please contact the site administrator for assistance.'));
+  variable_set('salesforce_login_no_contact_found_error', t('No information was found for this email address. Please try again or contact the site administrator for assistance.'));
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function salesforce_login_uninstall() {
+  variable_del('salesforce_login_multiple_contacts_error');
+  variable_del('salesforce_login_no_contact_found_error');
+}

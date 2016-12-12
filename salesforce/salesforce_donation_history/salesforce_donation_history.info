@@ -1,0 +1,7 @@
+name = Salesforce Donation History
+description = List user donations and tax records from Salesforce.
+package = Salesforce
+core = 7.x
+dependencies[] = salesforce_donation
+
+configure = admin/config/salesforce/donation_history

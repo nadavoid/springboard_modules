@@ -1,0 +1,170 @@
+<?php
+/**
+ * @file
+ * Provides Braintree payment form functions.
+ */
+
+require_once 'inc/hosted.braintree_payment.inc';
+require_once 'inc/paypal.braintree_payment.inc';
+
+/**
+ * Implements hook_library().
+ *
+ * Defines the Braintree Javascript library.
+ */
+function braintree_payment_library() {
+  $path = drupal_get_path('module', 'braintree_payment');
+
+  $libraries['braintree.js'] = array(
+    'title' => 'Braintree Web js',
+    'version' => '3.5.0',
+    'js' => array(
+      $path . '/lib/braintree-web/client.js' => array(),
+      $path . '/lib/braintree-web/hosted-fields.js' => array(),
+      $path . '/lib/braintree-web/paypal.js' => array(),
+      $path . '/lib/braintree-web/apple-pay.js' => array(),
+      $path . '/lib/braintree-web/data-collector.js' => array(),
+      $path . '/js/braintree_payment.js' => array(),
+    ),
+    'css' => array(
+      $path . '/css/braintree_payment.css' => array(),
+    ),
+  );
+
+  return $libraries;
+}
+
+/**
+ * Helper function to provide form elements for different Braintree payments.
+ *
+ * @param string $payment_type
+ *   The type of payment, ie "paypal" or "credit".
+ * @param array $config
+ *   The payment method configuration.
+ */
+function braintree_form_elements($payment_type, $config) {
+  global $user;
+  $js_settings = array();
+  $form = array();
+  $form_processed = &drupal_static(__FUNCTION__);
+
+  $payment_method_instance = commerce_payment_method_instance_load($config['id']);
+  braintree_initialize($payment_method_instance['settings']);
+
+  if (empty($form_processed)) {
+    $form['#attached']['library'][] = array('braintree_payment', 'braintree.js');
+
+    $form['braintree'] = array(
+      '#type' => 'container',
+      '#id' => 'payment-details',
+    );
+    $form['braintree']['new'] = array(
+      '#type' => 'container',
+      '#attributes' => array(
+        'class' => array('braintree-payment-form'),
+      ),
+      '#prefix' => '<div id="braintree-payment-form-outer">',
+      '#suffix' => '</div>',
+    );
+
+    $form['errors'] = array(
+      '#type' => 'hidden',
+      '#parents' => array('braintree', 'errors'),
+    );
+
+    // Add Kount fraud protection.
+    $kount_env = NULL;
+    // Get payment rule settings.
+    $braintree_settings = variable_get('braintree_settings', array());
+    if (!empty($braintree_settings['environment'])) {
+      $js_settings['dataCollector']['kount']['environment'] = $braintree_settings['environment'];
+    }
+
+    $form['#validate'][] = '_braintree_payment_form_validate';
+
+    $token = NULL;
+    $arguments = array();
+    // Try to generate a Braintree token.
+    try {
+      $token = Braintree_ClientToken::generate($arguments);
+      $js_settings['clientToken'] = $token;
+    }
+    catch (Exception $e) {
+      $error_message = braintree_report_error($e);
+      $message = t('Braintree token generation failed: @message. Please check Braintree gateway configuration.', array('@message' => $error_message));
+      drupal_set_message($message, 'error');
+      return;
+    }
+
+    $form_processed = TRUE;
+  }
+
+  $context = array(
+    'form' => &$form,
+    'form_state' => &$form_state,
+    'payment_method_instance' => &$payment_method_instance,
+    'js_settings' => &$js_settings,
+  );
+  $hooks = array(
+    sprintf('braintree_payment_form__%s_', $payment_type),
+    'braintree_payment_form',
+  );
+  foreach ($hooks as $hook) {
+    drupal_alter($hook, $context);
+  }
+
+  $js_settings['storeName'] = variable_get('site_name');
+  $form['#attached']['js'][] = array(
+    'data' => array('braintree' => $js_settings),
+    'type' => 'setting',
+  );
+
+  return $form;
+}
+
+/**
+ * Validation callback for Braintree payment method.
+ *
+ * Note this won't be invoked in Commerce module as they use their own form
+ * process functions.
+ */
+function _braintree_payment_form_validate($form, &$form_state) {
+  // Make sure we have a valid nonce (sale token) returned from Braintree.
+  $nonce = braintree_get_nonce();
+
+  if (empty($nonce)) {
+    form_set_error('braintree_payment', t('Unexpected error happened. Please try again.'));
+    watchdog('braintree', 'Cannot get nonce', array(), WATCHDOG_DEBUG);
+    return FALSE;
+  }
+}
+
+/**
+ * Return custom styles for Braintree Hosted Fields.
+ *
+ * @return array
+ *   An array of styles to use.
+ *
+ * @see https://developers.braintreepayments.com/javascript+php/guides/hosted-fields/styling
+ */
+function braintree_hostedfields_styles() {
+  $styles = array(
+    'input' => array(
+      'font-size' => '12px',
+      'color' => '#222',
+      'font-family' => 'sans-serif',
+    ),
+    ':focus' => array(
+      'color' => '#222',
+    ),
+    '.valid' => array(
+      'color' => 'green',
+    ),
+    '.invalid' => array(
+      'color' => 'red',
+    ),
+  );
+
+  drupal_alter('braintree_hostedfields_styles', $styles);
+  return $styles;
+}

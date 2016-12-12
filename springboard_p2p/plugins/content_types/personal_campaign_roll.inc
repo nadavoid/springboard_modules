@@ -81,9 +81,9 @@ function springboard_p2p_personal_campaign_roll_render($subtype, $conf, $panel_a
 
     $output[] = '<tr class="personal-campaign-roll-donor ' . $zebra_class . '">';
 
-    if ($comment['show_name']) {
+    if ($comment['show_name'] && !empty($comment['donor_name'])) {
       $output[] = '<td>';
-      $output[] = springboard_p2p_format_user_full_name(user_load($comment['uid']));
+      $output[] = $comment['donor_name'];
       $output[] = '</td>';
     }
     else {

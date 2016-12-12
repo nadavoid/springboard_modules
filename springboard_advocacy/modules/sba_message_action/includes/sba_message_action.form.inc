@@ -107,7 +107,7 @@ function sba_message_action_additional_elements(&$form, &$form_state) {
     );
     $form['sba_messages']['multiple_not_multi_flow']['message'] = array(
       '#type' => 'item',
-      '#markup' => '<p>' . $prompt_text . '</p><p></p>' . ctools_modal_text_button('View all possible messages.', $href, t('View messages'), 'ctools-modal-message-window-style') . '</p>',
+      '#markup' => '<p>' . $prompt_text . '</p><p></p>' . sba_message_action_ajax_text_button('View all possible messages.', $href, t('View messages'), 'ctools-modal-message-window-style') . '</p>',
     );
   }
   elseif ($action_type == 'multi_flow') {
@@ -130,6 +130,17 @@ function sba_message_action_additional_elements(&$form, &$form_state) {
   $form['#validate'][] = 'sba_message_action_form_validate';
   $form['#submit'][] = 'sba_message_action_form_submit_success';
   array_unshift($form['#submit'], 'sba_message_action_form_submit');
+}
+
+
+/**
+ * Override ctools_modal_text_button().
+ *
+ * If javascript is disabled open in a new window.
+ */
+function sba_message_action_ajax_text_button($text, $dest, $alt, $class = '', $type = 'ctools-use-modal') {
+  drupal_add_library('system', 'drupal.ajax');
+  return l($text, $dest, array('html' => TRUE, 'attributes' => array('class' => array($type, $class), 'title' => $alt, 'target' => '_blank')));
 }
 
 /**
@@ -201,16 +212,17 @@ function sba_message_action_message_form(&$form, $message, $action_type) {
       '#default_value' => $subject,
       '#description' => !empty($description) ? $description : '',
       '#access' => $access,
+      '#maxlength' => 70,
     );
 
   }
   // The subject is not editable.
   else {
     // Show the non-editable subject if there aren't multiple messages.
-   // if (!$multiple && !$multi_flow) {
-      if ($action_type != 'multiple_not_multi_flow') {
+    // if (!$multiple && !$multi_flow) {
+    if ($action_type != 'multiple_not_multi_flow') {
 
-        $form['message'][$message->sba_message_id]['subject_show'] = array(
+      $form['message'][$message->sba_message_id]['subject_show'] = array(
         '#type' => 'item',
         '#title' => t('Subject'),
         '#markup' => check_plain($subject),
@@ -353,15 +365,15 @@ function sba_message_action_form_validate(&$form, &$form_state) {
     $changed = FALSE;
     // Enforce mandatory editing.
     if ($body_edited == $body_default && isset($message['body_required']) && $message['body_required']['#value'] == 1) {
-        form_set_error('body_editable', t('Please personalize your message before sending.'));
-        $form['sba_messages']['message'][$message_id]['edited_body']['#attributes']['class'][] =  'error';
+      form_set_error('body_editable', t('Please personalize your message before sending.'));
+      $form['sba_messages']['message'][$message_id]['edited_body']['#attributes']['class'][] =  'error';
     }
     elseif ($body_edited != $body_default) {
       $changed = TRUE;
     }
     if ($subject_edited == $subject_default && isset($message['subject_required']) && $message['subject_required']['#value'] == 1) {
-       $form['sba_messages']['message'][$message_id]['subject']['#attributes']['class'][] =  'error';
-        form_set_error('subject', t('Please personalize the subject line before sending your message.'));
+      $form['sba_messages']['message'][$message_id]['subject']['#attributes']['class'][] =  'error';
+      form_set_error('subject', t('Please personalize the subject line before sending your message.'));
     }
     elseif (!isset($message['subject_show']) && $subject_edited != $subject_default) {
       $changed = TRUE;
@@ -410,6 +422,7 @@ function sba_message_action_form_submit($form, &$form_state) {
   $_SESSION['form_details'] = array();
   $_SESSION['action_sid'] = FALSE;
   $_SESSION['success_messages'] = array();
+  $_SESSION['springboard_advocacy_action_webform_data'] = array();
 
   // Create array of messages to submit for target resolution.
   if (isset($form_state['values']['sba_messages'])) {
@@ -445,7 +458,7 @@ function sba_message_action_form_submit($form, &$form_state) {
  * In order to get the submission ID we need a second submit hook which
  * fires after webform has done its processing. The other submit hook has
  * to fire before webform in order to make session values available for token
- * replacement in confirmation messages when there is a reirect set in
+ * replacement in confirmation messages when there is a redirect set in
  * confirmation settings.
  *
  * @param array $form
@@ -454,11 +467,21 @@ function sba_message_action_form_submit($form, &$form_state) {
  *   The form_state array.
  */
 function sba_message_action_form_submit_success($form, &$form_state) {
-  if (!empty($_SESSION['success_messages'])) {
-    $node = $form['#node'];
-    $sid = !empty($_SESSION['webform_confirmations_sid']) ? $_SESSION['webform_confirmations_sid'] : FALSE;
-    springboard_advocacy_success($node, $_SESSION['contact'], $_SESSION['success_messages'], $sid);
+  $node = $form['#node'];
+  $sid = !empty($_SESSION['webform_confirmations_sid']) ? $_SESSION['webform_confirmations_sid'] : FALSE;
+
+  // Fire the advocacy success hook only if we are not submitting a
+  // multi-flow action. (multi-flow actions submit after the preview
+  // confirmation in the method sba_message_action_preview_form_submit() in
+  // the file: springboard/springboard_advocacy/modules/sba_message_action
+  ///includes/sba_message_action.preview.inc
+  if (isset($_SESSION['springboard_advocacy_action_webform_data']['is_multiflow_action']) && $_SESSION['springboard_advocacy_action_webform_data']['is_multiflow_action'] == FALSE) {
+    springboard_advocacy_success($_SESSION['springboard_advocacy_action_webform_data']['node_data'], $_SESSION['springboard_advocacy_action_webform_data']['contact_data'], $_SESSION['springboard_advocacy_action_webform_data']['response_data'], $sid);
   }
+
+  // Cleanup the session data now that it has been used for the advocacy
+  // success hook call and is no longer needed.
+  unset($_SESSION['springboard_advocacy_action_webform_data']);
 }
 /**
  * Helper function to build message bodies.

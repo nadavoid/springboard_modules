@@ -364,29 +364,71 @@ function _commerce_authnet_fundraiser_commerce_authnet_cim_cardonfile_update($fo
 
 /**
  * Refund callback for authnet, wraps the admin form used for refund with our own system.
+ *
+ * Here are some commonly seen response codes sent by authnet:
+ * 1 = This transaction has been approved.
+ * 11 = Duplicate transaction; for example, submitting two, partial refunds of $5.01 in a row.
+ * 54 = "The referenced transaction does not meet the criteria for issuing a credit".
+ *      The most likely explanation for response code 54 is that the original payment
+ *      in question has not been "settled" by authorize.net, which can take 24 hours.
+ *      response code "54" can be caused by other issues as well:
+ *        - The original payment has been settled more than 120 days.
+ *        - Invalid type (A valid type would be "credit")
+ *        - invalid reference transaction ID
+ *        - Wrong currency
+ * 
+ * For more: http://developer.authorize.net/api/reference/dist/json/responseCodes.json
  */
 function commerce_authnet_fundraiser_commerce_refund($payment_method, $refund) {
+  $refund_was_successful = FALSE;
+
   // Retrieve data.
   $refunding_order = commerce_order_load($refund->did);
   $transactions = commerce_payment_transaction_load_multiple(array(), $conditions = array('order_id' => $refunding_order->order_id));
   $transaction = array_shift($transactions); // The first one is the original donation.
 
-  $form = array();
-  $form_state = array();
   // Set up the values needed for the transaction to go through.
-  $form_state['transaction'] = $transaction;
-  $form_state['values']['amount'] = $refund->amount;
-  $form_state['order'] = $refunding_order;
-  $form_state['payment_method'] = commerce_payment_method_instance_load($transaction->instance_id);
+  $form = array();
+  $form_state = array(
+   'transaction' => $transaction,
+   'values' => array('amount' => $refund->amount),
+   'order' => $refunding_order,
+   'payment_method' => commerce_payment_method_instance_load($transaction->instance_id),
+  );
+
   // Submit the donation form.
   module_load_include('inc', 'commerce_authnet', '/includes/commerce_authnet.admin');
   $result = commerce_authnet_aim_credit_form_submit($form, $form_state);
-  // At this point the card has been saved on the user profile.
-  $success = FALSE;
-  if ($result !== FALSE) {
-    $success = TRUE;
+  // At this point, the card has been saved on the user profile.
+
+  // Next, check the newly saved authnet payload's response code to verify the refund a success:
+  $transactions = commerce_payment_transaction_load_multiple(array(), $conditions = array('order_id' => $refunding_order->order_id));
+  $transaction = array_pop($transactions);
+  $payload = array_pop($transaction->payload);
+  
+  // Get authnet's response code from the payload:
+  $response_code_index = 2;
+  $response_code = (string) $payload[$response_code_index];
+
+  // Add additional information for common authnet response codes:
+  switch ($response_code) {
+    case '11':
+      drupal_set_message('Authorize.net rejected this refund because an identical refund was recently issued against this transaction.' . '<br />' .
+        'If this duplicate refund was intentional then please wait 3-5 minutes before trying it again.', 'error');
+      break;
+    case '54':
+      drupal_set_message('New transactions are settled once per day based on your Authorize.net account\'s "Transaction Cut-Off Time".' . '<br />' .
+        'If you change the cut-off time after today\'s transactions have been settled, the new cut-off time will be used tomorrow.', 'error');
+      break;
   }
-  return $success;
+
+  // A response code of 1 indicates success AND $result will
+  // be FALSE if commerce_authnet detects any problems:
+  if ($response_code === '1' && $result !== FALSE) {
+    $refund_was_successful = TRUE;
+  }
+  
+  return $refund_was_successful;
 }
 
 /**

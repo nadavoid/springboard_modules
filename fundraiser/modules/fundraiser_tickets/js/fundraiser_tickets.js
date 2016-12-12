@@ -56,7 +56,7 @@
    * Calculate the value of a field
    */
   Drupal.fundraiserTickets.prototype.calcField = function(productId, price) {
-    return $('#product-' + productId + '-ticket-quant').val() * parseFloat(price.replace(/\,/g,''));
+    return $('#product-' + productId + '-ticket-quant').val() * parseFloat(price.replace(/[^0-9\.]+/g,''));
   }
 
   /**
@@ -69,7 +69,7 @@
       total = total + (parseFloat(price.amount.replace(/\,/g,'')) * $('#product-' + productId + '-ticket-quant').val());
     });
     if ($('#fundraiser-tickets-extra-donation').val()){
-      total = total + parseFloat($('#fundraiser-tickets-extra-donation').val().replace(/\,/g,''));
+      total = total + parseFloat($('#fundraiser-tickets-extra-donation').val().replace(/[^0-9\.]+/g,''));
     }
     return total;
   }
@@ -81,7 +81,7 @@
     var self = this;
     var extra = 0;
     if ($('#fundraiser-tickets-extra-donation').val()){
-      extra = parseFloat($('#fundraiser-tickets-extra-donation').val().replace(/\,/g,''));
+      extra = parseFloat($('#fundraiser-tickets-extra-donation').val().replace(/[^0-9\.]+/g,''));
     }
     return extra;
   }

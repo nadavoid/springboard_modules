@@ -237,10 +237,21 @@ function sba_message_action_node_insert($node) {
     sba_message_action_insert_components($node);
     sba_message_action_update_multiflow_component($node);
 
-    // If this is a cloned node, save the cloned confirmation message data.
-    // We cannot do with with hook_clone_node_alter() because the nid of the new
-    // node is not yet available when that hook is fired.
+    // Handle cloning:
     if (isset($node->clone_from_original_nid)) {
+      // Copy the original node's success message:
+      if (isset($node->custom_success_message)) {
+         db_query("UPDATE {webform} SET confirmation = :confirmation WHERE nid = :nid",
+           array(
+             ':confirmation' => $node->custom_success_message,
+             ':nid' => $node->nid,
+           )
+         );
+      } 
+
+      // Save the cloned confirmation message data.
+      // We cannot do with with hook_clone_node_alter() because the nid of the new
+      // node is not yet available when that hook is fired.
       if (isset($node->custom_confirmation)) {
         $record = array(
           'nid' => $node->nid,
@@ -250,6 +261,7 @@ function sba_message_action_node_insert($node) {
         drupal_write_record('sba_message_action_confirm', $record);
       }
     }
+    springboard_advocacy_node_form_post_save($node);
   }
 }
 
@@ -259,6 +271,7 @@ function sba_message_action_node_insert($node) {
 function sba_message_action_node_update($node) {
   if ($node->type == 'sba_message_action') {
     sba_message_action_update_multiflow_component($node);
+    springboard_advocacy_node_form_post_save($node);
   }
 }
 
@@ -323,6 +336,11 @@ function sba_message_action_node_load($nodes, $types) {
         if (!empty($confirm_fail[0]->custom_confirmation) && isset($confirm_fail[0]->fail_message)) {
           $node->custom_fail_message = $confirm_fail[0]->fail_message;
         }
+      }
+
+      // Add the confirmation success message to the node object so it can be cloned:
+      if (isset($node->webform['confirmation'])) {
+        $node->custom_success_message = $node->webform['confirmation'];
       }
 
       // Add the precedence value to the node object.
@@ -673,9 +691,7 @@ function sba_message_action_form_sba_message_action_node_form_alter(&$form, &$fo
     '#weight' => -4,
   );
 
-  $form['actions']['submit']['#validate'][] = 'sba_message_action_form_sba_message_action_node_form_validate';
-  $form['actions']['submit']['#submit'][] = 'sba_message_action_form_sba_message_action_node_form_submit';
-
+  $form['#validate'][] = 'sba_message_action_form_sba_message_action_node_form_validate';
 }
 
 /**
@@ -712,39 +728,6 @@ function sba_message_action_form_sba_message_action_node_form_validate(&$form, &
 }
 
 /**
- * Redirect to the messages tab instead of webform tab.
- *
- * @param $form
- * @param $form_state
- */
-function sba_message_action_form_sba_message_action_node_form_submit(&$form, &$form_state) {
-  $data = array(
-    'nid' => $form_state['values']['nid'],
-    'visibility' => $form_state['values']['show_participants']
-  );
-  $visibility = db_query('select visibility from {springboard_action_opt_in_block} WHERE nid=:nid', array(':nid' => $form_state['values']['nid']))->fetchCol();
-  if (empty($visibility)) {
-    drupal_write_record('springboard_action_opt_in_block', $data);
-  }
-  else {
-    drupal_write_record('springboard_action_opt_in_block', $data, 'nid');
-  }
-
-  $submit = array(
-    'nid' => $form_state['values']['nid'],
-    'submit_text' => $form_state['values']['action_submit_button_text']
-  );
-
-  drupal_write_record('webform', $submit, 'nid');
-
-  if (empty($form['#node']->nid)) {
-    $path = 'node/'.$form_state['nid'].'/messages';
-    $form_state['redirect'] = $path;
-  }
-}
-
-
-/**
  * Implements hook_FORMID_form_alter().
  *
  * Alter message action-specific form elements on message entity edit form.
@@ -754,12 +737,17 @@ function sba_message_action_form_sba_message_edit_form_alter(&$form, &$form_stat
   $node = menu_get_object();
 
   if (isset($node->type) && $node->type == 'sba_message_action') {
+
+    $lang = $form['field_sba_subject']['#language'];
+    $form['field_sba_subject'][$lang][0]['value']['#maxlength'] = 70;
+
     $sba_message = $form_state['sba_message'];
     $node_wrapper = entity_metadata_wrapper('node', $node);
     $multi_flow = $node_wrapper->field_sba_action_flow->value() == 'multi' ? TRUE : FALSE;
     $form['field_sba_subject_editable'][$form['field_sba_subject_editable']['#language']]['#title'] = t('Subject editable by advocate?');
 
-    // Disable the subject and body editable fields if this is a singe step action, and other messages already exist.
+    // Disable the subject and body editable fields if this is a single step
+    // action, and other messages already exist.
     if ((isset($node->message_ids) && empty($sba_message->sba_message_id)) || (isset($node->message_ids) && count($node->message_ids) > 1)) {
       if (!$multi_flow) {
         $form['field_sba_subject_editable'][$form['field_sba_subject_editable']['#language']]['#description'] = t('This option is only available for multi-step messages, or single-step messages without multiple messages.');

@@ -276,6 +276,18 @@ input#edit-submit {
   font-size: 28px;
 }
 
+.user-form-vertical-right input#edit-submit,
+.user-form-vertical-left input#edit-submit{
+  font-size: 20px;
+}
+
+@media (min-width: 1200px) {
+  .user-form-vertical-right input#edit-submit,
+  .user-form-vertical-left input#edit-submit{
+    font-size: 22px;
+  }
+}
+
 #edit-actions:after {
   position: absolute;
   top: 28px;
@@ -401,6 +413,15 @@ div.donation-processing-wrapper,
 
 .webform-user-wrapper {
   padding: 5px 0 22px 20px;
+}
+
+/* Override P2P styling for quicksign form */
+#edit-submitted-sba-quicksign-children-submit + .webform-user-wrapper,
+#edit-submitted-sba-quicksign-children-submit + .webform-user-wrapper p {
+  padding: 0;
+  margin: 0;
+  font-size: 16px;
+  clear: both;
 }
 
 /* confirmation page */

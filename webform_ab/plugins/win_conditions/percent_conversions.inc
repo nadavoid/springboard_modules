@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Provide a Webform A/B Test win condition: Percentage of hits that result in
+ * Provide a Multivariate Test win condition: Percentage of hits that result in
  * conversions
  */
 
@@ -15,6 +15,7 @@ $plugin = array(
   'config summary' => 'webform_ab_percent_conversions_config_summary',
   'check criteria' => 'webform_ab_percent_conversions_check_win',
   'prep for save' => 'webform_ab_percent_conversions_prep_save',
+  'current value' => 'webform_ab_percent_conversions_current_value',
 );
 
 /**
@@ -63,7 +64,7 @@ function webform_ab_percent_conversions_config_validate($config, $field_name_pre
 
 /**
  * Return a summary of the plugin config, for listing on the admin view of a
- * Webform A/B test node
+ * Multivariate test node
  */
 function webform_ab_percent_conversions_config_summary($config) {
   if ($config['percentage'] > 0) {
@@ -85,15 +86,32 @@ function webform_ab_percent_conversions_prep_save(&$config) {
 }
 
 /**
- * Check if the given Webform A/B Test node has a winner
+ * Returns the current value of this win condition.
+ *
+ * @param $webform_nid
+ *   Note ID for the webform being tested.
+ */
+function webform_ab_percent_conversions_current_value($webform_nid) {
+  $query_data = array(':webform_nid' => $webform_nid);
+  $conversions = db_query("SELECT webform_nid FROM {webform_ab_conversion} WHERE webform_nid = :webform_nid",
+    $query_data)->rowCount();
+  $hits = db_query("SELECT webform_nid FROM {webform_ab_hits} WHERE webform_nid = :webform_nid",
+    $query_data)->rowCount();
+
+  $value = $hits > 0 ? $conversions / $hits : 0;
+  return round($value, 2);
+}
+
+/**
+ * Check if the given Multivariate test node has a winner
  *
  * @param $config
- *   Array of config options for this plugin for the Webform A/B test being
+ *   Array of config options for this plugin for the Multivariate test being
  *   checked for a win. In this case, the array will contain 'percentage'
  * @param $webform_details
  *   Array of info about the webform to check.
  * @param $test_node
- *   Webform A/B Test node
+ *   Multivariate test node
  */
 function webform_ab_percent_conversions_check_win($config, $webform_details, $test_node) {
   if ($webform_details['hits'] > 0) {

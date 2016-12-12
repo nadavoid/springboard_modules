@@ -102,6 +102,13 @@ function commerce_paypal_wps_fundraiser_commerce_redirect($method_instance, $don
       );
     }
   }
+  // Include the BN code if it has been set:
+  if (isset($donation->gateway['gateway_details']['settings']['bn_code'])) {  
+    $form['bn'] = array(
+      '#type' => 'hidden',
+      '#value' => $donation->gateway['gateway_details']['settings']['bn_code'],
+    );
+  } 
   // Set the cancel_return as form url.
   $form['cancel_return'] = array(
     '#type' => 'hidden',
@@ -113,7 +120,6 @@ function commerce_paypal_wps_fundraiser_commerce_redirect($method_instance, $don
     '#type' => 'hidden',
     '#value' => $base_url . '/node/' . $donation->nid . '/done?sid=' . $donation->sid,
   );
-
   return $form;
 }
 
@@ -250,6 +256,12 @@ function commerce_paypal_wps_form_rules_ui_edit_element_builder(&$form, &$form_s
           '#title' => t('Signature'),
           '#description' => t('These credentials are only needed for initiating PayPal WPS refunds through Springboard.'),
           '#default_value' => !empty($config['api_signature']) ? $config['api_signature'] : '',
+        );
+        $form['parameter']['payment_method']['settings']['payment_method']['settings']['bn_code'] = array(
+          '#type' => 'textfield',
+          '#title' => t('BN Code'),
+          '#description' => t('This code should be provided by PayPal partners to be submitted along with every payment.'),
+          '#default_value' => !empty($config['bn_code']) ? $config['bn_code'] : '',
         );
         $form['parameter']['payment_method']['settings']['payment_method']['settings']['log'] = array(
           '#type' => 'checkboxes',

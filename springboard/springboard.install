@@ -109,3 +109,50 @@ function springboard_update_7003() {
   $market_source_to_user_map['sbp_device_browser'] = 'device_browser';
   variable_set('market_source_to_user_map', $market_source_to_user_map);
 }
+
+/**
+ * Change sbp_referrer and sbp_initial_referrer to textareas.
+ */
+function springboard_update_7004() {
+
+  $fields = array(
+    'sbp_referrer',
+    'sbp_initial_referrer',
+  );
+
+  foreach ($fields as $field_name) {
+
+    $data_table = 'field_data_' . $field_name;
+    $revision_table = 'field_revision_' . $field_name;
+    $value_field = $field_name . '_value';
+
+    if (db_table_exists($data_table)) {
+      // Change the field_config table entry.
+      db_update('field_config')
+        ->fields(array('type' => 'text_long'))
+        ->condition('field_name', $field_name)
+        ->execute();
+
+      // Change the field storage tables.
+      $textarea_spec = array(
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => FALSE,
+      );
+      db_change_field($data_table, $value_field, $value_field, $textarea_spec);
+      db_change_field($revision_table, $value_field, $value_field, $textarea_spec);
+
+      // Change the field_config_instance settings so that the
+      // textarea shows up in the admin ui.
+      $result = db_query("Select entity_type, bundle FROM {field_config_instance} WHERE field_name = :name", array(':name' => $field_name));
+      foreach ($result as $instance) {
+        $instance_info = field_info_instance($instance->entity_type, $field_name, $instance->bundle);
+        $instance_info['widget']['type'] = 'text_textarea';
+        field_update_instance($instance_info);
+      }
+    }
+  }
+  // Clear caches.
+  field_cache_clear();
+}
+

@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Provide a Webform A/B Test win condition: Total sum of donations
+ * Provide a Multivariate test win condition: Total sum of donations
  */
 
 // Plugin details
@@ -13,6 +13,7 @@ $plugin = array(
   'config form validation' => 'fundraiser_ab_donations_total_config_validate',
   'config summary' => 'fundraiser_ab_donations_total_config_summary',
   'check criteria' => 'fundraiser_ab_donations_total_check_win',
+  'current value' => 'fundraiser_ab_donations_total_current_value',
 );
 
 /**
@@ -47,24 +48,39 @@ function fundraiser_ab_donations_total_config_validate($config, $field_name_pref
 
 /**
  * Return a summary of the plugin config, for listing on the admin view of a
- * Webform A/B test node
+ * multivariate test node
  * @todo: format this as a dollar amount
  */
 function fundraiser_ab_donations_total_config_summary($config) {
   return money_format('$%.2n', $config['donation_sum']);
 }
 
+/**
+ * Returns the current value this win condition is measuring for a given test.
+ *
+ * @param $webform_nid
+ *   Node ID of the webform currently being test.
+ */
+function fundraiser_ab_donations_total_current_value($webform_nid) {
+  $sum = db_query("SELECT SUM(amount) FROM {fundraiser_donation} WHERE nid = :webform_nid",
+    array(':webform_nid' => $webform_nid))
+    ->fetchField();
+  if (!$sum) {
+    return 0;
+  }
+  return $sum;
+}
 
 /**
- * Check if the given Webform A/B Test node has a winner
+ * Check if the given multivariate test node has a winner
  *
  * @param $config
- *   Array of config options for this plugin for the Webform A/B test being
+ *   Array of config options for this plugin for the multivariate test being
  *   checked for a win. In this case, the array will contain 'donation_sum'
  * @param $webform_details
  *   Array of info about the webform to check.
  * @param $test_node
- *   Webform A/B Test node
+ *   Multivariate Testing test node
  */
 function fundraiser_ab_donations_total_check_win($config, $webform_details, $test_node) {
   return isset($webform_details['fundraiser']) && is_array($webform_details['fundraiser']) && ($webform_details['fundraiser']['total_donations'] >= $config['donation_sum']);

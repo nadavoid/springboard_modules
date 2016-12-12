@@ -1,0 +1,108 @@
+<?php
+/**
+ * @file
+ * Provides integration with Braintree core functions. This file holds module
+ * hooks implementations.
+ */
+
+require_once 'inc/braintree.inc';
+require_once 'inc/braintree.braintree_php.inc';
+
+/**
+ * Implements hook_init().
+ */
+function braintree_init() {
+  // Avoid "can't use nonce more than once" error if page is reloaded (with same
+  // $_POST).
+  if (isset($_POST['payment_method_nonce']) && !empty($_POST['payment_method_nonce'])) {
+    if (!isset($_SESSION['payment_method_nonce']) || $_POST['payment_method_nonce'] != $_SESSION['payment_method_nonce']) {
+      $_SESSION['payment_method_nonce'] = $_POST['payment_method_nonce'];
+    }
+    else {
+      unset($_SESSION['payment_method_nonce']);
+      // Reload without $_POST to stop payment form from submitting with already
+      // used nonce.
+      drupal_goto(current_path());
+    }
+  }
+}
+
+/**
+ * Implements hook_mail().
+ */
+function braintree_mail($key, &$message, $params) {
+  if ($key == 'transaction_fraud') {
+    $order = $params['order'];
+    $message['subject'] = t('Transaction fraud risk marked @decision', array('@decision' => $params['decision']));
+
+    // Fraud risk decision.
+    $message['body'][] = t('Decision: @decision', array('@decision' => $params['decision']));
+
+    // Link to view order.
+    $message['body'][] = t('Order: !order_link', array(
+      '!order_link' => l(t('view'), 'admin/commerce/orders/' . $order->order_id, array('absolute' => TRUE)),
+    ));
+
+    // Link to view braintree transaction.
+    if (!empty($params['txn_id'])) {
+      // TODO: Refactor to use passed settings. There are no global settings to
+      // get anymore.
+      // $braintree_settings = variable_get('braintree_settings');
+      $bt_env = $braintree_settings['environment'];
+      $subdomain = ($bt_env == 'sandbox') ? 'sandbox' : 'www';
+      $bt_url = 'https://' . $subdomain . '.braintreegateway.com/merchants/' . $braintree_settings[$bt_env]['merchant_id'] . '/transactions/' . $params['txn_id'];
+      $message['body'][] = t('Transaction: !braintree_link', array('!braintree_link' => l(t('view'), $bt_url)));
+    }
+  }
+}
+
+/**
+ * Implements hook_permission().
+ */
+function braintree_permission() {
+  return array(
+    'administer braintree settings' => array(
+      'title' => t('Administer Braintree settings'),
+      'description' => t('Setup up Braintree merchant ID and API keys.'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_libraries_info().
+ *
+ * Define braintree_php library. Note: this library is also defined in
+ * commerce_braintree module.
+ */
+function braintree_libraries_info() {
+  $libraries['braintree_php'] = array(
+    'name' => 'BrainTree PHP',
+    'vendor url' => 'https://www.braintreepayments.com/docs/php',
+    'download url' => 'https://github.com/braintree/braintree_php',
+    'version arguments' => array(
+      'file' => 'CHANGELOG.md',
+      'pattern' => '/^##\s+(.+)$/',
+      'lines' => 1,
+    ),
+    'files' => array(
+      'php' => array('lib/Braintree.php'),
+    ),
+  );
+  return $libraries;
+}
+
+/**
+ * Implements hook_hook_info().
+ */
+function braintree_hook_info() {
+  $hooks = array(
+    'braintree_transaction_sale_data_alter',
+    'braintree_transaction_sale_complete',
+  );
+  foreach ($hooks as $hook) {
+    $hook_info[$hook] = array(
+      'group' => 'braintree',
+    );
+  };
+  return $hook_info;
+}

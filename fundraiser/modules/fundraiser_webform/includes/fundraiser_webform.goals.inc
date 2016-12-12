@@ -125,6 +125,10 @@ function fundraiser_webform_is_fundraiser_goal($selected_context, $form_state, $
 
     if ($selected_context['id'] == 'single' && $nid) {
       $node = node_load($nid);
+      // If this goal's node no longer exists then return false:
+      if (!$node) {
+        return FALSE;
+      }
       $type = $node->type;
     }
     elseif ($selected_context['id'] == 'group') {

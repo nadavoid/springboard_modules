@@ -95,6 +95,7 @@ class springboard_advocacy_views_handler_field_target_actions extends views_hand
           'title' => !empty($values->title) ? $values->title : '',
           'state' => !empty($values->state) ? $values->state : '',
           'district' => !empty($values->district_name) ? $values->district_name : '',
+          'role' => !empty($values->role) ? $values->role : '',
 
           // Need to send an empty string if the last query segment is empty
           // so that the query string

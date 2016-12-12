@@ -1,0 +1,65 @@
+<?php
+
+/**
+ * @file
+ * Installation file for springboard_node_expire.
+ */
+
+/**
+ * Implements hook_schema_alter().
+ */
+function springboard_node_expire_schema_alter(&$schema) {
+  $schema['node_expire']['fields']['action'] = array(
+    'description' => 'The action to take if the fundraiser has expired.',
+    'type' => 'int',
+    'size' => 'tiny',
+    'not null' => FALSE,
+    'default' => 0,
+  );
+  $schema['node_expire']['fields']['redirect_url'] = array(
+    'description' => 'The URL to redirect to if the fundraiser has expired.',
+    'type' => 'varchar',
+    'length' => '255',
+    'not null' => FALSE,
+  );
+  $schema['node_expire']['fields']['message'] = array(
+    'description' => 'The message to display if the fundraiser has expired.',
+    'type' => 'text',
+    'not null' => FALSE,
+  );
+  $schema['node_expire']['fields']['message_format'] = array(
+    'description' => 'The format of the expiration message.',
+    'type' => 'varchar',
+    'length' => '255',
+    'not null' => FALSE,
+  );
+}
+
+/**
+ * Implements hook_install().
+ */
+function springboard_node_expire_install() {
+  // Retrieve the adjusted schema and add any columns that don't exist in the
+  // node_expire table.
+  $schema = drupal_get_schema('node_expire', TRUE);
+  foreach ($schema['fields'] as $field => $spec) {
+    if (!db_field_exists('node_expire', $field)) {
+      db_add_field('node_expire', $field, $spec);
+    }
+  }
+}
+
+/**
+ * Implements hook_node_uninstall().
+ */
+function springboard_node_expire_uninstall() {
+  $fields_to_drop = array(
+    'action',
+    'redirect_url',
+    'message',
+    'message_format',
+  );
+  foreach ($fields_to_drop as $field) {
+    db_drop_field('node_expire', $field);
+  }
+}

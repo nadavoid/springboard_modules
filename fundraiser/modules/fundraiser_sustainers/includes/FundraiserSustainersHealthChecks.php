@@ -68,7 +68,7 @@ class FundraiserSustainersHealthChecks {
    *   An array of donation IDs.
    */
   protected function getStuckDids() {
-    $query = "SELECT did FROM {fundraiser_sustainers} WHERE next_charge < :time AND lock_id != '0' AND attempts < :max_processing_attempts AND (gateway_resp NOT IN ('success', 'failed') OR gateway_resp IS NULL)";
+    $query = "SELECT did FROM {fundraiser_sustainers} WHERE next_charge < :time AND lock_id != '0' AND attempts < :max_processing_attempts AND (gateway_resp NOT IN ('success', 'failed', 'omitted') OR gateway_resp IS NULL)";
     $replacements = array(
       ':max_processing_attempts' => variable_get('fundraiser_sustainers_max_processing_attempts', 3),
       // Filter on next charge earlier than an hour in the past to avoid pulling currently processing sustainers.

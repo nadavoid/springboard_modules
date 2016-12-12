@@ -1,6 +1,6 @@
 core = "7.x"
-description = "Example module demonstrating Email Wrappers mail form API."
-name = "Email Wrappers Example"
+description = "Example module demonstrating Email Templates mail form API."
+name = "Email Templates Example"
 version = 7.x-4.x-dev
 package = "Jackson River Springboard - extras"
 

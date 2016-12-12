@@ -39,6 +39,12 @@ function salesforce_npsp_admin_form($form, &$form_state) {
     '#required' => TRUE,
   );
 
+  $form['user_profile_info'] = array(
+    '#type' => 'checkbox',
+    '#title' => t("Show Salesforce information on the user's profile page?"),
+    '#default_value' => variable_get('salesforce_npsp_user_profile', TRUE),
+  );
+
   // Save.
   $form['submit'] = array(
     '#type' => 'submit',
@@ -59,6 +65,8 @@ function salesforce_npsp_admin_form_validate($form, &$form_state) {
  * Submit callback for the configuration form.
  */
 function salesforce_npsp_admin_form_submit($form, &$form_state) {
-    // set default last name
-    variable_set('salesforce_npsp_lastname', $form_state['input']['lastname']);
+  // Set default last name.
+  variable_set('salesforce_npsp_lastname', $form_state['input']['lastname']);
+  // Set default value for displaying Salesforce info on user profile.
+  variable_set('salesforce_npsp_user_profile', !empty($form_state['input']['user_profile_info']));
 }

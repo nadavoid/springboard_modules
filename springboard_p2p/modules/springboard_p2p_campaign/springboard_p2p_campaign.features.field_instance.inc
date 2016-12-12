@@ -1138,7 +1138,7 @@ function springboard_p2p_campaign_field_default_field_instances() {
     'bundle' => 'p2p_campaign',
     'default_value' => NULL,
     'deleted' => 0,
-    'description' => 'This is a Youtube or Vimeo video URL. Example: https://www.youtube.com/watch?v=kJ4CYbCGhLA',
+    'description' => 'This is a YouTube or Vimeo video URL. Example: https://www.youtube.com/watch?v=kJ4CYbCGhLA',
     'display' => array(
       'default' => array(
         'label' => 'above',

@@ -1,0 +1,7 @@
+name = Springboard Message Action A/B
+description = Allows Multivariate A/B testing to be performed upon message action nodes.
+core = 7.x
+package = Springboard Advocacy
+dependencies[] = sba_message_action
+dependencies[] = webform_ab
+

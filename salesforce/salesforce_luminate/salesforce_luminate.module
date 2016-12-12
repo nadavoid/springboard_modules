@@ -70,6 +70,16 @@ function salesforce_luminate_salesforce_queue_create_item_alter(&$item) {
       $item['sobject']->fields['cv__RecurrenceInterval__c'] = 1;
     }
   }
+
+  // Check if the object is a sustainer upgrade. If so we'll need to add a relationship
+  // to the Luminate specific recurring donation object.
+  if ($item['object_type'] == 'Sustainers_Upgrade__c') {
+    $did = $item['sobject']->fields['Donation_ID__c'];
+    $item['sobject']->fields['Recurring_Donations__c'] = sprintf('[cv__Recurring_Gift__c:fundraiser_sustainers_series:%d]', $did);
+    $item['sync_rules']['Recurring_Donations__c'] = 'always';
+    // Add a token for the contact. The user's id is mapped, so we should be able to pluck it from the object.
+    $item['sobject']->fields['Contact__c'] = sprintf('[Contact:user:%d]', $item['sobject']->fields['User_ID__c']);
+  }
 }
 
 /**

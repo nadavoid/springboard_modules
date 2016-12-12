@@ -514,7 +514,7 @@ function commerce_litle_fundraiser_commerce_cardonfile($donation) {
 
     // If we have a profile for this user update it locally.
     if ($card_data) {
-      // Make the update request to authorize.net
+      // Make a card update request to Litle.
       commerce_litle_fundraiser_commerce_update($donation, $card_data);
     }
   }

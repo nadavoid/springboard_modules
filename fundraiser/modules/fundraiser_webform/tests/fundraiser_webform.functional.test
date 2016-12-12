@@ -202,7 +202,7 @@ class FundraiserWebformFunctionalTest extends FundraiserSetup {
       'from_address_custom' => isset($settings['from_address']) ? $settings['from_address'] : 'from@example.com',
       // 'from_address_component' => 1,
       'from_name_option' => 'custom',
-      'from_name_custom' => isset($settings['from_name']) ? $settings['from_name'] : 'Email Wrappers Test',
+      'from_name_custom' => isset($settings['from_name']) ? $settings['from_name'] : 'Email Templates Test',
       //'from_name_component' => 1,
       'email_wrappers_html_message' => isset($settings['html_message']) ? $settings['html_message'] : '<p>Customized html message</p>',
       'email_wrappers_text_message' => isset($settings['text_message']) ? $settings['text_message'] : 'Customized text message',

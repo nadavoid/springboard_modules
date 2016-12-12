@@ -33,6 +33,7 @@ function dynamic_gift_strings_init() {
 function dynamic_gift_strings_form_alter(&$form, &$form_state, $form_id) {
   // make sure the node has a webform
   if (strstr($form_id, 'webform_client_form')) {
+
     $node = $form['#node'];
     if ($node->type == 'donation_form') {
       if (isset($_SESSION['dynamic_gift_string_values'][$node->nid])
@@ -233,6 +234,33 @@ function _dynamic_gift_strings_alert($amounts, $nid) {
         'amounts' => $amounts,
       );
       drupal_mail('dynamic_gift_strings', 'dynamic_gift_strings_alert', $email, language_default(), $params);
+    }
+  }
+}
+
+
+/**
+ * Implements hook_node_load().
+ *
+ * If a webform is not a donation form, has a redirect,
+ * and $_GET['gs'] exists and is not already in the node's redirect url setting,
+ * add the gift string paramter to the $node->webform['redirect'] string.
+ */
+function dynamic_gift_strings_node_load($nodes, $types) {
+  foreach ($nodes as $node) {
+    if (isset($_GET['gs'])
+      && !fundraiser_is_donation_type($node->type)
+      && in_array($node->type, variable_get('webform_node_types', array()))) {
+      $redirect_url = $node->webform['redirect_url'];
+      if ($redirect_url != '<confirmation>' && $redirect_url != '<none>') {
+        $parts = drupal_parse_url($redirect_url);
+        if (!isset($parts['query']['gs'])) {
+          $num = count($parts['query']);
+          $gs = urlencode($_GET['gs']);
+          $qstring = $num <= 1 ? '?gs=' . $gs : '&gs=' . $gs;
+          $node->webform['redirect_url'] = $node->webform['redirect_url'] . $qstring;
+        }
+      }
     }
   }
 }

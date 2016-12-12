@@ -17,6 +17,7 @@ function commerce_cybersource_fundraiser_commerce_fundraiser_gateway_info() {
     'cleanup callback' => 'commerce_cybersource_fundraiser_commerce_cleanup',
     'scrub callback' => 'commerce_cybersource_fundraiser_commerce_scrub',
     'expire callback' => 'commerce_cybersource_fundraiser_commerce_expire',
+    'validate callback' => 'commerce_cybersource_fundraiser_commerce_validate',
     'charge callback' => 'commerce_cybersource_fundraiser_commerce_charge',
     'update callback' => 'commerce_cybersource_fundraiser_commerce_update',
     'refund callback' => 'commerce_cybersource_fundraiser_commerce_refund',
@@ -75,6 +76,16 @@ function commerce_cybersource_fundraiser_commerce_scrub($submission_fields) {
 function commerce_cybersource_fundraiser_commerce_expire($submission_fields) {
   module_load_include('inc', 'fundraiser_commerce', 'includes/fundraiser_commerce.credit_card');
   return _fundraiser_commerce_credit_card_expire($submission_fields);
+}
+
+/**
+ * Validate the submitted values with the commerce validate function
+ */
+function commerce_cybersource_fundraiser_commerce_validate($submission_fields, $payment_fields) {
+  module_load_include('inc', 'fundraiser_commerce', 'includes/fundraiser_commerce.credit_card');
+  $form_parents = array_merge($payment_fields['#parents'], array('credit'));
+  _fundraiser_commerce_credit_card_validate($submission_fields, $form_parents);
+  return $submission_fields;
 }
 
 /**

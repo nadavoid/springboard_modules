@@ -1,0 +1,429 @@
+<?php
+
+/**
+ * @file
+ * Module file for springboard_node_expire.
+ */
+
+define('SPRINGBOARD_NODE_EXPIRE_ACTION_REDIRECT', 0);
+define('SPRINGBOARD_NODE_EXPIRE_ACTION_MESSAGE', 1);
+define('SPRINGBOARD_NODE_EXPIRE_DEFAULT_MESSAGE_FORMAT', 'filtered_html');
+
+/**
+ * Implements hook_theme().
+ */
+function springboard_node_expire_theme($existing, $type, $theme, $path) {
+  return array(
+    'springboard_node_expire_message' => array(
+      'variables' => array('message' => NULL),
+      'template' => 'templates/springboard-node-expire-message',
+    ),
+  );
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function springboard_node_expire_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'node_expire_admin_settings') {
+    // Improve the description language of the parent module's configuration
+    // options for easier understanding.
+    $form['handle_content_expiry']['node_expire_handle_content_expiry']['#description'] = t('In non-legacy mode, node expiry is set for each node type separately and disabled by default. Enable it at Structure -> Content types -> {Your content type} -> Edit -> Publishing options.<br /><br />The "Trigger \'Content Expired\' event only once" option will ignore any nodes which already have been processed.<br /><br />"Legacy mode" is for backwards compatibility reasons only, and should generally not be used.<br /><br /><strong>Note:</strong> these options are for "Rule" triggers only, and will not affect options on the node add/edit form provided by the Springboard Node Expire module.');
+
+    // Add configuration options to the parent module's configuration page.
+    $form['springboard_node_expire'] = array(
+      '#type' => 'fieldset',
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+      '#title' => t('Springboard Node Expire Settings'),
+      '#description' => t('Settings for the Springboard Node Expire module.'),
+      '#weight' => 10,
+    );
+    $form['springboard_node_expire']['springboard_node_expire_check_expiration'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Check expiration status on page load'),
+      '#description' => t("The node_expire module will only check a page's expiration status on every cron run. Check this box to check a page's expiration status when it is loaded instead. Note that this will have a small performance impact."),
+      '#default_value' => variable_get('springboard_node_expire_check_expiration', FALSE),
+    );
+  }
+  elseif ($form_id == 'node_type_form') {
+    // Move the node expiration configuration on content type edit forms from
+    // the "Publishing options" fieldset to its own fieldset.
+    $form['expiration_settings'] = array(
+      '#type' => 'fieldset',
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#title' => t('Expiration Settings'),
+      '#group' => 'additional_settings',
+    );
+    $form['expiration_settings']['node_expire_enabled'] = $form['workflow']['node_expire_enabled'];
+    unset($form['workflow']['node_expire_enabled']);
+    $form['expiration_settings']['node_expire_container'] = $form['workflow']['node_expire_container'];
+    unset($form['workflow']['node_expire_container']);
+  }
+  elseif (strpos($form_id, '_node_form') !== FALSE && $form['#node_edit_form']) {
+    // Move the parent module's settings to its own fieldset and add some
+    // settings of our own.
+    $types = array($form['#node']->type);
+    if (_springboard_node_expire_node_type_expirable($types)) {
+      $form['expiration_settings'] = array(
+        '#type' => 'fieldset',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+        '#title' => t('Expiration Settings'),
+        '#group' => 'additional_settings',
+        '#weight' => $form['options']['#weight'] + 1,
+        '#attributes' => array(
+          'class' => array('springboard-node-expire-form'),
+        ),
+      );
+      $options = 'options';
+      $condition = !$form['options']['#access'] || isset($form['options1']);
+      if ($condition) {
+        $options = 'options1';
+      }
+      $defaults = array(
+        '#title' => t('Expiration date'),
+        '#description' => t('Date on which this page will expire.'),
+        '#type' => 'textfield',
+        '#maxlength' => 25,
+        '#required' => FALSE,
+        '#date_label_position' => 'none',
+        '#default_value' => '',
+      );
+      if (variable_get('node_expire_date_entry_elements', 0) == 1) {
+        $defaults = array_merge($defaults, array(
+          '#type' => 'date_popup',
+          '#date_format' => 'Y-m-d',
+        ));
+      }
+      $form['expiration_settings']['expire'] = array_merge($defaults, $form[$options]['expire']);
+      if ($form['expiration_settings']['expire']['#type'] == 'value') {
+        $form['expiration_settings']['expire']['#type'] = $defaults['#type'];
+        unset($form['expiration_settings']['expire']['#value']);
+      }
+      unset($form[$options]['expire']);
+      if ($condition) {
+        unset($form[$options]);
+      }
+
+      $form['expiration_settings']['expiration_action'] = array(
+        '#title' => t('When this page expires, users should be:'),
+        '#type' => 'radios',
+        '#default_value' => isset($form['#node']->expiration_action) ? $form['#node']->expiration_action : SPRINGBOARD_NODE_EXPIRE_ACTION_REDIRECT,
+        '#options' => array(
+          SPRINGBOARD_NODE_EXPIRE_ACTION_REDIRECT => t('Redirected to another page'),
+          SPRINGBOARD_NODE_EXPIRE_ACTION_MESSAGE => t('Shown a message'),
+        ),
+      );
+      $form['expiration_settings']['expiration_redirect'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Redirect URL'),
+        '#description' => t('The URL the user should be redirected to. This can either be an external URL or an internal URL.'),
+        '#states' => array(
+          'visible' => array(
+            ':input[name="expiration_action"]' => array('value' => SPRINGBOARD_NODE_EXPIRE_ACTION_REDIRECT),
+          ),
+        ),
+        '#attributes' => array(
+          'placeholder' => 'http://',
+        ),
+        '#default_value' => isset($form['#node']->expiration_redirect) ? $form['#node']->expiration_redirect : NULL,
+      );
+
+      // Because a bug exists in D7 where the input filter help information
+      // doesn't respect the '#states' property, we need to wrap the message in
+      // a container and apply the #states property to the container instead.
+      // See https://www.drupal.org/node/997826 for more info.
+      $form['expiration_settings']['expired_message_container'] = array(
+        '#type' => 'container',
+        '#states' => array(
+          'visible' => array(
+            ':input[name="expiration_action"]' => array('value' => SPRINGBOARD_NODE_EXPIRE_ACTION_MESSAGE),
+          ),
+        ),
+      );
+      $form['expiration_settings']['expired_message_container']['expiration_message'] = array(
+        '#type' => 'text_format',
+        '#title' => t('Page expired message'),
+        '#default_value' => isset($form['#node']->expiration_message) ? $form['#node']->expiration_message : NULL,
+      );
+      $form['#validate'][] = '_springboard_node_expire_form_validate';
+
+      $form['#attached']['js'][] = drupal_get_path('module', 'springboard_node_expire') . '/js/springboard_node_expire_admin.js';
+
+      $form['#after_build'][] = "_springboard_node_expire_form_alter__node_form";
+
+      drupal_add_js(array(
+        'springboard_node_expire' => array(
+          'use_date_popup' => variable_get('node_expire_date_entry_elements', 0) == 1,
+          'allow_past_dates' => variable_get('node_expire_past_date_allowed', 0),
+        ),
+      ), 'setting');
+    }
+  }
+}
+
+/**
+ * Helper function called after node add/edit form has been built.
+ */
+function _springboard_node_expire_form_alter__node_form($form, &$form_state) {
+  $form['expiration_settings']['expire']['date']['#description'] = 'Format: YYYY-MM-DD';
+  return $form;
+}
+
+/**
+ * Validate handler for expiration settings.
+ */
+function _springboard_node_expire_form_validate($form, &$form_state) {
+  $values = $form_state['values'];
+  if (!empty($values['expire']) && $values['expiration_action'] == SPRINGBOARD_NODE_EXPIRE_ACTION_REDIRECT) {
+    $redirect = $values['expiration_redirect'];
+    if (empty($values['expiration_redirect'])) {
+      form_set_error('expiration_settings][expiration_redirect', t('A redirect URL must be given if redirecting when the fundraiser has expired.'));
+    }
+    $external = url_is_external($redirect);
+    // If this is an internal path, or if it's external but pointing to the
+    // host site, check that the redirect URL isn't pointing to this node,
+    // which would cause an infinite redirect.
+    $form_error = FALSE;
+    $redirect_without_base = str_replace($GLOBALS['base_url'] . '/', '', $redirect);
+    $alias = $values['path']['alias'];
+    if (!empty($redirect_without_base) && !empty($alias) && $redirect_without_base == $alias) {
+      $form_error = TRUE;
+    }
+    if ((!$external || $external && strpos($redirect, $GLOBALS['base_url']) !== FALSE) && isset($form_state['node']->nid)) {
+      $nid = $form_state['node']->nid;
+      $path = url('node/' . $nid);
+      $path = ltrim($path, '/');
+      if ($redirect_without_base == $path || $redirect_without_base == 'node/' . $nid) {
+        $form_error = TRUE;
+      }
+    }
+    if ($form_error) {
+      form_set_error('expiration_settings][expiration_redirect', t("Pointing your redirect URL to the same page would cause an infinite redirect. Please use a different URL."));
+    }
+  }
+}
+
+/**
+ * Implements hook_node_update().
+ */
+function springboard_node_expire_node_update($node) {
+  springboard_node_expire_node_insert($node);
+}
+
+/**
+ * Implements hook_node_insert().
+ */
+function springboard_node_expire_node_insert($node) {
+  $ntypes = variable_get('node_expire_ntypes', array());
+  if (!isset($ntypes[$node->type])) {
+    return;
+  }
+  if (!$ntype = $ntypes[$node->type]) {
+    return;
+  }
+
+  if (!property_exists($node, 'expired')) {
+    $node->expired = FALSE;
+  }
+
+  if (!empty($node->expire)) {
+    $update_fields = array();
+    $now = strtotime("now");
+    $then = strtotime($node->expire);
+    if ($now > $then && $node->expired == FALSE) {
+      $update_fields['expired'] = 1;
+    }
+    elseif ($now < $then && $node->expired == TRUE) {
+      $update_fields['expired'] = 0;
+    }
+  }
+  else {
+    $update_fields['expired'] = 0;
+  }
+
+  if (isset($node->expiration_action)) {
+    $update_fields['action'] = $node->expiration_action;
+  }
+  if (isset($node->expiration_redirect)) {
+    $update_fields['redirect_url'] = $node->expiration_redirect;
+  }
+  if (!isset($node->expiration_message)) {
+    $node->expiration_message = '';
+  }
+  $message = is_array($node->expiration_message) ? $node->expiration_message['value'] : $node->expiration_message;
+  if (!empty($message)) {
+    $update_fields['message'] = $message;
+  }
+  $format = is_array($node->expiration_message) && isset($node->expiration_message['format']) ? $node->expiration_message['format'] : SPRINGBOARD_NODE_EXPIRE_DEFAULT_MESSAGE_FORMAT;
+  $update_fields['message_format'] = $format;
+
+  db_merge('node_expire')
+    ->key(array('nid' => $node->nid))
+    ->fields($update_fields)
+    ->execute();
+
+  cache_clear_all();
+}
+
+/**
+ * Helper function to determine if current node is configured to be expirable.
+ *
+ * @param array $types
+ *   An array of node types to check against.
+ */
+function _springboard_node_expire_node_type_expirable($types) {
+  $ntypes = variable_get('node_expire_ntypes', array());
+  if (empty($ntypes)) {
+    return;
+  }
+
+  $ntypes = array_filter($ntypes, function($value) {
+    return $value['enabled'];
+  });
+  if (empty($ntypes)) {
+    return;
+  }
+
+  $ntypes = array_keys($ntypes);
+  $intersection = array_intersect($types, $ntypes);
+  return count($intersection) > 0;
+}
+
+/**
+ * Implements hook_node_load().
+ */
+function springboard_node_expire_node_load($nodes, $types) {
+  $arg = arg();
+  // If viewing or editing a node, load some required expiration information and
+  // attach it to the node.
+  if ($arg[0] == 'node' && !empty($arg[1]) && intval($arg[1]) != 0 && _springboard_node_expire_node_type_expirable($types)) {
+    $nids = array_keys($nodes);
+    $query = db_select('node_expire', 'ne')
+      ->fields('ne', array(
+        'nid',
+        'expire',
+        'expired',
+        'action',
+        'redirect_url',
+        'message',
+        'message_format',
+      ))
+      ->condition('nid', $nids, 'IN')
+      ->execute();
+
+    $time = strtotime("now");
+
+    // If any records exist, set the node object's properties to their
+    // expiration setting values.
+    if ($query->rowCount()) {
+      $results = $query->fetchAllAssoc('nid');
+      foreach ($results as $key => $record) {
+        $nodes[$key]->expiration_action = $record->action;
+        $nodes[$key]->expiration_redirect = isset($record->redirect_url) ? $record->redirect_url : '';
+        $nodes[$key]->expiration_message = isset($record->message) ? $record->message : '';
+        $nodes[$key]->expiration_message_format = $record->message_format;
+        $nodes[$key]->access = node_access('update', $nodes[$key]);
+
+        // Ensure the node expiration value is right. Since the check from the
+        // parent module (node_expire) happens on every cron run, some users
+        // might want to ensure the expiration value is set before a user views
+        // the node.
+        if (variable_get('springboard_node_expire_check_expiration', FALSE)) {
+          if (!$nodes[$key]->expired && !empty($nodes[$key]->expire) && $time > strtotime($nodes[$key]->expire)) {
+            // If the expiration time has passed, update the record.
+            $update_record = array(
+              'nid' => $nodes[$key]->nid,
+              'expired' => TRUE,
+            );
+            drupal_write_record('node_expire', $update_record, 'nid');
+            $nodes[$key]->expired = TRUE;
+          }
+          elseif (property_exists($nodes[$key], 'expired') && $nodes[$key]->expired && !empty($nodes[$key]->expire) && $time < strtotime($nodes[$key]->expire)) {
+            $update_record = array(
+              'nid' => $nodes[$key]->nid,
+              'expired' => FALSE,
+            );
+            drupal_write_record('node_expire', $update_record, 'nid');
+            $nodes[$key]->expired = FALSE;
+          }
+        }
+      }
+    }
+    // Otherwise, set the default expiration settings.
+    else {
+      foreach ($nodes as $node) {
+        $node->expiration_action = 0;
+        $node->expiration_redirect = NULL;
+        $node->expiration_message = NULL;
+        $node->expiration_message_format = SPRINGBOARD_NODE_EXPIRE_DEFAULT_MESSAGE_FORMAT;
+        $node->expired = FALSE;
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_node_view().
+ */
+function springboard_node_expire_node_view($node, $view_mode, $language) {
+  $types = array($node->type);
+  if ($view_mode == 'full' && _springboard_node_expire_node_type_expirable($types)) {
+    $data = array(
+      'expired' => $node->expired,
+      'action' => $node->expiration_action,
+      'message' => array(
+        'message' => $node->expiration_message,
+        'format' => $node->expiration_message_format,
+      ),
+      'redirect' => $node->expiration_redirect,
+      'access' => node_access('update', $node),
+    );
+
+    // Allow other modules to alter the expiration behavior.
+    drupal_alter('springboard_node_expire', $data);
+
+    if ($data['expired']) {
+      // Notify other module's that an expiration action is about to occur.
+      module_invoke_all('springboard_node_expire_action_before', $node, $data);
+
+      switch ($data['action']) {
+        // When node has expired, redirect user.
+        case SPRINGBOARD_NODE_EXPIRE_ACTION_REDIRECT:
+          if (!$data['access']) {
+            drupal_goto($data['redirect']);
+          }
+          else {
+            // Unless the user has permission to modify expiration settings.
+            // Then show them a message detailing the fact that the node is
+            // being redirected and tell them where it's redirecting to.
+            drupal_set_message(t('This form is closed and users are being redirected to !redirect.',
+             array('!redirect' => l(t('this page'), $data['redirect']))), 'warning');
+          }
+          break;
+
+        case SPRINGBOARD_NODE_EXPIRE_ACTION_MESSAGE:
+          // When node has expired, show a message.
+          // Hide the body content by default.
+          $node->content['body']['#access'] = FALSE;
+
+          // Allow other modules to hide any content they want to hide.
+          drupal_alter('springboard_node_expire_node_view', $node);
+
+          $message = check_markup($data['message']['message'], $data['message']['format']);
+          if (!empty($data['message']['message'])) {
+            $node->content['expiration_message'] = array(
+              '#markup' => theme('springboard_node_expire_message', array('message' => $data['message']['message'])),
+              '#weight' => 10,
+            );
+          }
+          break;
+      }
+
+      // Notify other module's that an expiration action has just occurred.
+      module_invoke_all('springboard_node_expire_action_after', $node, $data);
+    }
+  }
+}

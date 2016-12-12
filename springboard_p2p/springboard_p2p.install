@@ -232,6 +232,13 @@ function springboard_p2p_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
+      'donor_name' => array(
+        'description' => 'The name to show for the submission.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'default' => NULL,  
+      ),
     ),
     'indexes' => array(
       'personal_campaign_nid' => array('personal_campaign_nid'),
@@ -632,4 +639,61 @@ function springboard_p2p_update_7008() {
   );
 
   db_add_field('springboard_p2p_personal_campaign_action', 'status', $status);
+}
+
+/**
+ * Adds donor_name field to personal campaign actions.
+ */
+function springboard_p2p_update_7009() {
+  if (!db_field_exists('springboard_p2p_personal_campaign_action', 'donor_name')) {
+    $donor_name = array(
+      'description' => 'The name to show for the submission.',
+      'type' => 'varchar',
+      'length' => 255,
+      'not null' => FALSE,
+      'default' => NULL,   
+    );
+    db_add_field('springboard_p2p_personal_campaign_action', 'donor_name', $donor_name);
+  }
+}
+
+/**
+ * Populates donor_name field in springboard_p2p_personal_campaign_action for existing users.
+ */
+function springboard_p2p_update_7010(&$sandbox) {
+  $batch = 50;
+  $query = "SELECT sid, form_nid,uid FROM {springboard_p2p_personal_campaign_action}
+    WHERE status = 1 AND show_name = 1
+    AND action_type = 'fundraiser'
+    ORDER BY sid ASC
+   ";
+  if (!isset($sandbox['max'])) {
+    $sandbox['progress'] = 0;
+    $sandbox['current_sid'] = 0;
+    $sandbox['max'] = db_query($query)->rowCount();
+  }
+  
+  $update_query = "UPDATE {springboard_p2p_personal_campaign_action} set donor_name = :donor_name WHERE uid = :uid AND sid = :sid";
+
+  $result = db_query_range($query, $sandbox['progress'], $batch);
+  while ($record = $result->fetchAssoc()) {
+    // If the user no longer exists, we won't have a name, but we will get php notices from entity.inc.
+    $exists = db_query("select 1 from {users} where uid = :uid", array(':uid' => $record['uid']))->fetchField();
+    if ($exists) {
+      // Load the account to get the value for donor_name.
+      $account = user_load($record['uid']);
+      $donor_name = springboard_p2p_format_user_full_name($account);
+      if (!empty($donor_name)) {
+        db_query($update_query, array(':donor_name' => $donor_name, ':uid' => $record['uid'], ':sid' => $record['sid']));
+      }
+    }
+    $sandbox['progress']++;
+    $sandbox['current_sid'] = $record['sid'];
+  }
+  
+  $sandbox['#finished'] = empty($sandbox['max']) ? 1 : ($sandbox['progress'] / $sandbox['max']);
+
+  if ($sandbox['#finished'] >= 1) {
+    return t('springboard_p2p_personal_campaign_action table donor_names updated.');
+  }
 }

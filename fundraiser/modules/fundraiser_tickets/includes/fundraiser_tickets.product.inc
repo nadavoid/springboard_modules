@@ -92,7 +92,65 @@ function _fundraiser_tickets_product_fields() {
     )
   );
 
- $fields['fr_tickets_quantity_sold'] = array(
+
+
+  $fields['fr_tickets_quantity_displayed'] = array(
+    'field_config' => array(
+      'field_name' => 'fr_tickets_quantity_displayed',
+      'label' => t('Quantity displayed'),
+      'cardinality' => 1,
+      'type' => 'number_integer',
+      'module' => 'number',
+      'active' => 1,
+      'locked' => 1,
+      'settings' => array(
+        'size' => 5,
+        'max_length' => 8,
+        'text_processing' => 0,
+      ),
+    ),
+    'field_instance' => array(
+      'bundle' =>'fundraiser_ticket',
+      'default_value' => NULL,
+      'deleted' => 0,
+      'description' => 'Display this number of tickets remaining unless the actual number of tickets remaining is less than this.',
+      'display' => array(
+        'default' => array(
+          'label' => 'above',
+          'settings' => array(),
+          'type' => 'hidden',
+          'weight' => 2,
+        ),
+        'teaser' => array(
+          'label' => 'above',
+          'settings' => array(),
+          'type' => 'hidden',
+          'weight' => 0,
+        ),
+      ),
+      'entity_type' => 'commerce_product',
+      'field_name' => 'fr_tickets_quantity_displayed',
+      'label' => 'Quantity displayed',
+      'required' => 0,
+      'settings' => array(
+        'text_processing' => 0,
+        'user_register_form' => FALSE,
+      ),
+      'widget' => array(
+        'active' => 1,
+        'module' => 'text',
+        'settings' => array(
+          'size' => 3,
+        ),
+        'type' => 'text_textfield',
+        'weight' => 3,
+      ),
+    )
+  );
+
+
+
+  $fields['fr_tickets_quantity_sold'] = array(
     'field_config' => array(
       'field_name' => 'fr_tickets_quantity_sold',
       'label' => t('Quantity sold'),

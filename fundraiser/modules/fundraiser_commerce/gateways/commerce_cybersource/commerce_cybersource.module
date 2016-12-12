@@ -173,6 +173,14 @@ function commerce_cybersource_soap_cc_settings_form($settings = NULL) {
     '#default_value' => $settings['log'],
   );
 
+  if (module_exists('commerce_cardonfile')) {
+    $form['cardonfile'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Enable card on file to store credit card information.'),
+      '#default_value' => $settings['cardonfile'],
+    );
+  }
+
   $form['credit_card'] = array(
     '#type' => 'fieldset',
     '#title' => t('Credit card service settings'),
@@ -195,14 +203,6 @@ function commerce_cybersource_soap_cc_settings_form($settings = NULL) {
     '#default_value' => $settings['credit_card']['submit_itemized_order'],
   );
 
-  //https://www.drupal.org/files/1740346-cardonfile.patch
-  if (module_exists('commerce_cardonfile')) {
-    $form['credit_card']['cardonfile'] = array(
-      '#type' => 'checkbox',
-      '#title' => t('Enable card on file to store credit card information.'),
-      '#default_value' => $settings['credit_card']['cardonfile'],
-    );
-  }
   $form['credit_card']['card_types'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Limit accepted credit cards to the following types'),
@@ -462,7 +462,7 @@ function commerce_cybersource_soap_cc_submit_form_validate($payment_method, $pan
 
   //https://www.drupal.org/files/1740346-cardonfile.patch
   // If using cardonfile, skip the validation of credit card info as it doesn't exist.
-  if (module_exists('commerce_cardonfile') && $payment_method['settings']['credit_card']['cardonfile'] &&
+  if (module_exists('commerce_cardonfile') && $payment_method['settings']['cardonfile'] &&
     !empty($pane_values['cardonfile']) && $pane_values['credit_card']['cardonfile_store'] !== TRUE) {
     return TRUE;
   }
@@ -498,7 +498,7 @@ function commerce_cybersource_soap_cc_submit_form_submit($payment_method, $pane_
   $store =  (isset($pane_values['credit_card']['cardonfile_store']) && $pane_values['credit_card']['cardonfile_store'] === TRUE) ? TRUE : FALSE;
   $new = isset($pane_values['cardonfile']) && $pane_values['cardonfile'] =='new' ? TRUE : FALSE;
 
-  if (module_exists('commerce_cardonfile') && ($payment_method['settings']['credit_card']['cardonfile']
+  if (module_exists('commerce_cardonfile') && ($payment_method['settings']['cardonfile']
     && !empty($pane_values['cardonfile'])) && (!$store && !$new)) {
     // First attempt to load the card on file.
     if(isset($pane_values['the_real_cardonfile_value'])) {
@@ -515,7 +515,7 @@ function commerce_cybersource_soap_cc_submit_form_submit($payment_method, $pane_
       return FALSE;
     }
     $request->recurringSubscriptionInfo = (object) array('subscriptionID' => $card_data->remote_id);
-  } 
+  }
   else {
     // Add the billing information.
     $request->billTo = commerce_cybersource_address('billing', $order, 'commerce_customer_billing');
@@ -650,7 +650,7 @@ function commerce_cybersource_soap_cc_submit_form_submit($payment_method, $pane_
     $add_payment_form = (isset($pane_form['#id']) && $pane_form['#id'] == 'edit-payment-details') ? TRUE : FALSE;
 
     // If Card on File storage is enabled and this appears to be a new card
-    if (empty($add_payment_form) && module_exists('commerce_cardonfile') && $payment_method['settings']['credit_card']['cardonfile']
+    if (empty($add_payment_form) && module_exists('commerce_cardonfile') && $payment_method['settings']['cardonfile']
       && (empty($pane_values['cardonfile']) || !empty($pane_values['credit_card']['cardonfile_store']))) {
       // Submit a request to create the Customer Profile.
       if ($response = commerce_cybersource_create_customer_profile_request($request, $payment_method, $order)) {

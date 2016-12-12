@@ -1,0 +1,62 @@
+<?php
+/**
+ * @file
+ * Configure Braintree Vault module for our Springboard purposes.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function braintree_vault_install() {
+  // Create a field on the user entity to store the braintree customer id.
+  braintree_vault_create_customer_field();
+  // Config braintree_vault to use that new field.
+  variable_set('braintree_vault_field', 'braintree_customer_id');
+  // Enable braintree vault.
+  variable_set('braintree_use_vault', 1);
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function braintree_vault_uninstall() {
+  variable_del('braintree_use_vault');
+  variable_del('braintree_vault_field');
+  variable_del('braintree_payment_base_url');
+  variable_del('braintree_use_payment_methods_page');
+  variable_del('braintree_payment_methods_custom_page');
+}
+
+/**
+ * Create the braintree_customer_id field if it doesn't already exist.
+ */
+function braintree_vault_create_customer_field() {
+  if (!field_info_field('braintree_customer_id')) {
+    $field = array(
+      'field_name' => 'braintree_customer_id',
+      'type' => 'text',
+    );
+    field_create_field($field);
+  }
+
+  // Create the instance on the bundle.
+  $instance = array(
+    'field_name' => 'braintree_customer_id',
+    'entity_type' => 'user',
+    'label' => 'Braintree Customer ID',
+    'bundle' => 'user',
+    'widget' => array(
+      'type' => 'options_select',
+    ),
+    'display' => array(
+      'default' => array(
+        'type' => 'hidden',
+        'weight' => 10,
+      ),
+    ),
+  );
+  $prior_instance = field_read_instance($instance['entity_type'], $instance['field_name'], $instance['bundle']);
+  if (empty($prior_instance)) {
+    field_create_instance($instance);
+  }
+}

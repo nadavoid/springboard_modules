@@ -168,7 +168,7 @@ function fundraiser_upsell_send_thank_you($donation) {
     'module' => 'fundraiser_upsell',
     'delta' => 'nid_' . $donation->nid,
   );
-  // Load the email wrappers options.
+  // Load the email templates options.
   $mail = email_wrappers_mail_load($params);
   // Modify the "to:" information to match the donation.
   $mail->recipients = "$to_name <$to_email>";

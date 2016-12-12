@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Provide a Webform A/B Test win threshold: Minimum number of hits
+ * Provide a Multivariate Testing win threshold: Minimum number of hits
  */
 
 // Plugin details
@@ -47,7 +47,7 @@ function webform_ab_minimum_hits_config_validate($config, $field_name_prefix) {
 
 /**
  * Return a summary of the plugin config, for listing on the admin view of a
- * Webform A/B test node
+ * Multivariate test node
  */
 function webform_ab_minimum_hits_config_summary($config) {
   return $config['hits'];
@@ -55,15 +55,15 @@ function webform_ab_minimum_hits_config_summary($config) {
 
 
 /**
- * Check if the given Webform A/B Test node has a winner
+ * Check if the given Multivariate Test node has a winner
  *
  * @param $config
- *   Array of config options for this plugin for the Webform A/B test being
+ *   Array of config options for this plugin for the Multivariate test being
  *   checked for a win. In this case, the array will contain 'hits'
  * @param $webform_details
  *   Array of info about the webform to check.
  * @param $test_node
- *   Webform A/B Test node
+ *   Multivariate Test node
  */
 function webform_ab_minimum_hits_check_threshold($config, $webform_details, $test_node) {
   $hits = isset($webform_details['hits']) ? $webform_details['hits'] : 0;

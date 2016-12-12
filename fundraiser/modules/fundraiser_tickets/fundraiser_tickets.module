@@ -607,21 +607,40 @@ function _fundraiser_tickets_ticket_settings_form_validate(&$form, &$form_state)
   // Remove _default index from gateways.
   unset($form_state['values']['gateways']['_default']);
 
-  if ($form_state['values']['fr_tickets_closed_options'][LANGUAGE_NONE][0]['value'] == 'redirect'){
-    $closed_redirect = $form_state['values']['fr_tickets_closed_redirect'][LANGUAGE_NONE][0]['value'];
-    if (!trim($closed_redirect) || !drupal_valid_path($closed_redirect, TRUE)) {
-      form_set_error('fr_tickets_closed_redirect', t("The path '@link_path' is either invalid or you do not have access to it.", array('@link_path' => $closed_redirect)));
+  $check_redirects = array('closed', 'soldout');
+
+  foreach ($check_redirects as $check_redirect) {
+    if ($form_state['values']['fr_tickets_' . $check_redirect . '_options'][LANGUAGE_NONE][0]['value'] == 'redirect') {
+      $redirect = $form_state['values']['fr_tickets_' . $check_redirect . '_redirect'][LANGUAGE_NONE][0]['value'];
+      if (!trim($redirect) || !drupal_valid_path($redirect, TRUE)) {
+        form_set_error('fr_tickets_' . $check_redirect . '_redirect', t("The path '@link_path' is either invalid or you do not have access to it.", array('@link_path' => $redirect)));
+      }
+      if (!empty($form_state['node']->nid)) {
+        $nid = $form_state['node']->nid;
+        $external = url_is_external($redirect);
+        // If this is an internal path, or if it's external but pointing to the
+        // host site, check that the redirect URL isn't pointing to this node,
+        // which would cause an infinite redirect.
+        $form_error = FALSE;
+        $redirect_without_base = str_replace($GLOBALS['base_url'] . '/', '', $redirect);
+        if ($redirect_without_base == $form_state['values']['path']['alias']) {
+          $form_error = TRUE;
+        }
+        if (!$external || $external && strpos($redirect, $GLOBALS['base_url']) !== FALSE) {
+          $path = url('node/' . $nid);
+          $path = ltrim($path, '/');
+          if ($redirect_without_base == $path || $redirect_without_base == 'node/' . $nid) {
+            $form_error = TRUE;
+          }
+        }
+        if ($form_error) {
+          form_set_error('fr_tickets_' . $check_redirect . '_redirect', t("Pointing your redirect URL to this form would cause an infinite redirect. Please use a different URL."));
+        }
+      }
     }
   }
 
-  if ($form_state['values']['fr_tickets_soldout_options'][LANGUAGE_NONE][0]['value'] == 'redirect'){
-    $soldout_redirect = $form_state['values']['fr_tickets_soldout_redirect'][LANGUAGE_NONE][0]['value'];
-    if (!trim($soldout_redirect) || !drupal_valid_path($soldout_redirect, TRUE)) {
-      form_set_error('fr_tickets_soldout_redirect', t("The path '@link_path' is either invalid or you do not have access to it.", array('@link_path' => $soldout_redirect)));
-    }
-  }
-
-  if ($form_state['values']['fr_tickets_donation_donation'][LANGUAGE_NONE][0]['value'] == 1){
+  if ($form_state['values']['fr_tickets_donation_donation'][LANGUAGE_NONE][0]['value'] == 1) {
     $addon = $form_state['values']['fr_tickets_donation_addon_form'][LANGUAGE_NONE][0]['target_id'];
     if (empty($addon)) {
       form_set_error('fr_tickets_donation_addon_form', t('When add-on donations are enabled, "Donation form to Use for Add-ons" is required.'));
@@ -642,12 +661,11 @@ function _fundraiser_tickets_ticket_settings_form_validate(&$form, &$form_state)
   $closed = $form_state['values']['fr_tickets_closed_options'][LANGUAGE_NONE][0]['value'];
   $soldout = $form_state['values']['fr_tickets_soldout_options'][LANGUAGE_NONE][0]['value'];
   $waitlist = $form_state['values']['fr_tickets_waitlist_form'][LANGUAGE_NONE][0]['target_id'];
-  if (($closed == 'form' || $soldout == 'form') && $waitlist == NULL){
+  if (($closed == 'form' || $soldout == 'form') && $waitlist == NULL) {
     form_set_error('fr_tickets_waitlist_form', t('You must select a wait list or choose a different closed or soldout setting.'));
   }
-  $_GET['destination'] =  current_path();
+  $_GET['destination'] = current_path();
 }
-
 
 /**
  * Implements hook_form_alter().

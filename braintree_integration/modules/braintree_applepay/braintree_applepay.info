@@ -1,0 +1,5 @@
+name = Braintree Apple Pay
+description = Provide Braintree Apple Pay integration.
+package = Braintree
+core = 7.x
+dependencies[] = braintree

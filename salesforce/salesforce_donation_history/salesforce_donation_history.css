@@ -1,0 +1,13 @@
+#salesforce-donation-history-select-year label {
+  display:inline;
+}
+#salesforce-donation-history-select-year select {
+  float: none;
+  display: inline;
+}
+#print-annual-tax-receipt {
+  float:right;
+}
+.page-user-donation-history table {
+  width: 100%;
+}

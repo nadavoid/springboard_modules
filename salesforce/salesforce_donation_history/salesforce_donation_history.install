@@ -1,0 +1,61 @@
+<?php
+/**
+ * @file
+ * Install functions for salesforce_donation_history module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function salesforce_donation_history_schema() {
+  $schema['cache_salesforce_donation_history'] = drupal_get_schema_unprocessed('system', 'cache');
+  return $schema;
+}
+
+/**
+ * Implements hook_install().
+ */
+function salesforce_donation_history_install() {
+  $result = salesforce_donation_history_test_query(SALESFORCE_DONATION_HISTORY_DEFAULT_SOQL);
+  if ($result->size != 1) {
+    drupal_set_message(t('There was a problem performing a test Salesforce query. A sample record could not be found. Please visit the module <a href="/admin/config/salesforce/donation_history">configuration page</a> to troubleshoot.'), 'error');
+  }
+  else {
+    // Save fields from the default SOQL query.
+    $query_fields = salesforce_donation_history_get_query_fields($result->records);
+    $field_types = salesforce_donation_history_get_field_types($query_fields);
+    variable_set('salesforce_donation_history_query_fields', $field_types);
+    // Provide sensible defaults for custom labels and visibility.
+    module_load_include('inc', 'salesforce_donation_history', 'includes/salesforce_donation_history.admin');
+    $form_state = array();
+    $form_state['values']['salesforce_donation_history_field_settings']['Opportunity-StageName']['label'] = 'Status';
+    $form_state['values']['salesforce_donation_history_field_settings']['Opportunity-StageName']['show_on_tab'] = 1;
+    $form_state['values']['salesforce_donation_history_field_settings']['Opportunity-StageName']['show_on_receipt'] = 1;
+    $form_state['values']['salesforce_donation_history_field_settings']['Opportunity-StageName']['show_on_summary'] = 1;
+    $form_state['values']['salesforce_donation_history_field_settings']['Opportunity-CloseDate']['label'] = 'Date';
+    $form_state['values']['salesforce_donation_history_field_settings']['Opportunity-CloseDate']['show_on_tab'] = 1;
+    $form_state['values']['salesforce_donation_history_field_settings']['Opportunity-CloseDate']['show_on_receipt'] = 1;
+    $form_state['values']['salesforce_donation_history_field_settings']['Opportunity-CloseDate']['show_on_summary'] = 1;
+    $form_state['values']['salesforce_donation_history_field_settings']['Opportunity-Amount']['show_on_tab'] = 1;
+    $form_state['values']['salesforce_donation_history_field_settings']['Opportunity-Amount']['show_on_receipt'] = 1;
+    $form_state['values']['salesforce_donation_history_field_settings']['Opportunity-Amount']['show_on_summary'] = 1;
+    $form_state['values']['salesforce_donation_history_field_settings']['Opportunity-CC_Type__c']['label'] = 'Payment Method';
+    $form_state['values']['salesforce_donation_history_field_settings']['Opportunity-CC_Type__c']['show_on_tab'] = 1;
+    $form_state['values']['salesforce_donation_history_field_settings']['Opportunity-CC_Type__c']['show_on_receipt'] = 1;
+    $form_state['values']['salesforce_donation_history_field_settings']['Opportunity-CC_Type__c']['show_on_summary'] = 1;
+    $form_state['values']['salesforce_donation_history_field_settings']['Opportunity-CC_Last_4__c']['label'] = 'Last 4 of CC';
+    $form_state['values']['salesforce_donation_history_field_settings']['Opportunity-CC_Last_4__c']['show_on_tab'] = 1;
+    $form_state['values']['salesforce_donation_history_field_settings']['Opportunity-CC_Last_4__c']['show_on_receipt'] = 1;
+    $form_state['values']['salesforce_donation_history_field_settings']['Opportunity-CC_Last_4__c']['show_on_summary'] = 1;
+    drupal_form_submit('salesforce_donation_history_fields', $form_state);
+  }
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function salesforce_donation_history_uninstall() {
+  variable_del('salesforce_donation_history_field_settings');
+  variable_del('salesforce_donation_history_query');
+  variable_del('salesforce_donation_history_query_fields');
+}

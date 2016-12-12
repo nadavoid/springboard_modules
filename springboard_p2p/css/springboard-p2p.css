@@ -477,6 +477,10 @@ div.selector span {
   -webkit-font-smoothing: antialiased;
 }
 
+div.selector span {
+  padding-right: 0px;
+}
+
 div.selector select {
   border: none;
   font-family: inherit;

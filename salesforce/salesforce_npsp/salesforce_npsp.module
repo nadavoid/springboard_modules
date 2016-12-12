@@ -57,6 +57,10 @@ function salesforce_npsp_user_load($users) {
  * Implements hook_user_view().
  */
 function salesforce_npsp_user_view($account) {
+  if (!variable_get('salesforce_npsp_user_profile', TRUE)) {
+    return;
+  }
+
   if (!empty($account->salesforce_contact_id) && !empty($account->salesforce_account_id)) {
     $account->content['summary']['salesforce_contact_id'] = array(
       '#type' => 'user_profile_item',
@@ -95,6 +99,16 @@ function salesforce_npsp_salesforce_queue_create_item_alter(&$item) {
         $item['sobject']->fields['npe03__Installments__c'] = 0;
       }
     }
+  }
+
+  // Check if the object is a sustainer upgrade. If so we'll need to add a relationship
+  // to the NPSP specific recurring donation object.
+  if ($item['object_type'] == 'Sustainers_Upgrade__c') {
+    $did = $item['sobject']->fields['Donation_ID__c'];
+    $item['sobject']->fields['Recurring_Donations__c'] = sprintf('[npe03__Recurring_Donation__c:fundraiser_sustainers_series:%d]', $did);
+    $item['sync_rules']['Recurring_Donations__c'] = 'always';
+    // Add a token for the contact. The user's id is mapped, so we should be able to pluck it from the object.
+    $item['sobject']->fields['Contact__c'] = sprintf('[Contact:user:%d]', $item['sobject']->fields['User_ID__c']);
   }
 }
 
@@ -251,7 +265,7 @@ function salesforce_npsp_save_account_ids($account_ids) {
 function salesforce_npsp_salesforce_sync_fail_item($item, $message, $result) {
 
   // If sync fails because LastName is empty, item lastname to standard value
-  if (!empty($item->sobject->fields) && array_key_exists('LastName', $item->sobject->fields) 
+  if (!empty($item->sobject->fields) && array_key_exists('LastName', $item->sobject->fields)
     && $result->errors[0]->message == "Required fields are missing: [LastName]"
   ) {
     $lastname = variable_get('salesforce_npsp_lastname', SALESFORCE_NPSP_DEFAULT_LASTNAME);

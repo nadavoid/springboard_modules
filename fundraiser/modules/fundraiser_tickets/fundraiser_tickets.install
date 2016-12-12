@@ -67,3 +67,13 @@ function fundraiser_tickets_update_7002() {
     user_role_grant_permissions($sb_admin_role->rid, array('allow node-specific ticket deletion'));
   }
 }
+
+/**
+ * Add the new "Quantity displayed" field to the "Fundraiser Tickets" product type if needed.
+ */
+function fundraiser_tickets_update_7003() {
+  module_load_include('inc', 'fundraiser_tickets', 'includes/fundraiser_tickets.product');
+  if (function_exists('_fundraiser_tickets_create_fundraiser_ticket_product')) {
+    _fundraiser_tickets_create_fundraiser_ticket_product();
+  }
+}

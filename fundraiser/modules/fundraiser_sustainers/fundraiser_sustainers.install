@@ -1036,3 +1036,79 @@ function fundraiser_sustainers_update_7017(&$sandbox) {
   db_add_field('fundraiser_sustainers_nodes', 'default_donation_type', $fields['default_donation_type']);
   db_add_field('fundraiser_sustainers_nodes', 'donation_type_help_text', $fields['donation_type_help_text']);
 }
+
+/**
+ * Batch update add card_id and sid fields for unprocessed recurring donations.
+ */
+/** Commented out because this update takes too long
+    to run in a site with a lot of donations. We'll
+    examine a real-time approach in the next release.
+function fundraiser_sustainers_update_7018(&$sandbox) {
+  $ret = array();
+  $cards = &drupal_static(__FUNCTION__);
+
+  if (!isset($sandbox['progress'])) {
+    // The count of donations visited so far.
+    $sandbox['progress'] = 0;
+    // Total donations that must be visited. Select donations that have a status
+    // of "payment_received" but no card_id.
+    $sandbox['max'] = db_query('SELECT COUNT(DISTINCT master_did) FROM {fundraiser_sustainers}', array(
+      ':status' => 'payment_received',
+    ))->fetchField();
+    // A place to store messages during the run.
+    $sandbox['messages'] = array();
+    // Last donation read via the query.
+    $sandbox['current_donation'] = -1;
+  }
+
+  // Process donations by groups of 25 (arbitrary value).
+  $limit = 25;
+
+  // Retrieve the next group of donations to update.
+  $query = db_select('fundraiser_sustainers', 'fs')
+    ->distinct()
+    ->fields('fs', array('master_did'))
+    ->condition('fs.master_did', $sandbox['current_donation'], '>')
+    ->orderBy('fs.master_did', 'ASC')
+    ->range(0, $limit)
+    ->execute()
+    ->fetchAll();
+
+  $rows = &drupal_static(__FUNCTION__);
+
+  foreach ($query as $record) {
+    $master_did = $record->master_did;
+    $sandbox['progress']++;
+    // Update our progress information.
+    $sandbox['current_donation'] = $master_did;
+
+    if (empty($rows[$master_did])) {
+      $rows[$master_did] = db_select('fundraiser_donation', 'fd')
+        ->fields('fd', array('did', 'uid', 'created', 'sid', 'card_id'))
+        ->condition('fd.did', $master_did, '=')
+        ->execute()
+        ->fetch();
+    }
+
+    $row = $rows[$master_did];
+
+    db_update('fundraiser_donation')
+      ->fields(array(
+        'card_id' => $row->card_id,
+        'sid' => $row->sid,
+      ))
+      ->condition('created', $row->created, '=')
+      ->condition('uid', $row->uid, '=')
+      ->execute();
+  }
+
+  // Set the "finished" status, to tell batch engine whether this function
+  // needs to run again. If you set a float, this will indicate the progress
+  // of the batch so the progress bar will update.
+  $sandbox['#finished'] = ($sandbox['progress'] >= $sandbox['max']) ? TRUE : ($sandbox['progress'] / $sandbox['max']);
+
+  if ($sandbox['#finished']) {
+    return t("Recurring donations have been updated with their master's card_id and sid values.");
+  }
+}
+*/

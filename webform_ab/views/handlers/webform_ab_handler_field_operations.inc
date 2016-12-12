@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Field handler to show a Webform A/B Test's links
+ * Field handler to show a Multivariate Test's links
  */
 class webform_ab_handler_field_operations extends views_handler_field {
   function construct() {

@@ -1,0 +1,11 @@
+name = Salesforce Line Item
+description = Salesforce integration support for commerce line item entities.
+package = Salesforce
+core = 7.x
+version = 7.x-4.x-dev
+
+dependencies[] = salesforce
+dependencies[] = salesforce_soap
+dependencies[] = salesforce_sync
+dependencies[] = salesforce_mapping
+dependencies[] = fundraiser_designations

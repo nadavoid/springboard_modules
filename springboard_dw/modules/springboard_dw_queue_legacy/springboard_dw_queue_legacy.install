@@ -1,0 +1,72 @@
+<?php
+/**
+ * @file
+ * Springboard data warehouse queue legacy installation functions.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function springboard_dw_queue_legacy_install() {
+  $types = array(
+    'contact',
+    'form',
+    'submission',
+    'action',
+    'message',
+    'donation',
+    'petition_message',
+    'payment',
+    'salesforce_sync',
+  );
+  foreach ($types as $type) {
+    db_insert('springboard_data_warehouse_queue_legacy')
+      ->fields(array(
+        'type' => $type,
+        'highwater' => 0,
+      ))
+      ->execute();
+  }
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function springboard_dw_queue_legacy_uninstall() {
+  variable_del('springboard_dw_advocacy_authentication_token');
+  variable_del('springboard_dw_advocacy_api_endpoint');
+}
+
+/**
+ * Implements hook_schema().
+ */
+function springboard_dw_queue_legacy_schema() {
+  $schema['springboard_data_warehouse_queue_legacy'] = array(
+    'description' => 'Record highwater timestamps so each queueing command can pick up where they left off',
+    'fields' => array(
+      'id' => array(
+        'description' => 'Primary key',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'type' => array(
+        'description' => 'Type of queue item',
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'highwater' => array(
+        'description' => 'Timestamp of last queued item',
+        'type' => 'int',
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('id'),
+    'unique keys' => array(
+      'type' => array('type'),
+    ),
+  );
+  return $schema;
+}

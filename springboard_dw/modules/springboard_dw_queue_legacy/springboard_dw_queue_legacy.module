@@ -1,0 +1,253 @@
+<?php
+/**
+ * @file
+ * Drupal hooks.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function springboard_dw_queue_legacy_menu() {
+  // Page to view progress.
+  $items['admin/config/services/springboard-dw/dashboard'] = array(
+    'title'            => 'Progress Dashboard',
+    'description'      => 'View queueing progress.',
+    'page callback'    => 'springboard_dw_queue_legacy_dashboard',
+    'access arguments' => array('administer springboard data warehouse'),
+    'type'             => MENU_LOCAL_TASK,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function springboard_dw_queue_legacy_form_springboard_dw_settings_form_alter(&$form, &$form_state, $form_id) {
+
+  $form['springboard_dw_queue_legacy'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Queueing legacy data'),
+    '#collapsible' => FALSE,
+    '#collapsed' => FALSE,
+    '#description' => 'Queing legacy Advocacy messages for ingestion to the data wareshouse requires gathering information from the advocacy server.',
+  );
+
+  $form['springboard_dw_queue_legacy']['springboard_dw_advocacy_api_endpoint'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Advocacy server url: (I.E https://advocacy.gospringboard.io or https://advocacy-staging.gospringboard.io)'),
+    '#default_value' => variable_get('springboard_dw_advocacy_api_endpoint', NULL),
+  );
+
+  $form['springboard_dw_queue_legacy']['springboard_dw_advocacy_authentication_token'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Advocacy server authentication token'),
+    '#default_value' => variable_get('springboard_dw_advocacy_authentication_token', NULL),
+  );
+}
+
+/**
+ * Page callback for progress dashboard.
+ */
+function springboard_dw_queue_legacy_dashboard() {
+  $output = '';
+
+  $total_contacts = db_query("SELECT count(uid) FROM {users} WHERE uid <> 0", array(), array(), array('target' => 'slave'))->fetchField();
+  $total_donations = db_query("SELECT count(did) FROM {fundraiser_donation}", array(), array('target' => 'slave'))->fetchField();
+  $total_actions = db_query("SELECT count(s.sid) FROM {webform_submissions} s INNER JOIN {node} n ON s.nid = n.nid WHERE n.type IN ('sba_message_action', 'sba_social_action', 'springboard_petition')", array(), array('target' => 'slave'))->fetchField();
+  $total_petition_messages = db_query("SELECT count(s.sid) FROM {webform_submissions} s INNER JOIN {node} n ON s.nid = n.nid WHERE n.type = 'springboard_petition'", array(), array('target' => 'slave'))->fetchField();
+  $total_forms = db_query('SELECT count(n.nid) FROM {node} n INNER JOIN {webform} w ON n.nid = w.nid', array(), array('target' => 'slave'))->fetchField();
+  $excluded_types = springboard_dw_get_donation_types();
+  $excluded_types[] = 'springboard_petition';
+  $excluded_types[] = 'sba_message_action';
+  $excluded_types[] = 'sba_social_action';
+  $total_submissions = db_query("SELECT count(s.sid) FROM {webform_submissions} s INNER JOIN {node} n ON s.nid = n.nid WHERE n.type NOT IN (:excluded_types)", array(':excluded_types' => $excluded_types), array('target' => 'slave'))->fetchField();
+  $total_payments = db_query('SELECT count(transaction_id) FROM {commerce_payment_transaction}')->fetchField();
+  $total_messages = springboard_dw_queue_legacy_get_advocacy_messages_count();
+  $total_salesforce_sync = db_query("SELECT count(rmid) FROM {salesforce_sync_map} WHERE (delta IN (:included_types) OR object_type = 'sb_Actions_Taken__c') AND sfid <> ''", array(':included_types' => array('user', 'sba_message_action', 'sba_social_action', 'springboard_petition', 'donation') ), array('target' => 'slave'))->fetchField();
+  $records_in_drupal_count = $total_contacts + $total_donations + $total_actions + $total_petition_messages + $total_forms + $total_submissions + $total_payments + $total_messages + $total_salesforce_sync;
+
+  $total_records = array(
+    'action:&nbsp;' . number_format($total_actions, 0, '', ','),
+    'action message:&nbsp;' . number_format($total_messages, 0, '', ','),
+    'contact:&nbsp;' . number_format($total_contacts, 0, '', ','),
+    'donation:&nbsp;' . number_format($total_donations, 0, '', ','),
+    'form:&nbsp;' . number_format($total_forms, 0, '', ','),
+    'payment:&nbsp;' . number_format($total_payments, 0, '', ','),
+    'petition message:&nbsp;' . number_format($total_petition_messages, 0, '', ','),
+    'salesforce sync:&nbsp;' . number_format($total_salesforce_sync, 0, '', ','),
+    'submission:&nbsp;' . number_format($total_submissions, 0, '', ','),
+  );
+
+  $records_in_queue_table = db_query("SELECT count(item_id) FROM {queue} WHERE name = 'springboard_dw_export'", array(), array('target' => 'slave'))->fetchField();
+
+  $processed_counts = db_query("SELECT type, COUNT(*) as count FROM {springboard_data_warehouse} GROUP BY type ORDER BY type ASC", array(), array('target' => 'slave'))->fetchAll();
+  $data_warehouse_total = 0;
+  $processed_counts_by_type = array(
+    'advocacy action' => 0,
+    'contact' => 0,
+    'petition' => 0,
+    'donation' => 0,
+    'form' => 0,
+    'payment' => 0,
+    'submission' => 0,
+    'advocacy petition message' => 0,
+    'advocacy message' => 0,
+    'salesforce sync' => 0,
+
+  );
+  $processed_records = array();
+  foreach ($processed_counts as $type) {
+    $processed_records[] = $type->type . ':&nbsp;' . number_format($type->count, 0, '', ',');
+    // Massaging into assoc array for easier access below.
+    $processed_counts_by_type[$type->type] = $type->count;
+    $data_warehouse_total += $type->count;
+  }
+  $unprocessed_counts = array();
+  $unprocessed_counts = array(
+    'action' => strval($total_actions - ($processed_counts_by_type['advocacy action'] + $processed_counts_by_type['petition'])),
+    'action message' => strval($total_messages - $processed_counts_by_type['advocacy message']),
+    'contact' => strval($total_contacts - $processed_counts_by_type['contact']),
+    'donation' => strval($total_donations - $processed_counts_by_type['donation']),
+    'form' => strval($total_forms - $processed_counts_by_type['form']),
+    'payment' => strval($total_payments - $processed_counts_by_type['payment']),
+    'petition message' => strval($total_petition_messages - $processed_counts_by_type['advocacy petition message']),
+    'salesforce sync' => strval($total_salesforce_sync - $processed_counts_by_type['salesforce sync']),
+    'submission' => strval($total_submissions - $processed_counts_by_type['submission']),
+  );
+  $unprocessed_items = array();
+  $unprocessed_total = 0;
+  foreach ($unprocessed_counts as $key => $val) {
+    $unprocessed_items[] = $key . ':&nbsp;' . number_format($val, 0, '', ',');
+    $unprocessed_total += $val;
+  }
+
+  $dw_types = springboard_dw_queue_legacy_get_dw_totals();
+  $dw_totals = array();
+  $dw_total_count = 0;
+  foreach ($dw_types as $key => $val) {
+    $dw_totals[] = $key . ':&nbsp;' . number_format($val, 0, '', ',');
+    $dw_total_count += $val;
+  }
+  $dw_totals[] = l('View recent submissions', 'https://dw.gospringboard.io/report/recent-submissions?authenticationToken=' . variable_get("springboard_dw_authentication_token"));
+
+  $header = array('Records in Drupal', 'Unprocessed', 'Processed', 'Queued for Export', 'In Data Warehouse');
+  $rows = array(
+    array(
+      theme('item_list', array('items' => $total_records)),
+      theme('item_list', array('items' => $unprocessed_items)),
+      theme('item_list', array('items' => $processed_records)),
+      $records_in_queue_table,
+      theme('item_list', array('items' => $dw_totals)),
+    ),
+    array(
+      number_format($records_in_drupal_count, 0, '', ','),
+      number_format($unprocessed_total, 0, '', ','),
+      number_format($data_warehouse_total, 0, '', ','),
+      number_format($records_in_queue_table, 0, '', ','),
+      number_format($dw_total_count, 0, '', ','),
+    ),
+  );
+  drupal_add_css('progress[value] {width: 100%; height: 50px;}', 'inline');
+  $progress_bar = array(
+      '#type' => 'markup',
+      '#markup' => '<progress max="' . $records_in_drupal_count . '" value="' . $dw_total_count . '"></progress>',
+    );
+  $output .= render($progress_bar);
+
+  $output .= theme('table', array('header' => $header, 'rows' => $rows));
+  return $output;
+}
+
+function springboard_dw_queue_legacy_get_dw_totals() {
+  // Return early if the API info has not been configured.
+  $endpoint = variable_get('springboard_dw_api_endpoint', NULL);
+  $token = variable_get('springboard_dw_authentication_token', NULL);
+  if (empty($endpoint) || empty($token)) {
+    return array();
+  }
+  $token = variable_get('springboard_dw_authentication_token');
+  $data = json_decode(drupal_http_request($endpoint . '/report/submissions?authenticationToken=' . $token . '&jsonReturn=true')->data, TRUE);
+  ksort($data);
+  return $data;
+}
+
+function springboard_dw_queue_legacy_get_advocacy_messages_count() {
+  // Return early if the API info has not been configured.
+  $endpoint = variable_get('springboard_dw_advocacy_api_endpoint', NULL);
+  $token = variable_get('springboard_dw_advocacy_authentication_token', NULL);
+  if (empty($endpoint) || empty($token)) {
+    return 0;
+  }
+  $advocacy_action_records = db_query("SELECT nid FROM {node} WHERE type = 'sba_message_action' OR type = 'sba_social_action' ORDER BY created ASC", array(), array('target' => 'slave'))->fetchAll();
+  $total = 0;
+  foreach ($advocacy_action_records as $advocacy_action_record) {
+    $node = node_load($advocacy_action_record->nid);
+    if (isset($node->advocacy_id)) {
+      $data = json_decode(drupal_http_request($endpoint . '/api/v1/messages/get/' . $node->advocacy_id . '?access_token=' . $token)->data, TRUE);
+      if (isset($data['total'])) {
+        $total += $data['total'];
+      }
+    }
+  }
+  return $total;
+}
+
+/**
+ * Gets timestamp of the last queued item.
+ *
+ * Can be reset to 0 for a particular type by passing the --reset flag.
+ *
+ * @param string $type
+ *   Type of queue record to create. eg contact, petition, message action, etc.
+ *
+ * @return int
+ *   Number of seconds since the Unix Epoch.
+ */
+function springboard_dw_queue_legacy_get_highwater_mark($type) {
+  return db_query('SELECT highwater FROM {springboard_data_warehouse_queue_legacy} WHERE type = :type LIMIT 1', array(':type' => $type))->fetchField();
+}
+
+/**
+ * Records timestamp of last queued item so the next batch can start afterwards.
+ *
+ * @param string $type
+ *   Type of queue record to create. eg contact, petition, message action, etc.
+ * @param int $timestamp
+ *   of seconds since the Unix Epoch.
+ *   Number of seconds since the Unix Epoch.
+ *  @param  mixed $idlist
+ *   False or array if IDs that are being specifically queued.
+ *
+ * @return mixed
+ *   FALSE on error. Otherwise, SAVED_NEW or SAVED_UPDATED.
+ */
+function springboard_dw_queue_legacy_set_highwater_mark($type, $timestamp, $idlist = FALSE) {
+  // If we are working with a specific set of IDs, don't move highwater mark.
+  if ($idlist) {
+    return;
+  }
+  $record = array('type' => $type, 'highwater' => $timestamp);
+  return drupal_write_record('springboard_data_warehouse_queue_legacy', $record, 'type');
+}
+
+/**
+ * Resets all highwater marks to zero.
+ */
+function springboard_dw_queue_legacy_reset_highwater_marks() {
+  $types = array(
+    'contact',
+    'form',
+    'submission',
+    'action',
+    'message',
+    'donation',
+    'petition_message',
+    'payment',
+    'salesforce_sync'
+  );
+  foreach ($types as $type) {
+    springboard_dw_queue_legacy_set_highwater_mark($type, 0);
+  }
+}
+

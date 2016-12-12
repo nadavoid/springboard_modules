@@ -1,0 +1,9 @@
+name = Fundraiser Commerce Cardonfile
+description = Fundraiser-related functionality for cardonfile.
+package = Jackson River Springboard
+core = 7.x
+dependencies[] = commerce_cardonfile
+dependencies[] = fundraiser
+
+; Views handlers
+files[] = includes/views/handlers/fundraiser_commerce_cardonfile_handler_field_used_by.inc

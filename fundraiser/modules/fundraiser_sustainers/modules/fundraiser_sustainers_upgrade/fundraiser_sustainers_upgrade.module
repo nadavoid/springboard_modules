@@ -80,16 +80,22 @@ function fundraiser_sustainers_upgrade_springboard_hmac_allowed_actions() {
  */
 function fundraiser_sustainers_upgrade_springboard_hmac_success($payload) {
   if ($payload['action'] == 'su') {
+    $parts = drupal_parse_url(request_uri());
+    $query = array();
+    if (!empty($parts['query'])) {
+      $query = $parts['query'];
+    }
     if (isset($payload[2]) && is_numeric($payload[2])) {
       $node = node_load($payload[2]);
       if (!empty($node->type) && $node->type == 'sustainers_upgrade_form') {
-        drupal_goto('node/' . $node->nid);
+
+        drupal_goto('node/' . $node->nid, array('query' => $query));
       }
     }
     // If there's no form in the payload, try the default form.
     $nid = variable_get('fundraiser_sustainers_upgrade_default_form', '');
     if (!empty($nid)) {
-      drupal_goto('node/' . $nid);
+      drupal_goto('node/' . $nid, array('query' => $query));
     }
   }
 }
@@ -203,7 +209,7 @@ function fundraiser_sustainers_upgrade_form_fundraiser_admin_settings_alter(&$fo
  * Show/Hide the default failure message and failure reason based on
  * donation status result.
  */
-function fundraiser_sustainers_upgrade_node_view($node) {
+function fundraiser_sustainers_upgrade_node_view($node, $view_mode, $langcode) {
   if ($node->type == 'sustainers_upgrade_form') {
 
     // Set an error message if SPP is not configured.
@@ -293,10 +299,7 @@ function fundraiser_sustainers_upgrade_form_webform_client_form_alter(&$form, &$
 
     // Get the session values created by springboard_hmac.module.
     $payload = fundraiser_sustainers_upgrade_get_session_payload();
-    if (!user_access('administer fundraiser sustainers upgrade') && empty($payload)) {
-      drupal_access_denied();
-      drupal_exit();
-    }
+
     // If there are no session values, stop everything and
     // display a failure message, even on auto-submit forms.
     // Get the appropriate status messages and donation objects
@@ -795,7 +798,7 @@ function fundraiser_sustainers_upgrade_get_session_payload() {
   $payload = &drupal_static(__FUNCTION__);
   if (!isset($payload)) {
     $payload = array();
-    if (isset($_SESSION['springboard_hmac'])) {
+    if (!empty($_SESSION['springboard_hmac']['action']) && $_SESSION['springboard_hmac']['action'] == 'su') {
       $payload['timestamp'] = $_SESSION['springboard_hmac']['timestamp'];
       $payload['uid'] = $_SESSION['springboard_hmac']['uid'];
       $payload['amount'] = $_SESSION['springboard_hmac']['0'];
@@ -811,7 +814,9 @@ function fundraiser_sustainers_upgrade_get_session_payload() {
  * Clear the session.
  */
 function fundraiser_sustainers_upgrade_clear_session_payload() {
-  unset($_SESSION['springboard_hmac']);
+  if (!empty($_SESSION) && isset($_SESSION['springboard_hmac'])) {
+    unset($_SESSION['springboard_hmac']);
+  }
 }
 
 /**
@@ -1061,7 +1066,9 @@ function fundraiser_sustainers_upgrade_tokenize_confirmation($status, $confirmat
  * Clear the session payload after the confirmation has been built.
  */
 function fundraiser_sustainers_process_webform_confirmation(&$vars) {
-  fundraiser_sustainers_upgrade_clear_session_payload();
+  if (!empty($vars['node']->type) && $vars['node']->type == 'sustainers_upgrade_form') {
+    fundraiser_sustainers_upgrade_clear_session_payload();
+  }
 }
 
 /**
@@ -1176,7 +1183,7 @@ function fundraiser_sustainers_upgrade_walk_component_hierarchy($nid, $cid, &$pa
 /**
  * Implements hook_mail_alter().
  *
- * Stop email wrappers email from sending if upgrade failed.
+ * Stop email templates email from sending if upgrade failed.
  */
 function fundraiser_sustainers_upgrade_mail_alter(&$message) {
   if (!empty($message['params']['node']) && $message['params']['node']->type == 'sustainers_upgrade_form') {
@@ -1184,19 +1191,6 @@ function fundraiser_sustainers_upgrade_mail_alter(&$message) {
       $message['send'] = FALSE;
       unset($_SESSION[$message['params']['node']->nid . '_stop_mail']);
     }
-  }
-}
-
-/**
- * Implements hook_salesforce_queue_create_item_alter().
- *
- * Relate the upgrade to the sustainer series.
- */
-function fundraiser_sustainers_upgrade_salesforce_queue_create_item_alter(&$item) {
-  if ($item['object_type'] == 'Sustainers_Upgrade__c') {
-    $did = $item['sobject']->fields['Donation_ID__c'];
-    $item['sobject']->fields['Recurring_Donations__c'] = sprintf('[npe03__Recurring_Donation__c:fundraiser_sustainers_series:%d]', $did);
-    $item['sync_rules']['Recurring_Donations__c'] = 'always';
   }
 }
 
@@ -1287,4 +1281,55 @@ function fundraiser_sustainers_upgrade_springboard_admin_admin_menu_items_alter(
       'create sustainers_upgrade_form content',
     ),
   );
+}
+
+
+/**
+ * Implements hook_TAG_query_alter().
+ *
+ * Hide sustainer upgrade forms from search results.
+ */
+function fundraiser_sustainers_upgrade_query_node_access_alter(QueryAlterableInterface $query) {
+
+  if (user_access('administer fundraiser sustainer upgrades') || empty($query->alterTags['search_node'])) {
+    return;
+  }
+  $search = FALSE;
+  $node = FALSE;
+
+  foreach ($query->getTables() as $alias => $table) {
+    if ($table['table'] == 'search_index') {
+      $search = $alias;
+    }
+    elseif ($table['table'] == 'node') {
+      $node = $alias;
+    }
+  }
+
+  if ($node && $search) {
+    $excluded_content_types = array('sustainers_upgrade_form');
+
+    if (!empty($excluded_content_types)) {
+      $query->condition($node . '.type', array($excluded_content_types), 'NOT IN');
+    }
+  }
+}
+
+
+/**
+ * Implements hook_node_access().
+ *
+ * Deny access if theres no payload.
+ */
+function fundraiser_sustainers_upgrade_node_access($node, $op, $account) {
+  $type = is_string($node) ? $node : $node->type;
+
+  if ($type == 'sustainers_upgrade_form') {
+    $payload = fundraiser_sustainers_upgrade_get_session_payload();
+    if (!user_access('administer fundraiser sustainers upgrade') && empty($payload) && $op == 'view') {
+      return NODE_ACCESS_DENY;
+    }
+  }
+  // Returning nothing from this function would have the same effect.
+  return NODE_ACCESS_IGNORE;
 }

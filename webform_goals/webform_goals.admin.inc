@@ -15,6 +15,10 @@ function webform_goals_admin_list($form, $form_state = array()) {
 
     if ($selected_context['id'] == 'single') {
       $node = node_load($goal['extra']['selected_form_id']);
+      // Do not display data for this goal if its node does not exist:
+      if (!$node) {
+        continue;
+      }
       $selected_context['name'] .= ' : ' . l($node->title, 'node/' . $node->nid);
     }
     elseif ($selected_context['id'] == 'group') {

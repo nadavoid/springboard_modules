@@ -1,0 +1,14 @@
+#edit-field-fd-designation-categories {
+    background: #fff;
+    padding: 8px 20px;
+    margin: 20px auto;
+}
+
+#edit-override-settings > legend .fieldset-legend {
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+#edit-override-settings .form-type-checkbox {
+    z-index: 10;
+}

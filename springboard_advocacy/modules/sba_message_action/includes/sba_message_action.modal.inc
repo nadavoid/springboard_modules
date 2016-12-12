@@ -12,12 +12,15 @@ function sba_message_action_modal_page($js = NULL, $nid = NULL) {
   if ($nid == NULL) {
     return;
   }
+  $contents = views_embed_view('sba_messages_node', 'block_2', $nid);
   if ($js) {
     ctools_include('modal');
     ctools_include('ajax');
+    ctools_modal_render(t('Possible Messages'), $contents);
   }
-  $contents = views_embed_view('sba_messages_node', 'block_2', $nid);
-  ctools_modal_render(t('Possible Messages'), $contents);
+  else {
+    return $contents;
+  }
 }
 
 function sba_message_action_build_modal() {

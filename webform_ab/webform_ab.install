@@ -1,7 +1,7 @@
 <?php
 /**
  * @file
- *   Webform A/B install/schema hooks
+ *   Multivariate install/schema hooks
  */
 
 /**
@@ -11,10 +11,10 @@ function webform_ab_schema() {
   $schema = array();
 
   /**
-   * Settings/configuration for each Webform A/B Test
+   * Settings/configuration for each Multivariate Test
    */
   $schema['webform_ab'] = array(
-    'description' => 'Stores Webform A/B test configurations',
+    'description' => 'Stores Webform Multivariate test configurations',
     'fields' => array(
       'nid' => array(
         'type' => 'int',
@@ -40,21 +40,21 @@ function webform_ab_schema() {
   );
 
   /**
-   * Forms included in Webform A/B Test nodes
+   * Forms included in Webform Multivariate Test nodes
    */
   $schema['webform_ab_forms'] = array(
-    'description' => 'Stores the forms included within Webform A/B tests',
+    'description' => 'Stores the forms included within Multivariate tests',
     'fields' => array(
       'test_nid' => array(
         'type' => 'int',
-        'description' => 'The {node}.nid of the Webform A/B Test node',
+        'description' => 'The {node}.nid of the Multivariate Test node',
         'default' => 0,
         'not null' => TRUE,
         'unsigned' => TRUE,
       ),
       'webform_nid' => array(
         'type' => 'int',
-        'description' => 'The {node}.nid of the Webform node included in the Webform A/B Test node',
+        'description' => 'The {node}.nid of the Webform node included in the Multivariate Test node',
         'default' => 0,
         'not null' => TRUE,
         'unsigned' => TRUE,
@@ -81,10 +81,10 @@ function webform_ab_schema() {
   );
 
   /**
-   * Webform A/B Test hits table
+   * Multivariate Test hits table
    */
   $schema['webform_ab_hits'] = array(
-    'description' => 'Hit stats for each form in a Webform A/B Test',
+    'description' => 'Hit stats for each form in a Multivariate Test',
     'fields' => array(
       'hit_id' => array(
         'type' => 'serial',
@@ -94,14 +94,14 @@ function webform_ab_schema() {
       ),
       'test_nid' => array(
         'type' => 'int',
-        'description' => 'The {node}.nid of the Webform A/B Test node',
+        'description' => 'The {node}.nid of the Multivariate Test node',
         'default' => 0,
         'not null' => TRUE,
         'unsigned' => TRUE,
       ),
       'webform_nid' => array(
         'type' => 'int',
-        'description' => 'The {node}.nid of the Webform node included in the Webform A/B Test node',
+        'description' => 'The {node}.nid of the Webform node included in the Multivariate Test node',
         'default' => 0,
         'not null' => TRUE,
         'unsigned' => TRUE,
@@ -134,21 +134,21 @@ function webform_ab_schema() {
   );
 
   /**
-   * Webform A/B Test conversions
+   * Multivariate Test conversions
    */
   $schema['webform_ab_conversion'] = array(
-    'description' => 'Conversion stats for each form in a Webform A/B Test',
+    'description' => 'Conversion stats for each form in a Multivariate Test',
     'fields' => array(
       'test_nid' => array(
         'type' => 'int',
-        'description' => 'The {node}.nid of the Webform A/B Test node',
+        'description' => 'The {node}.nid of the Multivariate Test node',
         'default' => 0,
         'not null' => TRUE,
         'unsigned' => TRUE,
       ),
       'webform_nid' => array(
         'type' => 'int',
-        'description' => 'The {node}.nid of the Webform node included in the Webform A/B Test node',
+        'description' => 'The {node}.nid of the Webform node included in the Multivariate Test node',
         'default' => 0,
         'not null' => TRUE,
         'unsigned' => TRUE,
@@ -173,7 +173,7 @@ function webform_ab_schema() {
     'description' => 'Win theshold plugin config',
     'fields' => array(
       'test_nid' => array(
-        'description' => 'Node ID for the Webform A/B test node',
+        'description' => 'Node ID for the Multivariate test node',
         'type' => 'int',
         'not null' => TRUE,
       ),
@@ -203,7 +203,7 @@ function webform_ab_schema() {
     'description' => 'Win condition plugin config',
     'fields' => array(
       'test_nid' => array(
-        'description' => 'Node ID for the Webform A/B test node',
+        'description' => 'Node ID for the Multivariate test node',
         'type' => 'int',
         'not null' => TRUE,
       ),

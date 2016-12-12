@@ -110,6 +110,24 @@ function springboard_p2p_user_register_form($form, &$form_state) {
     springboard_p2p_add_state_and_country_ajax($form);
   }
 
+  // Check for POST values from previous page and store them in COOKIE.
+  $campaign_values = array(
+    'campaign_name' => FALSE,
+    'campaign_goal' => FALSE,
+    'campaign_url' => FALSE,
+  );
+  foreach ($campaign_values as $key => $value) {
+    if (isset($_POST[$key])) {
+      $campaign_values[$key] = check_plain($_POST[$key]);
+    }
+    else {
+      unset($campaign_values[$key]);
+    }
+  }
+  if (count($campaign_values)) {
+    user_cookie_save($campaign_values);
+  }
+
   return $form;
 }
 

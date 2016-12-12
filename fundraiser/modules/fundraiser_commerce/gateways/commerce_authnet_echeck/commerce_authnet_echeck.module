@@ -1,0 +1,265 @@
+<?php
+
+/**
+ * @file
+ * Implements Authorize.Net eCheck payment services for use in Drupal Commerce.
+ *
+ * Based on https://www.drupal.org/sandbox/actorrunning/2716153
+ */
+
+/**
+ * Implements hook_commerce_payment_method_info().
+ */
+function commerce_authnet_echeck_commerce_payment_method_info() {
+  $payment_methods = array();
+
+  $payment_methods['authnet_echeck'] = array(
+    'base' => 'commerce_authnet_echeck',
+    'title' => t('Authorize.Net - eCheck.Net'),
+    'short_title' => t('eCheck.Net'),
+    'display_title' => t('eCheck'),
+    'description' => t('Integrates Authorize.Net Advanced Integration Method
+       for eCheck transactions.'),
+    'file' => 'includes/commerce_authnet_echeck.echeck.inc',
+    'cardonfile' => array(
+      'charge callback' => 'commerce_authnet_echeck_cardonfile_charge',
+      'update callback' => 'commerce_authnet_echeck_cardonfile_update',
+      'delete callback' => 'commerce_authnet_echeck_cardonfile_delete',
+    ),
+  );
+
+  return $payment_methods;
+}
+
+/**
+ * Implements hook_mail_alter().
+ */
+function commerce_authnet_echeck_mail_alter(&$message) {
+  // Suppress expiration emails for pwmb transactions
+  if ($message['id'] == 'fundraiser_sustainers_fundraiser_cc_notification') {
+    $params = $message['params'];
+    if ($params && array_key_exists('fundraiser_sustainers_token_set', $params) && array_key_exists('donation', $params['fundraiser_sustainers_token_set'])) {
+      $donation = $params['fundraiser_sustainers_token_set']['donation'];
+      $gateway_config = _fundraiser_gateway_info($donation->gateway['id']);
+      if ($donation && $gateway_config['gateway_details']['method_id'] == 'authnet_echeck') {
+        // Suppress email and log
+        watchdog('commerce_authnet_echeck', 'Credit card expiration email suppressed for donation ID @did', array('@did' => $donation->did), WATCHDOG_INFO);
+        $message['send'] = FALSE;
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_fundraiser_donation_update().
+ */
+function commerce_authnet_echeck_fundraiser_donation_update($donation) {
+  $gateway_config = _fundraiser_gateway_info($donation->gateway['id']);
+  if ($gateway_config['gateway_details']['method_id'] == 'authnet_echeck') {
+    // If a recurring donation is skipped, create the next series donation.
+    if (($donation->status == 'skipped') && isset($donation->recurring) && !empty($donation->recurring)) {
+      $master_donation = fundraiser_donation_get_donation($donation->recurring->master_did);
+
+      if (!empty($master_donation)) {
+          // If the next recurring series entry doesn't exist, create one.
+          if (($donation->status <> 'failed') && _fundraiser_sustainers_count_donations_recurr_remaining($donation->recurring->master_did) < 1) {
+          // Update expiration date and generate the next donation.
+          $cardonfile_fields = commerce_authnet_echeck_cardonfile_fields($donation);
+          $card_data = _fundraiser_commerce_cardonfile_match($cardonfile_fields);
+
+          if (!empty($card_data)) {
+
+            // Move card expiration date ahead one month.
+            $new_expire_time = mktime(0, 0, 0, ($card_data->card_exp_month + 1), 1, $card_data->card_exp_year);
+
+            $card_data->card_exp_month = date('m', $new_expire_time);
+            $card_data->card_exp_year = date('Y', $new_expire_time);
+
+            $submission_fields = array(
+              'payment_fields' => array(
+                'bank account' => array(
+                  'card_expiration_month' => $card_data->card_exp_month,
+                  'card_expiration_year' => $card_data->card_exp_year,
+                ),
+              ),
+            );
+
+            // Update card data
+            commerce_cardonfile_save($card_data);
+
+            fundraiser_sustainers_update_billing_info_create_new_donations($master_donation, $donation, $submission_fields);
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Card on file callback: background charge payment
+ *
+ * @param object $payment_method
+ *  The payment method instance definition array.
+ * @param object $card_data
+ *   The stored credit card data array to be processed
+ * @param object $order
+ *   The order object that is being processed
+ * @param array $charge
+ *   The price array for the charge amount with keys of 'amount' and 'currency'
+ *   If null the total value of the order is used.
+ *
+ * @return
+ *   TRUE if the transaction was successful
+ */
+function commerce_authnet_echeck_cardonfile_charge($payment_method, $card_data, $order, $charge = NULL) {
+  // Format order total for transaction.
+  if (!isset($charge)) {
+    $wrapper = entity_metadata_wrapper('commerce_order', $order);
+    $charge = commerce_line_items_total($wrapper->commerce_line_items);
+  }
+
+  // Extract the Customer Profile and Payment Profile IDs from the remote_id.
+  list($cim_customer_profile_id, $cim_payment_profile_id) = explode('|', $card_data->remote_id);
+
+  // Determine the proper transaction element to use inside the XML.
+  $element_name = commerce_authnet_cim_transaction_element_name($payment_method['settings']['txn_type']);
+
+  // Build a data array for the transaction API request.
+  $api_request_data = array(
+    'transaction' => array(
+      $element_name => array(
+        'amount' => number_format(commerce_currency_amount_to_decimal($charge['amount'], $charge['currency_code']), 2, '.', ''),
+        'customerProfileId' => $cim_customer_profile_id,
+        'customerPaymentProfileId' => $cim_payment_profile_id,
+        'order' => array(
+          'invoiceNumber' => $order->order_number,
+        ),
+      ),
+    ),
+    'extraOptions' => '<![CDATA[x_delim_data=TRUE&amp;x_delim_char=|&amp;x_encap_char="&amp;x_solution_id=A1000009&amp;x_currency_code=' . $charge['currency_code'] . '&amp;x_customer_ip=' . substr(ip_address(), 0, 15) . ']]>',
+  );
+
+  // If we get a response from the API server...
+  $xml_response = commerce_authnet_cim_request($payment_method, 'createCustomerProfileTransactionRequest', $api_request_data);
+
+  if (!empty($xml_response->directResponse)) {
+    // Extract the response data from the XML.
+    $response = explode('|', (string) $xml_response->directResponse);
+
+    for ($i = 0; $i < count($response); $i++) {
+      $response[$i] = substr($response[$i], 1, strlen($response[$i]) - 2);
+    }
+
+    // Prepare a transaction object to represent the transaction attempt.
+    $transaction = commerce_payment_transaction_new('authnet_echeck', $order->order_id);
+    $transaction->instance_id = $payment_method['instance_id'];
+    $transaction->remote_id = $response[6];
+    $transaction->amount = $charge['amount'];
+    $transaction->currency_code = $charge['currency_code'];
+    $transaction->payload[REQUEST_TIME] = $response;
+
+    // If we didn't get an approval response code...
+    if ($response[0] != '1') {
+      // Create a failed transaction with the error message.
+      $transaction->status = COMMERCE_PAYMENT_STATUS_FAILURE;
+    }
+    else {
+      // Set the transaction status based on the type of transaction this was.
+      switch ($payment_method['settings']['txn_type']) {
+        case COMMERCE_CREDIT_AUTH_ONLY:
+          $transaction->status = COMMERCE_PAYMENT_STATUS_PENDING;
+          break;
+
+        case COMMERCE_CREDIT_AUTH_CAPTURE:
+          $transaction->status = COMMERCE_PAYMENT_STATUS_SUCCESS;
+          break;
+      }
+    }
+
+    // Store the type of transaction in the remote status.
+    $transaction->remote_status = $response[11];
+
+    // Build a meaningful response message.
+    $message = array(
+      '<b>' . commerce_authnet_reverse_txn_type(commerce_authnet_txn_type($payment_method['settings']['txn_type'])) . '</b>',
+      '<b>' . ($response[0] != '1' ? t('REJECTED') : t('ACCEPTED')) . ':</b> ' . check_plain($response[3]),
+      t('AVS response: @avs', array('@avs' => commerce_authnet_avs_response($response[5]))),
+    );
+
+    $transaction->message = implode('<br />', $message);
+
+    // Save the transaction information.
+    commerce_payment_transaction_save($transaction);
+
+    // If the payment failed, display an error and rebuild the form.
+    if ($response[0] != '1') {
+      drupal_set_message(t('We received the following error processing your card. Please enter your information again or try a different card.'), 'error');
+      drupal_set_message(check_plain($response[3]), 'error');
+      return FALSE;
+    }
+
+    return;
+  }
+  elseif ((string) $xml_response->messages->message->code == 'E00040') {
+    // If the response indicated a non-existent profile, deactive it now.
+    $card_data->status = 0;
+    commerce_cardonfile_save($card_data);
+
+    drupal_set_message(t('The card you selected is no longer valid. Please use a different card to complete payment.'), 'error');
+    return FALSE;
+  }
+
+  drupal_set_message(t('We could not process your card on file at this time. Please try again or use a different card.'), 'error');
+  return FALSE;
+
+}
+
+/**
+ * Card on file callback: updates the associated customer payment profile.
+ */
+function commerce_authnet_echeck_cardonfile_update($form, &$form_state, $payment_method, $card_data) {
+  // This callback is empty because cardonfile doesn't currently store the bank account info correctly.
+  // It can only be updated by editing the sustainer series.
+}
+
+/**
+ * Card on file callback: deletes the associated customer payment profile.
+ */
+function commerce_authnet_echeck_cardonfile_delete($form, &$form_state, $payment_method, $card_data) {
+  // Extract the Customer Profile and Payment Profile IDs from the remote_id.
+  list($cim_customer_profile_id, $cim_payment_profile_id) = explode('|', $card_data->remote_id);
+
+  // Fetch the response from the API server and let Card on File know that the
+  // delete was either successful or not necessary.
+  $xml_response = commerce_authnet_cim_delete_customer_payment_profile_request($payment_method, $cim_customer_profile_id, $cim_payment_profile_id);
+  $code = (string) $xml_response->messages->message->code;
+
+  return in_array($code, array('I00001', 'E00040'));
+}
+
+/**
+ * Implements hook_fundraiser_sustainers_series_end_date_alter().
+ */
+function commerce_authnet_echeck_fundraiser_sustainers_series_end_date_alter(&$end_date, $context) {
+  // Bank account recurring transactions can share a cardonfile entry.
+  // Because bank accounts don't have expiration dates, using the cardonfile date isn't a reliable way to increment a series.
+  $master_donation = $context['master_donation'];
+  // $source_donation = $context['source_donation'];
+  if ($master_donation->gateway['gateway_details']['method_id'] == 'authnet_echeck') {
+    // Get the count of series entries.
+    $charge_count = db_query('SELECT count(did) FROM {fundraiser_sustainers} WHERE master_did = :master_did', array(':master_did' => $master_donation->did))->fetchField();
+    // We only want to increment the series if there's one remaining donation.
+    if (_fundraiser_sustainers_count_donations_recurr_remaining($master_donation->did) < 1) {
+      // Set the date so that a new series entry is created.
+      $new_exp = strtotime("now +" . $charge_count ." months");
+      $end_date['month'] = date('m', $new_exp);
+      $end_date['year'] = date('y', $new_exp);
+    }
+    else {
+      // If there's more than one future donation, set the dates so that no entries will be created or deleted.
+      $new_exp = strtotime("now +" . ($charge_count - 1) ." months");
+      $end_date['month'] = date('m', $new_exp);
+      $end_date['year'] = date('y', $new_exp);
+    }
+  }
+}

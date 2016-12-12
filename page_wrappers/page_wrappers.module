@@ -173,6 +173,13 @@ function page_wrappers_css_alter(&$css) {
       }
     }
 
+    if (function_exists('honeypot_get_css_file_path')) {
+      $honeypot_css = honeypot_get_css_file_path();
+      if (file_exists($honeypot_css)) {
+        $keep[] = $honeypot_css;
+      }
+    }
+
     // If a stylesheet has been added to the wrapper, don't remove it.
     if (!empty($css_files)) {
       foreach ($css_files as $css_file) {
@@ -855,13 +862,13 @@ function _page_wrappers_node_assigned_wrapper($node) {
  */
 function _page_wrappers_page_node() {
   $node = NULL;
-
+  $subpages = array('done', 'fundraiser-redirect');
   // Check if this in ajax request form submit
   if (arg(0) == 'system' && arg(1) == 'ajax' && !empty($_POST['form_build_id'])) {
     $node = _page_wrappers_cached_form_node($_POST['form_build_id']);
   }
   // If this is a node page load it up, also cover webform 'done' page
-  elseif (arg(0) == 'node' && is_numeric(arg(1)) && (arg(2) == 'done' || !arg(2))) {
+  elseif (arg(0) == 'node' && is_numeric(arg(1)) && (in_array(arg(2), $subpages) || !arg(2))) {
     $node = node_load(arg(1));
   }
 

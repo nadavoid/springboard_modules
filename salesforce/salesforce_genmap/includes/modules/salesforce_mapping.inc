@@ -807,6 +807,9 @@ function _salesforce_mapping_get_entity_fields($entity_type, $entity_bundle_type
     }
   }
 
+  // Give other modules a chance to alter the entity fields available for mapping.
+  drupal_alter('salesforce_mapping_entity_fields', $entity_fields, $entity_type, $entity_bundle_type);
+
   // Remove - Select - option.
   unset($entity_fields['']);
 

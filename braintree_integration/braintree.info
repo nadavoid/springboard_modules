@@ -1,0 +1,6 @@
+name = Braintree
+description = Provide Braintree core function.
+package = Braintree
+core = 7.x
+dependencies[] = libraries
+dependencies[] = commerce_payment

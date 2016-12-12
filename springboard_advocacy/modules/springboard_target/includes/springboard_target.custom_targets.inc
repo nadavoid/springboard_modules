@@ -440,7 +440,7 @@ function springboard_target_form_validate($form, &$form_state) {
   if (!empty($form_state['values']['youtube'])) {
     $valid = valid_url($form_state['values']['youtube'], TRUE);
     if (!$valid) {
-      form_set_error('youtube', t('Invalid Youtube url. Please check for "http://" and/or path formatting.'));
+      form_set_error('youtube', t('Invalid YouTube url. Please check for "http://" and/or path formatting.'));
     }
   }
 

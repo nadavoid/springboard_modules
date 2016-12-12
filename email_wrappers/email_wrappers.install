@@ -33,7 +33,7 @@ function email_wrappers_uninstall() {
   // Remove fields implemented by this module.
   _email_wrappers_delete_fields();
 
-  // Delete the email wrapper content type.
+  // Delete the email template content type.
   node_type_delete('email_wrapper');
   field_purge_batch(1000);
 
@@ -333,7 +333,7 @@ function _email_wrappers_create_fields() {
   if (!in_array('email_wrapper', node_type_get_names())) {
     $type = array(
       'type' => 'email_wrapper',
-      'name' => $t('Email Wrapper'),
+      'name' => $t('Email Template'),
       'description' => $t('Create theme templates for emails sent by your website.'),
       'base' => 'node_content',
       'custom' => 1,
@@ -561,12 +561,12 @@ function _email_wrappers_delete_fields() {
     $field = field_info_field($field_name);
     field_delete_field($field_name);
   }
-  drupal_set_message('Email Wrapper fields deleted.');
+  drupal_set_message('Email Template fields deleted.');
 }
 
 function _email_wrappers_delete_nodes() {
   require_once 'email_wrappers.module';
   $nids = email_wrappers_get_nodes();
   node_delete_multiple($nids);
-  drupal_set_message('Email Wrappers have been deleted.');
+  drupal_set_message('Email Templates have been deleted.');
 }

@@ -32,6 +32,16 @@ class FundraiserSustainerRecordViewsController extends EntityDefaultViewsControl
       'field' => 'did',
     );
 
+    // Adds a join against fundraiser_donation.
+    $data[$table]['did']['relationship'] = array(
+      'title' => t('Fundraiser Donation'),
+      'help' => t("Relate this log to the donation record"),
+      'handler' => 'views_handler_relationship',
+      'base' => 'fundraiser_donation',
+      'base field' => 'did',
+      'label' => t('Fundraiser Donation'),
+    );
+
     return $data;
   }
 }
