@@ -255,6 +255,19 @@ function fundraiser_offline_commerce_authnet_aim_request_alter(&$nvp) {
   }
 }
 
+/**
+ * Implements hook_commerce_authnet_cim_request_alter().
+ */
+function fundraiser_offline_commerce_authnet_cim_request_alter(&$api_request_element) {
+  // Use email from user instead of order if offline.
+  if (!empty($_GET['offline'])) {
+    $user = user_load((string) $api_request_element->profile->merchantCustomerId);
+    if (!empty($user->mail)) {
+      $api_request_data['profile']['email'] = $user->mail;
+    }
+  }
+}
+
 function fundraiser_offline_sage_payment_request_sale_alter(&$request_parameters, $context) {
   // Use email from submitted donation data instead of order if offline.
   if (!empty($_GET['offline'])) {
