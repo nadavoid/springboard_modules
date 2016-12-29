@@ -266,11 +266,13 @@ function _fundraiser_designations_build_child_elements($id, &$element, $amounts,
   $group_wrapper = entity_metadata_wrapper('fundraiser_fund_group', $group);
   $other_amount = $group_wrapper->field_ffg_other_amt[0]->value();
   if (!empty($other_amount)) {
+    $currency = fundraiser_get_currency_from_node($node);
     $child = array();
     $child['#type'] = 'textfield';
     $child['#id'] = 'fd-other-' . $id;
     $child['#extra']['group_id'] = $id;
     $child['#title'] = 'Other amount';
+    $child['#description'] = 'Minimum payment ' . $currency['symbol'] . number_format($node->minimum_donation_amount, 2) . '.';
     $element[$id]['fd_other_' . $id] = $child;
   }
 

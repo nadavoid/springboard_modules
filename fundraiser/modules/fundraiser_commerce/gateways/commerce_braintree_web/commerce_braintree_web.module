@@ -330,7 +330,7 @@ function commerce_braintree_web_settings_form($settings = array()) {
   );
 
   $form['sandbox']['channel'] = array(
-    '#title' => t('Channel/Parter ID'),
+    '#title' => t('Channel/Partner ID'),
     '#type' => 'textfield',
     '#default_value' => isset($settings['sandbox']['channel']) ? $settings['sandbox']['channel'] : NULL,
   );
@@ -365,7 +365,7 @@ function commerce_braintree_web_settings_form($settings = array()) {
   );
 
   $form['production']['channel'] = array(
-    '#title' => t('Channel/Parter ID'),
+    '#title' => t('Channel/Partner ID'),
     '#type' => 'textfield',
     '#default_value' => isset($settings['production']['channel']) ? $settings['production']['channel'] : NULL,
   );

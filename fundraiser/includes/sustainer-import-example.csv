@@ -1,0 +1,11 @@
+"UNIQUE_ID","FIRST_NAME","LAST_NAME","EMAIL_ADDRESS","PRIMARY_ADDRESS_LINE_1","PRIMARY_ADDRESS_LINE_2","PRIMARY_ADDRESS_CITY","PRIMARY_ADDRESS_STATE","PRIMARY_ADDRESS_ZIP_CODE","PRIMARY_ADDRESS_COUNTRY","PAYMENT_DATE","PAYMENT_STATUS","PAYMENT_AMOUNT","FREQUENCY","CREDIT_CARD_TYPE","CREDIT_CARD_NUMBER","EXPIRE_MONTH","EXPIRE_YEAR","PAYMENT_REFERENCE_TOKEN"
+232,"Geoffrey","Rogers","geoffrey@example.com","41 Meeting House Hill Road",,"Sterling Hts","WA ",81601,"US ",03/06/15,"active",25,"monthly","MasterCard",7964,11,2018,4354354534534
+234,"Janet","Watkins","janet@example.com","103 Carolyn Dr",,"Charlottesvle","SC ",90274,"US ",03/06/15,"active",5,"monthly","Visa",9323,11,2018,4534354354445
+235,"David","Hadden","david@example.com","206 South St",,"Wilton","MN ",27284,"US ",03/06/15,"active",10,"monthly","American Express",4009,12,2018,764653838653
+236,"Gloria","Greenawalt","gloria@example.com","348 Trawick Ct",,"Durham","IN ",28458,"US ",05/06/15,"active",10,"monthly","Visa",1409,1,2019,445465431564
+237,"Barbara","Mitton","barbara@example.com","43 Peacock Drive","Condo V-2","Zearing","CA ",8202,"US ",03/06/15,"active",10,"monthly","American Express",5479,2,2017,132445435454
+238,"Sandra","Harris","sandra@example.com","199 Spectacle Lane",,"Saint Louis","IL ",98058,"US ",11/06/14,"active",15,"monthly","Visa",1005,2,2016,313463431343
+239,"Kathleen","Schuetzle","kathleen@example.com","3000 Hamstead Court","Unit 1402","Fircrest","CT ",29745,"US ",08/06/14,"active",20,"monthly","Visa",1000,2,2016,24334534534354
+240,"George","Wilkes","george@example.com","725 120th Street",,"Evans","IL ",56377,"US ",03/06/15,,10,"monthly","Visa",8082,2,2017,3243545345454
+241,"Aaron","Garnaas","aaron@example.com","239 Gateroyal Drive",,"Chesapeake","CA ",46385,"US ",03/06/15,"active",100,"annual","Visa",1192,3,2017,4354534534354
+242,"Louise","Corley","louise@example.com","519 Forrest Park Ave","Apt. 3","Arlington","SC ",92054,"US ",12/06/14,"active",30,"monthly","Visa",4002,3,2017,34545435453453

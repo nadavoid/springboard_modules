@@ -169,7 +169,12 @@ function fundraiser_quick_donate_schema() {
  * Implements hook_install().
  */
 function fundraiser_quick_donate_install() {
-  if (empty(field_info_field('field_quick_donate_opt_in'))) {
+  _fundraiser_quick_donate_create_date_field('field_quick_donate_opt_in', 'Quick Donate Opt In');
+  _fundraiser_quick_donate_create_date_field('field_quick_donate_opt_out', 'Quick Donate Opt Out');
+}
+
+function _fundraiser_quick_donate_create_date_field($field_name, $field_label) {
+  if (empty(field_info_field($field_name))) {
     $field = array(
       'translatable' => '0',
       'settings' => array(
@@ -187,7 +192,7 @@ function fundraiser_quick_donate_install() {
         'cache_count' => '4',
         'todate' => '',
       ),
-      'field_name' => 'field_quick_donate_opt_in',
+      'field_name' => $field_name,
       'type' => 'datetime',
       'active' => '1',
       'locked' => '0',
@@ -196,7 +201,7 @@ function fundraiser_quick_donate_install() {
     field_create_field($field);
 
     $instance = array(
-      'label' => 'Quick Donate Opt In',
+      'label' => $field_label,
       'widget' => array(
         'weight' => '28',
         'type' => 'date_text',
@@ -227,7 +232,7 @@ function fundraiser_quick_donate_install() {
       ),
       'required' => 0,
       'description' => '',
-      'field_name' => 'field_quick_donate_opt_in',
+      'field_name' => $field_name,
       'entity_type' => 'user',
       'bundle' => 'user',
     );
@@ -243,8 +248,13 @@ function fundraiser_quick_donate_uninstall() {
   if ($instance = field_info_instance('user', $field_name, 'user')) {
     field_delete_instance($instance);
   }
-
   field_delete_field($field_name);
+  $field_name = 'field_quick_donate_opt_out';
+  if ($instance = field_info_instance('user', $field_name, 'user')) {
+    field_delete_instance($instance);
+  }
+  field_delete_field($field_name);
+
   field_purge_batch(100);
 }
 
@@ -297,4 +307,13 @@ function fundraiser_quick_donate_update_7001() {
       'default' => 'plain_text',
     ));
   }
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Add the 'Quick Donate Opt Out' field to Springboard user profiles.
+ */
+function fundraiser_quick_donate_update_7002() {
+  _fundraiser_quick_donate_create_date_field('field_quick_donate_opt_out', 'Quick Donate Opt Out');
 }

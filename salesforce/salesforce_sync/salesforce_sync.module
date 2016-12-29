@@ -96,6 +96,49 @@ define('SALESFORCE_SYNC_ITEM_FAIL_TOKEN', 'Item failed due to bad token.');
  * @} salesforce_sync_item_fail_responces
  */
 
+/**
+ * Implements_hook_entity_delete().
+ */
+function salesforce_sync_entity_delete($entity, $type) {
+  // If any of these entities are deleted, delete their corresponding record
+  // from salesforce_sync_map.
+  $entity_id = array_shift(entity_extract_ids($type,$entity));
+  if ($type == 'user' || $type == 'commerce_order' || $type == 'fundraiser_sustainer_record') {
+    if ($type == 'commerce_order') {
+      $type = 'salesforce_donation';
+    }
+    if ($type == 'fundraiser_sustainer_record') {
+      $type = 'fundraiser_sustainers';
+    }
+    $rmid = db_select('salesforce_sync_map', 'm')
+              ->fields('m', array('rmid'))
+              ->condition('module', $type)
+              ->condition('drupal_id', $entity_id)
+              ->execute()
+              ->fetchField();
+    if ($rmid) {
+      entity_delete('salesforce_sync_map', $rmid);
+    }
+  }
+}
+
+/**
+ * Implements hook_webform_submission_delete().
+ */
+function salesforce_sync_webform_submission_delete($node, $submission) {
+  // When webform submission is deleted, also delete corresponding record in
+  // salesforce_sync_map.
+  $rmid = db_select('salesforce_sync_map', 'm')
+            ->fields('m', array('rmid'))
+            ->condition('module', 'webform')
+            ->condition('drupal_id', $submission->sid)
+            ->condition('delta', $node->nid)
+            ->execute()
+            ->fetchField();
+  if ($rmid) {
+    entity_delete('salesforce_sync_map', $rmid);
+  }
+}
 
 /**
  * Implements hook_entity_info().

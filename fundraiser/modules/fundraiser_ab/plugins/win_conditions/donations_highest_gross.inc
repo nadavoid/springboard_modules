@@ -33,10 +33,9 @@ function fundraiser_ab_donations_highest_gross_config_summary($config) {
 function fundraiser_ab_donations_highest_gross_current_value($webform_nid, $webform_details, $node) {
   // Get total, currency-agnostic donation amount for the current webform:
   $target_sum_donation = _fundraiser_ab_donations_highest_gross_get_sum_donation($webform_nid);
-
   foreach ($node->included_webforms as $nid => $details) {
     $this_sum_donation = _fundraiser_ab_donations_highest_gross_get_sum_donation($nid);
-    if ($this_sum_donation > $target_sum_donation) {
+    if ($this_sum_donation > $target_sum_donation || ($target_sum_donation === 0 && $this_sum_donation === 0)) {
       return 0;
     }
   }

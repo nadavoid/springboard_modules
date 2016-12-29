@@ -1094,6 +1094,7 @@ function webform_ab_form_clone_settings_alter(&$form, &$form_state, $form_id) {
  */
 function webform_ab_form_alter(&$form, &$form_state, $form_id) {
   if (isset($_SESSION['webform_ab'])) {
+
     if (is_array($_SESSION['webform_ab']['webform_for_tests'])) {
       foreach ($_SESSION['webform_ab']['webform_for_tests'] as $test_nid => $webform_nid) {
         $test_webform_id = 'webform_client_form_' . $webform_nid;
@@ -1231,25 +1232,8 @@ function _webform_ab_check_for_win($test_nid) {
 
     // Check win thresholds to make sure that all webforms meet the thresholds
     // before checking the win conditions
-    $meets_thresholds = TRUE;
-    foreach ($node->included_webforms as $webform_nid => $details) {
-      // Check each threshold in use on the Multivariate Test node
-      foreach ($node->win_thresholds as $plugin_key => $plugin_config) {
-        // Load the plugin details from
-        $plugin = _webform_ab_get_win_threshold_plugin($plugin_key);
-        if ($win_check = ctools_plugin_get_function($plugin, 'check criteria')) {
-          // Load the config for this plugin from the node
-          $plugin_config = $node->win_thresholds[$plugin_key];
-          // Run the check on this win threshold
-          if (!$win_check($plugin_config, $details, $node)) {
-            // Did NOT pass this threshold, so the win conditions should NOT be
-            // checked.
-            $meets_thresholds = FALSE;
-            continue 2;
-          }
-        }
-      }
-    }
+    $meets_thresholds = _webform_ab_check_threshold($node);
+
     // If any of the thresholds failed, don't run the win conditions
     if (!$meets_thresholds) {
       return FALSE;
@@ -1280,6 +1264,29 @@ function _webform_ab_check_for_win($test_nid) {
   }
 }
 
+function _webform_ab_check_threshold($node) {
+  $meets_thresholds = TRUE;
+  foreach ($node->included_webforms as $webform_nid => $details) {
+    // Check each threshold in use on the Multivariate Test node
+    foreach ($node->win_thresholds as $plugin_key => $plugin_config) {
+      // Load the plugin details from
+      $plugin = _webform_ab_get_win_threshold_plugin($plugin_key);
+      if ($win_check = ctools_plugin_get_function($plugin, 'check criteria')) {
+        // Load the config for this plugin from the node
+        $plugin_config = $node->win_thresholds[$plugin_key];
+        // Run the check on this win threshold
+        if (!$win_check($plugin_config, $details, $node)) {
+          // Did NOT pass this threshold, so the win conditions should NOT be
+          // checked.
+          $meets_thresholds = FALSE;
+          continue 2;
+        }
+      }
+    }
+  }
+
+  return $meets_thresholds;
+}
 /**
  * Process a test-winning form
  *

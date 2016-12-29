@@ -93,7 +93,7 @@
       });
 
       // Only on default form output, not on springboard.
-      if ($('div.form-item').length) {
+      if ($('div.form-item').length && $('.fundraiser-donation-form').length) {
       // Add classes to enhance default forms that don't have bootstrap classes.
         $('.fundraiser-donation-form').validate({
           onfocusout: function (element) {

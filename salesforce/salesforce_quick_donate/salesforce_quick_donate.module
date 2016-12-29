@@ -37,16 +37,6 @@ function salesforce_fundraiser_quick_donate_optout($card_id, $uid) {
 }
 
 /**
- * Implements hook_entity_delete().
- */
-function salesforce_quick_donate_entity_delete($entity, $type) {
-  if ($type == 'commerce_cardonfile') {
-    // Send the subscription back to Salesforce with the opt-out date set.
-    salesforce_quick_donate_optout($entity->card_id);
-  }
-}
-
-/**
  * Generates and queues a new quick donate subscription object.
  */
 function salesforce_quick_donate_optin($account, $donation, $card_id) {
@@ -58,14 +48,14 @@ function salesforce_quick_donate_optin($account, $donation, $card_id) {
   $sobject->fields = array(
     'Payment_Token_Id__c' => $card_id,
     'Payment_Method__c' => $card_on_file->payment_method,
-    'Payment_Gateway__c' => $card_on_file->instance_id,
+    'Payment_Gateway__c' => !empty($donation->gateway['title']) ? $donation->gateway['title'] : $card_on_file->instance_id,
     'Payment_Token__c' => $card_on_file->remote_id,
     'CC_Type__c' => $card_on_file->card_type,
     'Donor_Name__c' => $card_on_file->card_name,
     'CC_Last_4__c' => $card_on_file->card_number,
     'CC_Exp_Month__c' => $card_on_file->card_exp_month,
     'CC_Exp_Year__c' => $card_on_file->card_exp_year,
-    'Opt_In_Date__c' => $card_on_file->created,
+    'Activation_Date__c' => $card_on_file->created,
     'Default_Payment_Method__c' => $card_on_file->instance_default,
     'Contact__c' => sprintf('[Contact:user:%d]', $account->uid),
     'Donation__c' => sprintf('[Opportunity:donation:%d]', $donation->did),
@@ -97,7 +87,7 @@ function salesforce_quick_donate_optout($card_id) {
   $sobject = new stdClass();
   $sobject->type = 'Quick_Donate_Subscription__c';
   $sobject->fields = array(
-    'Opt_Out_Date__c' => time(),
+    'Deactivation_Date__c' => time(),
     'Default_Payment_Method__c' => FALSE,
   );
 

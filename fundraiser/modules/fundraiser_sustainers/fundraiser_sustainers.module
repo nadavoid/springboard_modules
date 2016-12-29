@@ -1191,20 +1191,19 @@ function fundraiser_sustainers_fundraiser_donation_delete($donation) {
 /**
  * Helper function, kick off recurring donations for payment. Called on cron usually.
  */
-function fundraiser_sustainers_process_recurring_donations() {
+function fundraiser_sustainers_process_recurring_donations($limit = 200) {
   // Provide a hook to allow for modules to respond.
   module_invoke_all('fundraiser_donation_recurring');
   $log = array(
     'successes' => 0,
     'fails' => 0,
   );
-  $donations = _fundraiser_sustainers_cron_get_recurring();
+  $donations = _fundraiser_sustainers_cron_get_recurring($limit);
   $sustainer_key = fundraiser_sustainers_get_sustainer_key_value();
 
   // Loop over the found orders
   foreach ($donations as $recurring) {
     try {
-
       fundraiser_sustainers_process_single_recurring_donation($log, $recurring, $sustainer_key);
     }
     catch (Exception $e) {
@@ -2319,7 +2318,7 @@ function fundraiser_sustainers_edit_form($did) {
     // Display the billing update form only if the update callback for the
     // gatway has been defined.
     $billing_update_form = '';
-    if (isset($donation->gateway['update callback'])) {
+    if (isset($next_donation->gateway['update callback'])) {
       $billing_update_form_array = drupal_get_form('fundraiser_update_billing_form', $data);
       $billing_update_form_array['#attached']['js'][3]['data']['fundraiser']['js_validation_settings']['card_cvv']->required = FALSE;
       $billing_update_form_array['#attached']['js'][3]['data']['fundraiser']['js_validation_settings']['card_number']->required = FALSE;
@@ -2969,7 +2968,8 @@ function _fundraiser_sustainers_create_future_orders($donation, $month, $year, $
   unset($existing_recurring[0]); // 0 is the master, we don't need to count it.
 
   $processed = 0;
-  while ($processed <= $schedule->scheduleAmount() && $processed <= $schedule->scheduleLimit()) {
+  $limit = $schedule->scheduleLimit();
+  while ($processed <= $schedule->scheduleAmount() && $processed <= $limit) {
     // Set the increment value.
     $increment = $processed + 1;
 
@@ -3040,6 +3040,8 @@ function _fundraiser_sustainers_create_future_orders($donation, $month, $year, $
       // in the series keeps it in sync with the month as we advance through
       // the existing orders.
       $previous_charge = $schedule->advanceDate($increment);
+      // Don't allow existing donations to affect the sustainer limit.
+      $limit++;
     }
 
     // Update the processed counter.
@@ -4362,8 +4364,8 @@ function fundraiser_sustainers_preprocess_html(&$vars) {
  *   Part of the sustainer record for additional logging.
  */
 function fundraiser_sustainers_processing_exception(Exception $e, $sustainer) {
-  $message = 'Exception thrown while processing a sustainer. Sustainer ID: %did. %type: !message in %function (line %line of %file).';
-  $variables = array('%did' => $sustainer->did);
+  $message = 'Exception thrown while processing a sustainer - did=%did, gateway=%gateway, uid=%uid, %type=!message in %function (line %line of %file).';
+  $variables = array('%did' => $sustainer->did, '%gateway' => $sustainer->gateway, '%uid' => $sustainer->uid);
   watchdog_exception('fundraiser_sustainers', $e, $message, $variables);
 }
 

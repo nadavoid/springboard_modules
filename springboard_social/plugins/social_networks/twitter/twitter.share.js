@@ -19,9 +19,8 @@
               text: Drupal.settings.sb_social.twitter_message
             }
           },
-        }
+        };
       }
     }
   };
 })(jQuery);
-

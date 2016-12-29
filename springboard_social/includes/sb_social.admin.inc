@@ -9,16 +9,14 @@
  * Admin settings form.
  */
 function sb_social_admin() {
-  $form['springboard_social_addthis_profile_id'] = array(
-    '#type' => 'textfield',
-    '#title' => t('AddThis Profile ID'),
-    '#default_value' => variable_get('springboard_social_addthis_profile_id', ''),
-    '#required' => TRUE,
-  );
+
+  $form['#attached']['js'][] = drupal_get_path('module', 'sb_social') . '/scripts/sb-social-admin.js';
+
   $form['springboard_social_debug_mode'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enable debug mode'),
     '#default_value' => variable_get('springboard_social_debug_mode', 0),
+    '#description' => t('Disable the short URL conversion')
   );
 
   // Begin settings for users to customize block title and description.
@@ -68,21 +66,42 @@ function sb_social_admin() {
     '#options' => $services,
     '#default_value' => variable_get('springboard_social_services', array()),
   );
-  $form['springboard_social_addthis_profile_id'] = array(
-    '#type' => 'textfield',
-    '#title' => t('AddThis Profile ID'),
-    '#default_value' => variable_get('springboard_social_addthis_profile_id', ''),
-  );
 
   // Each plugin should implement an an admin settings callback that outputs
   // the specific form fields required by the service. These fields are used to
   // configure sitewide defaults for share content.
   foreach ($plugins as $service => $plugin) {
-    $func = isset($plugin['admin_settings']) ? $plugin['admin_settings'] : FALSE;
-    if (function_exists($func)) {
+    $func = isset($plugin['admin_settings']) ? $plugin['admin_settings'] : '';
+    if (!empty($func) && function_exists($func)) {
       $func($form);
     }
   }
+
+  $form['addthis'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('AddThis'),
+  );
+
+  $form['addthis']['springboard_social_use_addthis'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use AddThis'),
+    '#default_value' => variable_get('springboard_social_use_addthis', 0),
+    '#description' => t("If checked, Springboard Social will use AddThis instead of Springboard's native  social integration.")
+  );
+
+  $form['addthis']['springboard_social_addthis_profile_id'] = array(
+    '#type' => 'textfield',
+    '#title' => t('AddThis Profile ID'),
+    '#default_value' => variable_get('springboard_social_addthis_profile_id', ''),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="springboard_social_use_addthis"]' => array('checked' => TRUE),
+      ),
+      'required' => array(
+        ':input[name="springboard_social_use_addthis"]' => array('checked' => TRUE),
+      ),
+    ),
+  );
 
   if (module_exists('market_source')) {
     $form['services']['market_source'] = array(
@@ -496,6 +515,7 @@ function sb_social_node_settings($form, $edit, $node) {
     '#type' => 'submit',
     '#value' => t('Save'),
   );
+
   $form['#submit'][] = 'sb_social_settings_submit';
   return $form;
 }

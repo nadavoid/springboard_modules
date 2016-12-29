@@ -245,18 +245,13 @@ function fundraiser_quick_donate_springboard_hmac_failure($reason, $payload) {
   }
 
   $payload = _fundraiser_quick_donate_hmac_mapping($payload);
-  $goto_nid = _fundraiser_quick_donate_get_nid($payload);
-
-  // Make sure the user account still exists. If it doesn't this function will
-  // redirect to the node id provided.
-  _fundraiser_quick_donate_springboard_hmac_check_user($goto_nid, $payload);
+  $nid = _fundraiser_quick_donate_get_nid($payload);
 
   // If the payload didn't validate any number of things could have happened,
   // therefore let's fallback to cookie data if available and prompt the user
   // to login.
   $cookie = springboard_cookie_get_cookie();
-  $nid = _fundraiser_quick_donate_get_nid($payload);
-  if (!empty($cookie['uid']) && $cookie['uid'] == $payload['uid']) {
+  if (!empty($cookie['uid'])) {
     drupal_goto('/user', array(
       'query' => array(
         'destination' => drupal_get_path_alias('node/' . $nid),

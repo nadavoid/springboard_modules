@@ -1188,7 +1188,8 @@ function springboard_p2p_format_progress($progress, $type, $include_units = TRUE
 
     case 'amount':
       if ($include_units) {
-        $output .= '$ ';
+        // Set the currency symbol prefix, excluding a space separator for page springboard/p2p:
+        $output .= '$' . (current_path() == 'admin/springboard/p2p' ? '' : ' ');
       }
       $output .= number_format($progress['amount'], 2);
       break;

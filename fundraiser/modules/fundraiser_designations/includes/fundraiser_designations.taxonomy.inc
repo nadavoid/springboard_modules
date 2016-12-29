@@ -50,6 +50,7 @@ function _fundraiser_designations_install_vocab_fd_designation_categories($produ
       }
     }
     _fundraiser_designations_install_taxonomy_fields($product_type);
+    _fundraiser_designations_install_lock_fields();
   }
 }
 
@@ -160,4 +161,110 @@ function _fundraiser_designations_install_taxonomy_field_definitions($product_ty
   );
 
   return $fields;
+}
+
+/**
+ * Add a checkbox to the designations category.
+ */
+function fundraiser_designations_taxonomy_category_field_bases() {
+  $field_bases = array();
+
+  $field_bases['field_fd_lock_donation_amount'] = array(
+    'active' => 1,
+    'cardinality' => 2,
+    'deleted' => 0,
+    'entity_types' => array(),
+    'field_name' => 'field_fd_lock_donation_amount',
+    'foreign keys' => array(),
+    'indexes' => array(
+      'value' => array(
+        0 => 'value',
+      ),
+    ),
+    'locked' => 0,
+    'module' => 'list',
+    'settings' => array(
+      'allowed_values' => array(
+        1 => 'Lock recurring donation amounts of products with this term.',
+      ),
+      'allowed_values_function' => '',
+    ),
+    'translatable' => 0,
+    'type' => 'list_text',
+  );
+
+  return $field_bases;
+}
+
+/**
+ * Add a checkbox to the designations category.
+ */
+function fundraiser_designations_taxonomy_category_field_instances() {
+  $field_instances = array();
+
+  $field_instances['field_fd_lock_donation_amount'] = array(
+    'bundle' => 'fd_designation_categories',
+    'default_value' => NULL,
+    'deleted' => 0,
+    'description' => 'Don\'t allow donors to update the amount of their recurring donations to funds in this category.',
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'module' => 'list',
+        'settings' => array(),
+        'type' => 'list_default',
+        'weight' => 1,
+      ),
+    ),
+    'entity_type' => 'taxonomy_term',
+    'field_name' => 'field_fd_lock_donation_amount',
+    'label' => 'Lock Recurring Donation Amount',
+    'required' => 0,
+    'settings' => array(
+      'user_register_form' => FALSE,
+    ),
+    'widget' => array(
+      'active' => 1,
+      'module' => 'options',
+      'settings' => array(),
+      'type' => 'options_buttons',
+      'weight' => 1,
+    ),
+  );
+
+  // Translatables
+  // Included for use with string extractors like potx.
+  t('Don\'t allow donors to update the amount of their recurring donations to funds in this category.');
+  t('Lock Recurring Donation Amount');
+
+  return $field_instances;
+}
+
+/**
+ * Add a checkbox to the designations category.
+ */
+function _fundraiser_designations_install_lock_fields() {
+  $already_exists = FALSE;
+  foreach (taxonomy_get_vocabularies() as $vocab) {
+    if ($vocab->machine_name == 'fd_designation_categories') {
+      $already_exists = TRUE;
+      break;
+    }
+  }
+
+  if ($already_exists) {
+    $fields = fundraiser_designations_taxonomy_category_field_bases();
+    $instances = fundraiser_designations_taxonomy_category_field_instances();
+    foreach ($fields as $key => $values) {
+      $instance = $instances[$key];
+      $base = field_info_field($key);
+      $term = field_info_instance('taxonomy_term', $key, 'fd_designation_categories');
+      if (empty($base)) {
+        field_create_field($fields[$key]);
+      }
+      if (empty($term)) {
+        field_create_instance($instance);
+      }
+    }
+  }
 }

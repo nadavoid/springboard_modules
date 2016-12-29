@@ -41,19 +41,20 @@ function fundraiser_designations_views_default_views() {
     'field_fd_designation_categories' => 'field_fd_designation_categories',
     'delete_product' => 'edit_product',
     'edit_product' => 'edit_product',
+    'field_internal_title' => 'field_internal_title',
   );
   $handler->display->display_options['style_options']['default'] = 'product_id';
   $handler->display->display_options['style_options']['info'] = array(
     'product_id' => array(
       'sortable' => 1,
-      'default_sort_order' => 'desc',
+      'default_sort_order' => 'asc',
       'align' => '',
       'separator' => '',
       'empty_column' => 0,
     ),
     'title' => array(
       'sortable' => 1,
-      'default_sort_order' => 'desc',
+      'default_sort_order' => 'asc',
       'align' => '',
       'separator' => '',
       'empty_column' => 0,
@@ -71,6 +72,13 @@ function fundraiser_designations_views_default_views() {
     'edit_product' => array(
       'align' => '',
       'separator' => ' | ',
+      'empty_column' => 0,
+    ),
+    'field_internal_title' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
       'empty_column' => 0,
     ),
   );
@@ -101,6 +109,14 @@ function fundraiser_designations_views_default_views() {
   $handler->display->display_options['fields']['edit_product']['table'] = 'commerce_product';
   $handler->display->display_options['fields']['edit_product']['field'] = 'edit_product';
   $handler->display->display_options['fields']['edit_product']['label'] = 'Actions';
+  /* Field: Commerce Product: Internal Title */
+  $handler->display->display_options['fields']['field_internal_title']['id'] = 'field_internal_title';
+  $handler->display->display_options['fields']['field_internal_title']['table'] = 'field_data_field_internal_title';
+  $handler->display->display_options['fields']['field_internal_title']['field'] = 'field_internal_title';
+  /* Sort criterion: Commerce Product: Title */
+  $handler->display->display_options['sorts']['title']['id'] = 'title';
+  $handler->display->display_options['sorts']['title']['table'] = 'commerce_product';
+  $handler->display->display_options['sorts']['title']['field'] = 'title';
   /* Filter criterion: Commerce Product: Type */
   $handler->display->display_options['filters']['type']['id'] = 'type';
   $handler->display->display_options['filters']['type']['table'] = 'commerce_product';
@@ -143,6 +159,24 @@ function fundraiser_designations_views_default_views() {
     3 => 0,
     4 => 0,
     5 => 0,
+  );
+  /* Filter criterion: Commerce Product: Status */
+  $handler->display->display_options['filters']['status']['id'] = 'status';
+  $handler->display->display_options['filters']['status']['table'] = 'commerce_product';
+  $handler->display->display_options['filters']['status']['field'] = 'status';
+  $handler->display->display_options['filters']['status']['value'] = '1';
+  $handler->display->display_options['filters']['status']['exposed'] = TRUE;
+  $handler->display->display_options['filters']['status']['expose']['operator_id'] = '';
+  $handler->display->display_options['filters']['status']['expose']['label'] = 'Active';
+  $handler->display->display_options['filters']['status']['expose']['operator'] = 'status_op';
+  $handler->display->display_options['filters']['status']['expose']['identifier'] = 'status';
+  $handler->display->display_options['filters']['status']['expose']['remember_roles'] = array(
+    2 => '2',
+    1 => 0,
+    3 => 0,
+    4 => 0,
+    5 => 0,
+    6 => 0,
   );
 
   /* Display: Page */

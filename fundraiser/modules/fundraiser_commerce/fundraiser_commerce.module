@@ -1970,6 +1970,9 @@ function _fundraiser_commerce_get_cc_type($cardnumber) {
   elseif ( $len == 16 && drupal_substr($cardnumber, 0, 1) == '5' ) {
     $cardtype = 'mc';
   }
+  elseif ( $len == 16 && (int)drupal_substr($cardnumber, 0, 6) >= 222100 && (int)drupal_substr($cardnumber, 0, 6) <= 272099) {
+    $cardtype = 'mc';
+  }
   elseif ( ($len == 16 || $len == 13) && drupal_substr($cardnumber, 0, 1) == '4' ) {
     $cardtype = 'visa';
   }
@@ -2340,16 +2343,24 @@ function fundraiser_commerce_commerce_paypal_ipn_process($order, $payment_method
   }
   if (!empty($order) && !empty($payment_method) && !empty($ipn)) {
     if ($ipn['payment_status'] == 'Completed' && !empty($order)) {
+      $log = array(
+        'start' => microtime(TRUE),
+        'transaction_type' => 'charge',
+      );
       // Grab the donation object from the order.
       $donation = fundraiser_donation_get_donation($order->order_id);
       // Update the donation and order data and result values based on the success.
       _fundraiser_commerce_update_donation_result_data($donation, TRUE);
       // Finish up any last cleanup for this transaction.
       fundraiser_commerce_fundraiser_donation_after_process($donation);
-      // Save the donation
+      // Save the donation.
       fundraiser_donation_update($donation);
       // Finish up the submission to kick off success / decline triggers.
       _fundraiser_donation_submit_after_process($donation);
+      // Log the donation here, because donations processed offsite do not make
+      // it to this point in fundraiser_donation_process().
+      $log['end'] = microtime(TRUE);
+      fundraiser_log_donation_processing($donation, $log);
     }
     elseif ($ipn['payment_status'] == 'Refunded') {
       // commerce_paypal_wps handles the Commerce refund transactions. This is here to record the fundrasier_refund item

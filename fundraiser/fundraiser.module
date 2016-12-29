@@ -1713,6 +1713,7 @@ function fundraiser_donation_validate(&$form, &$form_state) {
  * one donation processed per submission.
  */
 function fundraiser_donation_submit(&$form, &$form_state) {
+
   // Create the donation object and load it with the submitted information for the donation.
   $donation = new stdClass();
   // Using user load to avoid user object being carried by ref around.
@@ -1994,6 +1995,8 @@ function fundraiser_donation_process($donation) {
   );
 
   // Pass this down to the processing module.
+  // Note, if an implementation of this hook redirects users offsite (like
+  // PayPal WPS), the lines below this one may not execute.
   module_invoke_all('fundraiser_donation_process', $donation);
 
   // Mark the end time of the processing.
@@ -3110,7 +3113,7 @@ function _fundraiser_get_donation_gateway($did) {
   $found_gateway = db_query('SELECT d.gateway FROM {fundraiser_donation} d ' .
     'WHERE d.did = :did', array(':did' => $did))->fetchField();
   // Now ask if any other module wants to override this result.
-  module_invoke('fundraiser_get_donation_gateway_alter', $did, $found_gateway);
+  drupal_alter('fundraiser_get_donation_gateway', $found_gateway);
   // Now translate that into something we can use by getting the rest of the dateway info.
   if (isset($found_gateway)) {
     return _fundraiser_gateway_info($found_gateway);
@@ -4043,9 +4046,13 @@ function _fundraiser_update_billing_form_commerce_cardonfile_card_form_submit($f
         $confirm_message = t('A new card has been added.');
       }
       else {
+        // Re-set the card type if the number changed.
+        $card->card_type = commerce_payment_validate_credit_card_type($values['credit_card']['number'], array_keys(commerce_payment_credit_card_types()));
+
         $card_save = $card;
         $confirm_message = t('The card has been updated.');
       }
+
       commerce_cardonfile_save($card_save);
       drupal_set_message($confirm_message);
       $form_state['values']['cardonfile']['old_card'] = clone $card;

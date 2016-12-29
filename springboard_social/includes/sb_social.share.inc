@@ -1,24 +1,22 @@
 <?php
 
 /**
- * @file share event tracking
+ * @file Share event tracking.
  */
 
 
 /**
- * Track individual share event
+ * Track individual share event.
  *
- * @param $service
- * Social media service (facebook, twitter)
- *
- * @param $id
- * id associated with share event, submission id for webforms, node id for node pages, path for path-based shares.
- *
- * @param $type
- * ID type, sid, nid, or path
- *
+ * @param string $service
+ *   Social media service (facebook, twitter).
+ * @param int $id
+ *   Id associated with share event, submission id for webforms,
+ *   node id for node pages, path for path-based shares.
+ * @param string $type
+ *    ID type, sid, nid, or path.
  * @param $market_source
- * Market source value for the share event.
+ *   Market source value for the share event.
  */
 function sb_social_share_tracker($service, $id, $type, $market_source) {
   $enabled_services = sb_social_get_enabled_services();

@@ -45,6 +45,13 @@ function fundraiser_commerce_cardonfile_views_default_views_alter(&$views) {
   $handler->display->display_options['style_options']['default_row_class'] = FALSE;
   $handler->display->display_options['style_options']['row_class_special'] = FALSE;
   $handler->display->display_options['row_plugin'] = 'fields';
+  /* No results behavior: Global: Text area */
+  $handler->display->display_options['empty']['area']['id'] = 'area';
+  $handler->display->display_options['empty']['area']['table'] = 'views';
+  $handler->display->display_options['empty']['area']['field'] = 'area';
+  $handler->display->display_options['empty']['area']['empty'] = TRUE;
+  $handler->display->display_options['empty']['area']['content'] = 'You have no cards available to view.';
+  $handler->display->display_options['empty']['area']['format'] = 'filtered_html';
   /* Relationship: Commerce Card on File: User uid */
   $handler->display->display_options['relationships']['user']['id'] = 'user';
   $handler->display->display_options['relationships']['user']['table'] = 'commerce_cardonfile';
@@ -110,7 +117,7 @@ function fundraiser_commerce_cardonfile_views_default_views_alter(&$views) {
   $handler->display->display_options['arguments']['user']['id'] = 'user';
   $handler->display->display_options['arguments']['user']['table'] = 'commerce_cardonfile';
   $handler->display->display_options['arguments']['user']['field'] = 'user';
-  $handler->display->display_options['arguments']['user']['default_action'] = 'not found';
+  $handler->display->display_options['arguments']['user']['default_action'] = 'empty';
   $handler->display->display_options['arguments']['user']['exception']['value'] = '';
   $handler->display->display_options['arguments']['user']['default_argument_type'] = 'fixed';
   $handler->display->display_options['arguments']['user']['summary']['number_of_records'] = '0';

@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Plugin for AddThis + Twitter.
+ * Plugin for Twitter.
  */
 
 $plugin = array(
@@ -13,7 +13,6 @@ $plugin = array(
   'process' => 'sb_social_twitter_process_settings',
   'admin_setings_submit' => 'sb_social_twitter_admin_settings_submit',
   'share_config' => 'sb_social_twitter_share_js_config',
-  'js' => 'plugins/social_networks/twitter/twitter.share.js',
   'defaults' => 'sb_social_twitter_defaults',
   'uninstall' => 'sb_social_twitter_uninstall',
   'token_info' => sb_social_twitter_token_info(),
@@ -21,12 +20,20 @@ $plugin = array(
   'button_contents' => sb_social_twitter_custom_button_contents(),
 );
 
+$use_addthis = variable_get('springboard_social_use_addthis', FALSE);
+if ($use_addthis) {
+  $plugin['js'] = 'plugins/social_networks/email/email.share.js';
+}
+else {
+  $plugin['js'] = FALSE;
+}
+
+
 function sb_social_twitter_token_info() {
   $twitter_tokens['twitter_share_link'] = array(
     'name' => t('Twitter Share link'),
-    'description' => t('AddThis Twitter tweet link'),
+    'description' => t('Twitter tweet link'),
   );
-  // twitter message
   $twitter_tokens['twitter_message'] = array(
     'name' => t('Twitter tweet message'),
     'description' => t('Message content for Twitter tweet'),
@@ -39,17 +46,21 @@ function sb_social_twitter_token_replace($tokens, &$replacements, $settings, $no
     switch ($key) {
       case 'twitter_share_link':
         $vars['service'] = 'twitter';
-        $vars['extra'] = '';
         $vars['contents'] = sb_social_twitter_custom_button_contents();
-
-        if ($extra && function_exists($extra)) {
-          $vars['extra'] = $extra($settings['data']['twitter'], $node, $submission_id);
+        $use_addthis = variable_get('springboard_social_use_addthis', FALSE);
+        if ($use_addthis) {
+          $vars['extra'] = '';
+          if ($extra && function_exists($extra)) {
+            $vars['extra'] = $extra($settings['data']['twitter'], $node, $submission_id);
+          }
         }
+
         $button = theme('sb_social_share_button', $vars);
         $replacements[$token] = theme('sb_social_share', array('buttons' => $button));
         break;
+
       case 'twitter_message':
-        $replacements[$token] =  !empty($settings['data']['twitter']['message']) ? _sb_social_replace_tokens($settings['data']['twitter']['message'], $node, $submission_id) : '';
+        $replacements[$token] = !empty($settings['data']['twitter']['message']) ? _sb_social_replace_tokens($settings['data']['twitter']['message'], $node, $submission_id) : '';
         break;
     }
   }
@@ -160,12 +171,17 @@ function sb_social_twitter_custom_button_contents() {
   $contents = '';
   $icon = variable_get('springboard_social_twitter_custom_icon', '');
   $text = variable_get('springboard_social_twitter_custom_text', '');
+  $use_addthis = variable_get('springboard_social_use_addthis', FALSE);
+
   if (!empty($icon)) {
     $icon_file = file_load($icon);
     if (isset($icon_file->uri)) {
       $url = file_create_url($icon_file->uri);
       $contents .= '<img src="' . $url . '">';
     }
+  }
+  elseif (empty($icon) && empty($text) && !$use_addthis) {
+    $contents .= '<img src="' . base_path() . drupal_get_path('module', 'sb_social') . '/img/tr.png">';
   }
   if ($text) {
     $contents .= '<span>' . $text . '</span>';

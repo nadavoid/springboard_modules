@@ -370,7 +370,7 @@
     }
     var amtSel = typeof(amt) !== 'undefined';
 
-    var message = 'ok';
+    var message = '';
     if (!fundSel &&!amtSel) {
       message = 'Please choose a fund and select an amount.';
     }
@@ -392,6 +392,10 @@
           message += ' Below the minumum amount.'
         }
       }
+    }
+
+    if (message == '') {
+      message = 'ok';
     }
 
     var errorContain = $("#designation-group-" + fundGroupId + " .designation-group-title");

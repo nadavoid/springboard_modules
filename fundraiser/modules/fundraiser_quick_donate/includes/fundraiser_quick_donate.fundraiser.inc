@@ -178,7 +178,7 @@ function fundraiser_quick_donate_fundraiser_donation_form($form, $form_state) {
     }
     else {
       $form['submitted']['payment_information']['payment_fields'][$gateway_type]['cardonfile'] = array(
-        '#type' => 'value',
+        '#type' => 'hidden',
         '#value' => 'new',
       );
     }
@@ -305,7 +305,10 @@ function _fundraiser_quick_donate_checkout_form_hide_payment_fields(&$element) {
       $element[$child]['#states'] = array();
     }
 
-    $element[$child]['#states']['visible'][':input[name$="[cardonfile]"]'] = array('value' => 'new');
+    $element[$child]['#states']['visible']['input[name$="[cardonfile]"]'] = array('value' => 'new');
+    $element[$child]['#states']['visible']['input.fundraiser-payment-methods'] = array('value' => 'credit');
+    $element[$child]['#states']['optional']['input[type="radio"].fundraiser-payment-methods'] = array('!value' => 'credit');
+    $element[$child]['#states']['required']['input[type="hidden"].fundraiser-payment-methods'] = array('value' => 'credit');
 
     $grandchildren = element_get_visible_children($element[$child]);
     if (count($grandchildren)) {
@@ -326,7 +329,15 @@ function fundraiser_quick_donate_fundraiser_donation_submit_alter($form, $form_s
     $donation->data['is_quick_donate'] = TRUE;
     if (!empty($card)) {
       $donation->donation['payment_fields'][$payment_info['payment_method']]['card_number'] = $card->card_number;
-      $donation->donation['payment_fields'][$payment_info['payment_method']]['card_type'] = $card->card_type;
+
+      module_load_include('inc', 'commerce_payment', 'includes/commerce_payment.credit_card');
+      $card_types = commerce_payment_credit_card_types();
+      $card_type = $card->card_type;
+      if (!empty($card_types[$card_type])) {
+        $card_type = $card_types[$card_type];
+      }
+      $donation->donation['payment_fields'][$payment_info['payment_method']]['card_type'] = $card_type;
+
       $donation->donation['payment_fields'][$payment_info['payment_method']]['card_expiration_month'] = $card->card_exp_month;
       $donation->donation['payment_fields'][$payment_info['payment_method']]['card_expiration_year'] = $card->card_exp_year;
       $donation->donation['payment_fields'][$payment_info['payment_method']]['quickdonate'] = TRUE;
