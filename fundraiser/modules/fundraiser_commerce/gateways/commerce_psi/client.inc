@@ -24,7 +24,8 @@ class PsiClient {
 
     // Create a new soapclient
     try {
-      $this->soapclient = new SoapClient($this->wsdl);
+      $options = array('connection_timeout' => 10);
+      $this->soapclient = new SoapClient($this->wsdl, $options);
     }
     catch (Exception $ex) {
       watchdog('commerce_psi', 'Payment Services wsdl is not available.',
