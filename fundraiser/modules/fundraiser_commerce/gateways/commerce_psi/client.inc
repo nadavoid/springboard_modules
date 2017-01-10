@@ -16,7 +16,7 @@ class PsiClient {
       $this->wsdl = 'https://client.paymentsolutionsinc.net/Services/Payment/PsiWcfService.svc?wsdl';
     }
     elseif ($account['txn_mode'] == COMMERCE_PSI_MODE_STAGING) {
-      $this->wsdl = 'https://client.paymentsolutionsinc.net/Staging/Services/Payment/PsiWcfService.svc?wsdl';
+      $this->wsdl = 'https://staging.paymentsolutionsinc.net/Services/Aspca/Payment/PsiWcfService.svc?wsdl';
     }
     else {
       $this->wsdl = 'https://psiwebdev.paymentsolutionsincdev.net/Services/Payment/PsiWcfService.svc?wsdl';
