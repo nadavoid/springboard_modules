@@ -24,7 +24,7 @@ class PsiClient {
 
     // Create a new soapclient
     try {
-      $options = array('connection_timeout' => 10);
+      $options = array('connection_timeout' => 30);
       $this->soapclient = new SoapClient($this->wsdl, $options);
     }
     catch (Exception $ex) {
