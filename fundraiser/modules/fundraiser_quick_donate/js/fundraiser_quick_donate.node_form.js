@@ -64,7 +64,7 @@
         }
 
         if (!$gateways_enabled.credit || ($gateways_enabled.credit && !gateway_available.credit)) {
-          $quickdonate.find('input[type=checkbox]').attr('disabled', 'disabled');
+          $quickdonate.find('input[type=checkbox]').attr('checked', false).attr('disabled', 'disabled');
           $quickdonate.nextAll('.form-item, .form-wrapper').hide();
           $('#edit-quickdonate-message-container').hide();
           $note.show();
@@ -86,9 +86,7 @@
       };
 
       $quickdonate.find('input[type=checkbox]').on('change', function() {
-        if ($(this).is(':checked')) {
-          wasChecked = true;
-        }
+        wasChecked = $(this).is(':checked');
       });
 
       $gateways['credit'].add('#edit-gateways-credit-status').add('#edit-gateways-credit-id').on('change', function() {

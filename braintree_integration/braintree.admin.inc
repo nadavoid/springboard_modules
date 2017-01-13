@@ -58,7 +58,7 @@ function braintree_test_connection_submit($form, &$form_state) {
     drupal_set_message(t('Braintree connection succeeded.'));
   }
   catch (Exception $e) {
-    $error_message = braintree_exception_error_message($e, TRUE);
+    $error_message = braintree_report_error($e, TRUE);
     $message = t('Braintree connection failed: @message. Please check Braintree gateway credentials.', array(
       '@message' => $error_message,
     ));

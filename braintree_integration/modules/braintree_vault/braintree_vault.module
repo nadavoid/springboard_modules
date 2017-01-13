@@ -475,7 +475,7 @@ function braintree_vault_customer_save($customer_data, $context = array(), &$err
   }
   catch (Exception $e) {
     braintree_last_error($e);
-    $error_message = braintree_exception_error_message($e);
+    $error_message = braintree_report_error($e);
     return FALSE;
   }
   braintree_df($result, 'braintree_vault_customer_save $result');
@@ -489,7 +489,7 @@ function braintree_vault_customer_save($customer_data, $context = array(), &$err
     return $result;
   }
 
-  $error_message = braintree_result_error_message($result);
+  $error_message = braintree_report_result($result);
   return FALSE;
 }
 
@@ -555,7 +555,7 @@ function braintree_vault_payment_method_delete($payment_method, $context = array
     $result = Braintree_PaymentMethod::delete($payment_method->token);
   }
   catch (Exception $e) {
-    $error_message = braintree_exception_error_message($e);
+    $error_message = braintree_report_error($e);
     return FALSE;
   }
 
@@ -572,7 +572,7 @@ function braintree_vault_payment_method_delete($payment_method, $context = array
     return $result;
   }
 
-  $error_message = braintree_result_error_message($result);
+  $error_message = braintree_report_result($result);
   return FALSE;
 }
 
@@ -602,7 +602,7 @@ function braintree_vault_payment_method_make_default($payment_method, $context =
     ));
   }
   catch (Exception $e) {
-    $error_message = braintree_exception_error_message($e);
+    $error_message = braintree_report_error($e);
     return FALSE;
   }
 

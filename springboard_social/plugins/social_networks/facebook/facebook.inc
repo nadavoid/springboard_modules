@@ -84,7 +84,7 @@ function sb_social_facebook_token_replace($tokens, &$replacements, $settings, $n
         if ($use_addthis) {
           $vars['extra'] = '';
           if ($extra && function_exists($extra)) {
-            $vars['extra'] = $extra($settings['data']['twitter'], $node, $submission_id);
+            $vars['extra'] = $extra($settings['data']['facebook']);
           }
         }
         $button = theme('sb_social_share_button', $vars);

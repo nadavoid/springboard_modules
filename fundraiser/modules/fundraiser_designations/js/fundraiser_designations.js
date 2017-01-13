@@ -56,11 +56,12 @@
       }
     }
     // Landing page query params are present in Drupal.settings.
-    else if(typeof(settings.fundraiser_designations) != "undefined") {
+    if(typeof(settings.fundraiser_designations) != "undefined" && location.hash != '#fdprocessed') {
       var sfd = settings.fundraiser_designations;
+      var cartEmpty = $('input[name$="[fund_catcher]"]').val().replace(/&quot;/g, '"').length;
       self.repopCart(sfd);
       $('select#funds-select-' + sfd.fundGroup + ' option[value=' + sfd.fundId +']').prop('selected', true)
-      if (typeof(sfd.recurs) != 'undefined') {
+      if (typeof(sfd.recurs) != 'undefined' && cartEmpty === 0) {
         var rcr = $('input[name*="[recurs_monthly]"]');
         var freq = sfd.recurs;
         switch (freq) {
@@ -81,6 +82,7 @@
             break;
         }
       }
+      location.hash = 'fdprocessed';
     }
   };
 
@@ -197,6 +199,7 @@
       fundId = fundGroupId;
       fundName = typeof(Drupal.settings.addon) != "undefined" ? Drupal.settings.addon.cart_text : "One-time add-on donation";
     }
+
     self.newRow(displayAmt, displayQuant, type, fundId, amt, quant, fundName, fundGroupId);
   };
 
@@ -273,10 +276,10 @@
     $('tr', self.cart).each(function(){
       if($(this).attr('data-fund-id') == fundId && $(this).attr('data-fund-amount') == amt && type == 'fund') {
 
-        var oldAmt = parseInt($('.fund-amount', $(this)).text().replace('$', ''));
+        var oldAmt = parseInt($('.fund-amount', $(this)).text().replace('$', '').replace(',', ''));
         var oldQuant = $(this).attr('data-fund-quantity');
         var newQuant = parseInt(oldQuant) + parseInt(quant);
-        var newAmt = parseInt($('.fund-amount', newRow).text().replace('$', '')) + oldAmt;
+        var newAmt = parseInt($('.fund-amount', newRow).text().replace('$', '').replace(',', '')) + oldAmt;
 
         newRow.attr('data-fund-quantity', newQuant);
         if (newQuant > 1) {
@@ -338,7 +341,12 @@
     }
 
     var savedForm = JSON.stringify(obj).replace(/"/g, '&quot;');
-    $.cookie('designations_' + Drupal.settings.fdNid, savedForm);
+    if (!$.isEmptyObject(obj.cart)) {
+      $.cookie('designations_' + Drupal.settings.fdNid, savedForm);
+    }
+    else {
+      $.cookie('designations_' + Drupal.settings.fdNid,"", -1);
+    }
   };
 
   Drupal.fundraiserDesignations.prototype.validateOtherAmt = function(groupId) {
@@ -389,7 +397,7 @@
       else {
         var MinAmt = parseFloat(Drupal.settings.fundraiserWebform.minimum_donation_amount);
         if (amtFloat < MinAmt) {
-          message += ' Below the minumum amount.'
+          message += ' Below the minimum amount.'
         }
       }
     }

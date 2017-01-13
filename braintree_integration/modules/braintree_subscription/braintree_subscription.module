@@ -81,7 +81,7 @@ function braintree_subscription_create(&$subscription_data, $context = array(), 
     $result = Braintree_Subscription::create($subscription_data);
   }
   catch (Exception $e) {
-    $error_message = braintree_exception_error_message($e);
+    $error_message = braintree_report_error($e);
     return FALSE;
   }
 
@@ -94,7 +94,7 @@ function braintree_subscription_create(&$subscription_data, $context = array(), 
     return $result;
   }
 
-  $error_message = braintree_result_error_message($result);
+  $error_message = braintree_report_result($result);
   return FALSE;
 }
 
@@ -116,7 +116,7 @@ function braintree_subscription_update($id, $subscription_data, &$context = arra
   }
   catch(Exception $e) {
     braintree_last_error($e);
-    $error_message = braintree_exception_error_message($e);
+    $error_message = braintree_report_error($e);
     return FALSE;
   }
 
@@ -129,7 +129,7 @@ function braintree_subscription_update($id, $subscription_data, &$context = arra
     return $result;
   }
 
-  $error_message = braintree_result_error_message($result);
+  $error_message = braintree_report_result($result);
   return FALSE;
 }
 
@@ -147,7 +147,7 @@ function braintree_subscription_cancel($id, &$context = array(), &$error_message
   }
   catch(Exception $e) {
     braintree_last_error($e);
-    $error_message = braintree_exception_error_message($e);
+    $error_message = braintree_report_error($e);
     return FALSE;
   }
 
@@ -163,7 +163,7 @@ function braintree_subscription_cancel($id, &$context = array(), &$error_message
     return $result;
   }
 
-  $error_message = braintree_result_error_message($result);
+  $error_message = braintree_report_result($result);
   return FALSE;
 }
 

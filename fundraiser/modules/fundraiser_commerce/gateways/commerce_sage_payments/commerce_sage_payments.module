@@ -62,6 +62,12 @@ function commerce_sage_payments_cc_settings_form($settings = array()) {
     '#default_value' => isset($settings['commerce_sage_payments_settings_application_id']) ? $settings['commerce_sage_payments_settings_application_id'] : '',
   );
 
+  $form['commerce_sage_payments_settings_originator_id'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Originator ID'),
+    '#default_value' => isset($settings['commerce_sage_payments_settings_originator_id']) ? $settings['commerce_sage_payments_settings_originator_id'] : '',
+  );
+
   $form['transaction_type'] = array(
     '#type' => 'radios',
     '#title' => t('Default credit card transaction type'),
@@ -816,8 +822,11 @@ function commerce_sage_payments_eft_vault_cardonfile_charge($payment_method, $ca
     $request_parameters['C_COUNTRY']    = $billing_address['country'];
   }
 
+  // add the config settings
+  $sage_payments_config = _commerce_sage_payments_get_sage_payments_config($payment_method);
+
   // Per support@Sage all fields must be present in vault virtual check request
-  $request_parameters['C_ORIGINATOR_ID'] = '0000000000';
+  $request_parameters['C_ORIGINATOR_ID'] = !empty($payment_method['settings']['commerce_sage_payments_settings_originator_id']) ? $payment_method['settings']['commerce_sage_payments_settings_originator_id'] : '0000000000';
   $request_parameters['C_MIDDLE_INITIAL'] = '';
   $request_parameters['C_SUFFIX'] = '';
   $request_parameters['C_EMAIL'] = $order->mail;
@@ -835,9 +844,6 @@ function commerce_sage_payments_eft_vault_cardonfile_charge($payment_method, $ca
   $request_parameters['C_DL_STATE_CODE'] = '';
   $request_parameters['C_DL_NUMBER'] = '';
   $request_parameters['C_DOB'] = '';
-
-  // add the config settings
-  $sage_payments_config = _commerce_sage_payments_get_sage_payments_config($payment_method);
   $request_parameters += $sage_payments_config;
 
   // Prepare a transaction object to log the API response.

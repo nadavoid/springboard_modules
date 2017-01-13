@@ -390,7 +390,20 @@ function _fundraiser_quick_donate_check_qd_default($form, $form_state) {
   $card = $form_state['card'];
   $values = $form_state['values'];
 
+  // If the card number is the same, don't do anything.
   if ($card->card_number == $values['credit_card']['number']) {
+    return;
+  }
+
+  $cardonfile_fields = array(
+    'card_number' => substr($values['credit_card']['number'], -4),
+    'card_exp_month' => $values['credit_card']['exp_month'],
+    'card_exp_year' => $values['credit_card']['exp_year'],
+  ) + array('instance_id' => $donation->gateway['id'], 'uid' => $donation->uid);
+
+  $new_card = _fundraiser_commerce_cardonfile_match($cardonfile_fields, TRUE);
+
+  if (empty($new_card)) {
     return;
   }
 
@@ -400,38 +413,34 @@ function _fundraiser_quick_donate_check_qd_default($form, $form_state) {
     ':card_id' => $card->card_id,
     ':uid' => $values['uid'],
   ))->fetch();
+
   if (empty($qd)) {
     return;
   }
 
-  $cardonfile_fields = array(
-    'card_number' => substr($values['credit_card']['number'], -4),
-    'card_exp_month' => $values['credit_card']['exp_month'],
-    'card_exp_year' => $values['credit_card']['exp_year'],
-  ) + array('instance_id' => $donation->gateway['id'], 'uid' => $donation->uid);
-  $new_card = _fundraiser_commerce_cardonfile_match($cardonfile_fields, TRUE);
-  if (!empty($new_card)) {
-    db_update('fundraiser_quick_donate_cardonfile')
-      ->fields(array(
-        'status' => 0,
-      ))
-      ->condition('card_id', $card->card_id, '=')
-      ->execute();
-    db_merge('fundraiser_quick_donate_cardonfile')
-      ->key(array('card_id' => $new_card->card_id))
-      ->fields(array(
-        'status' => 1,
-        'uid' => $donation->uid,
-        'optin_date' => $qd->optin_date,
-        'did' => $qd->did,
-        'ms' => $qd->ms,
-        'cid' => $qd->cid,
-        'nid' => $qd->nid,
-        'gateway' => $donation->gateway['id'],
-      ))
-      ->condition('card_id', $new_card->card_id, '=')
-      ->execute();
-  }
+  db_update('fundraiser_quick_donate_cardonfile')
+    ->fields(array(
+      'status' => 0,
+    ))
+    ->condition('card_id', $card->card_id, '=')
+    ->execute();
+  db_merge('fundraiser_quick_donate_cardonfile')
+    ->key(array('card_id' => $new_card->card_id))
+    ->fields(array(
+      'status' => 1,
+      'uid' => $donation->uid,
+      'optin_date' => $qd->optin_date,
+      'did' => $qd->did,
+      'ms' => $qd->ms,
+      'cid' => $qd->cid,
+      'nid' => $qd->nid,
+      'gateway' => $donation->gateway['id'],
+    ))
+    ->condition('card_id', $new_card->card_id, '=')
+    ->execute();
+
+  $user = user_load($donation->uid);
+  module_invoke_all('fundraiser_quick_donate_optin_update', $user, $donation, $card->card_id, $new_card->card_id);
 }
 
 /**
@@ -534,14 +543,18 @@ function _fundraiser_quick_donate_set_new_qd_cof(&$form, &$form_state) {
     return;
   }
 
+  $user = user_load($values['uid']);
+  $did = NULL;
+
   // Check if the card has a corresponding record in
   // {fundraiser_quick_donate_cardonfile}, if it does just update that one.
   // Otherwise we'll need to create one.
-  $existing_card_id = db_query('SELECT card_id FROM {fundraiser_quick_donate_cardonfile} WHERE card_id = :card_id', array(
+  $results = db_query('SELECT card_id, did FROM {fundraiser_quick_donate_cardonfile} WHERE card_id = :card_id ORDER BY optin_date LIMIT 1', array(
     ':card_id' => $form_state['card']->card_id,
-  ))->fetchField();
+  ))->fetchAllKeyed();
+  $did = reset($results);
 
-  if (empty($existing_card_id)) {
+  if (empty($results)) {
     // Need a node id, query the table for any pre-existing ones the user has
     // opted into.
     $nid = db_query('SELECT nid FROM {fundraiser_quick_donate_cardonfile} WHERE uid = :uid LIMIT 1', array(
@@ -591,12 +604,17 @@ function _fundraiser_quick_donate_set_new_qd_cof(&$form, &$form_state) {
       ':card_id' => $form_state['card']->card_id,
     ));
   }
+
+  if (!empty($did)) {
+    $donation = fundraiser_donation_get_donation($did);
+    module_invoke_all('fundraiser_quick_donate_optin_create', $user, $donation, $form_state['card']->card_id);
+  }
 }
 
 /**
  * Returns a user's quick donate card or FALSE if they have none.
  *
- * @param $uid
+ * @param int $uid
  *   The id of the user whose quick donate card you want to retreive.
  */
 function fundraiser_quick_donate_get_default_card($uid) {
@@ -604,11 +622,17 @@ function fundraiser_quick_donate_get_default_card($uid) {
 }
 
 /**
- * Whenever a card is taken out of QD eligility, either by explicit opting out or by
- * deletion, check if it was the QD default and if so make opt-out-related updates.
+ * Helper function to invoke a hook when a card is opted out of Quick Donate.
  *
- * @param $uid
- * @param $card_id
+ * Whenever a card is taken out of QD eligility, either by explicit opting out
+ * or by deletion, check if it was the QD default and if so make opt-out-related
+ * updates.
+ *
+ * @param int $uid
+ *   The user's uid.
+ * @param int $card_id
+ *   The card's id.
+ *
  * @throws \Exception
  */
 function fundraiser_quick_donate_opt_out_card($uid, $card_id) {

@@ -459,7 +459,7 @@ function sba_social_action_form_sba_social_action_node_form_alter(&$form, &$form
   );
 
   $visibility = isset($form['#node']->show_my_name) ? $form['#node']->show_my_name : 0;
-  $form['springboard_display']['recent_participants']['show_participants'] = array(
+  $form['springboard_display']['recent_participants']['show_my_name'] = array(
     '#type' => 'checkbox',
     '#title' => t('Allow users to opt-in and show recent participants list'),
     '#default_value' => $visibility,

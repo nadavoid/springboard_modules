@@ -223,7 +223,7 @@ function _webform_render_funds_get_position($groups_by_weight, $id) {
 
 
 /**
- * Adds the quantity and ammount forms to the group.
+ * Adds the quantity and amount forms to the group.
  *
  * @param int $id
  *   A group entity id.
@@ -236,6 +236,41 @@ function _fundraiser_designations_build_child_elements($id, &$element, $amounts,
   if (!empty($group->fd_overrides) && !empty($group->fd_overrides['status'])) {
     $amounts = fundraiser_designations_get_group_display_amounts($group, $node);
   }
+
+  // Determine whether the designation group overrides the form's default ask amounts, then determine
+  // the default ask option for both one-time and recurring based on either the form's settings or
+  // the designation group's settings, as appropriate.
+  $default_default_amount = false;
+  $recurring_default_amount = false;
+  // Check the designation group for overrides
+  if(isset($group->fd_overrides['price_set']) && $group->fd_overrides['status'] == '1') {
+    $price_set = unserialize($group->fd_overrides['price_set']);
+    // if there are overrides, determine the default option for one-time ask amounts.
+    foreach($price_set['default'] as $price) {
+      if($price['default_amount'] === 1) {
+        $default_default_amount = $price['amount'];
+      }
+    }
+    // if there are overrides, determine the default option for recurring ask amounts.
+    foreach($price_set['recurring'] as $price) {
+      //find the one that is set to default.
+      if($price['default_amount'] === 1) {
+        $recurring_default_amount = $price['amount'];
+      }
+    }
+  }
+  // if there are not overrides and the parent node has default options set, use those values
+  else if(isset($node->default_amount) || isset($node->recurring_default_amount)) {
+    // parent node one-time default option.
+    if(isset($node->default_amount)){
+      $default_default_amount = intval($node->default_amount);
+    }
+    // parent node recurring default option.
+    if(isset($node->recurring_default_amount)) {
+      $recurring_default_amount = intval($node->recurring_default_amount);
+    }
+  }
+
   $donation_amounts = [];
   if (!empty($amounts['default'])) {
     foreach ($amounts['default'] as $key => $amount) {
@@ -247,6 +282,11 @@ function _fundraiser_designations_build_child_elements($id, &$element, $amounts,
     $child['#extra']['group_id'] = $id;
     $child['#options'] = $donation_amounts;
     $child['#title'] = '';
+    // Insert the default one-time option if applicable.
+    if($default_default_amount) {
+      $child['#default_value'] = $default_default_amount;
+    }
+
     $element[$id]['default_amounts_' . $id] = $child;
   }
 
@@ -261,6 +301,10 @@ function _fundraiser_designations_build_child_elements($id, &$element, $amounts,
     $child['#extra']['group_id'] = $id;
     $child['#options'] = $recurring_donation_amounts;
     $child['#title'] = '';
+    // Insert the default recurring option if applicable.
+    if($recurring_default_amount) {
+      $child['#default_value'] = $recurring_default_amount;
+    }
     $element[$id]['recurring_amounts_' . $id] = $child;
   }
   $group_wrapper = entity_metadata_wrapper('fundraiser_fund_group', $group);

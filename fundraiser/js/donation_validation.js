@@ -76,12 +76,13 @@
             }
           },
           onfocusout: function (element) {
+            // Callback for real-time onfocusout of form elements.
+            var isValid = $(element).valid();
+
             if (typeof validateKeyCallback == 'undefined') {
               return;
             }
 
-            // Callback for real-time onfocusout of form elements.
-            var isValid = $(element).valid();
             if (isValid == 0) {
               // Set status to 0.
               validateKeyCallback.status = 0;
@@ -202,22 +203,7 @@
                 }, 100);
               }
 
-              // A strange issue with Safari happens where the ellipsis of the
-              // "Processing..." text on the submit button doesn't animate, and
-              // the "focus"ing of the submit button doesn't occur. I have a
-              // suspicion it's because the Payment sheet still has "focus" when
-              // the rest of the submission callbacks occur, or it's something
-              // to do with the rest of the submission callbacks firing "too
-              // fast", if that's possible. Either way, slowing it down a bit
-              // seems to resolve things.
-              if (navigator.userAgent.indexOf('Safari') != -1 && navigator.userAgent.indexOf('Chrome') == -1) {
-                setTimeout(function() {
-                  $('.fundraiser-donation-form').off('submit.donationValidate').submit();
-                }, 500);
-              }
-              else {
-                return true;
-              }
+              return true;
             }
             return false;
           });

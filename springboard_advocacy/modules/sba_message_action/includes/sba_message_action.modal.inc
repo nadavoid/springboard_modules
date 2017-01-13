@@ -48,5 +48,4 @@ function sba_message_action_build_modal() {
     ),
   );
   drupal_add_js($message_window, 'setting');
-  ctools_add_css('springboard_message_action', 'modal');
 }

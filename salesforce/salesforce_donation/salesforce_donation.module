@@ -898,7 +898,7 @@ function salesforce_donation_form_commerce_order_ui_order_form_alter(&$form, $fo
     '#weight' => isset($form['commerce_line_items']['#weight']) ? $form['commerce_line_items']['#weight'] : -100,
   );
 
-  array_unshift($form['actions']['submit']['#submit'], '_salesforce_donation_form_commerce_order_ui_order_form_alter_submit');
+  $form['actions']['submit']['#submit'][] = '_salesforce_donation_form_commerce_order_ui_order_form_alter_submit';
 }
 
 /**
@@ -907,12 +907,22 @@ function salesforce_donation_form_commerce_order_ui_order_form_alter(&$form, $fo
  * @see salesforce_donation_form_commerce_order_ui_order_form_alter()
  */
 function _salesforce_donation_form_commerce_order_ui_order_form_alter_submit($form, &$form_state) {
-  $donation_id = $form_state['commerce_order']->order_id;
-  $donation = fundraiser_donation_get_donation($donation_id);
-
-  // Re-queue the order if the re-queue checkbox was checked:
-  if (isset($form_state['values']['sb_requeue']) && $form_state['values']['sb_requeue'] === 1) {
-    salesforce_donation_fundraiser_donation_success($donation);
-    drupal_set_message('This order has been re-queued.');
+  if (!isset($form_state['commerce_order']->order_id) || !isset($form_state['values']['sb_requeue']) || $form_state['values']['sb_requeue'] !== 1) {
+    return;
   }
+
+  $order_id = $form_state['commerce_order']->order_id;
+
+  // Remove the associated salesforce_sync_map record so orders previously deleted from Salesforce can be re-queued
+  // with a new Salesforce ID rather than the old ID which no longer exists in Salesforce:
+  $rmid = db_query("SELECT rmid FROM {salesforce_sync_map} WHERE drupal_id = :order_id AND delta = 'donation'", array(':order_id' => $order_id))
+    ->fetchField();
+  if ($rmid) {
+    entity_delete('salesforce_sync_map', $rmid);
+  }
+
+  // Re-queue the donation:
+  $donation = fundraiser_donation_get_donation($order_id);
+  salesforce_donation_fundraiser_donation_success($donation);
+  drupal_set_message('This order has been re-queued.');
 }

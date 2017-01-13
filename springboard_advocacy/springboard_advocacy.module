@@ -979,20 +979,18 @@ function springboard_advocacy_success($node, $contact, $data, $sid) {
 
 
 function springboard_advocacy_node_form_post_save($node) {
-  if (!empty($node->show_my_name)) {
-    $data = array(
-      'nid' => $node->nid,
-      'visibility' => $node->show_my_name,
-    );
+  $data = array(
+    'nid' => $node->nid,
+    'visibility' => (isset($node->show_my_name) && $node->show_my_name == 1) ? 1 : 0,
+  );
 
-    $visibility = db_query('select visibility from {springboard_action_opt_in_block} WHERE nid=:nid', array(':nid' => $node->nid))->fetchCol();
+  $visibility = db_query('select visibility from {springboard_action_opt_in_block} WHERE nid=:nid', array(':nid' => $node->nid))->fetchCol();
 
-    if (empty($visibility)) {
-      drupal_write_record('springboard_action_opt_in_block', $data);
-    }
-    else {
-      drupal_write_record('springboard_action_opt_in_block', $data, 'nid');
-    }
+  if (empty($visibility)) {
+    drupal_write_record('springboard_action_opt_in_block', $data);
+  }
+  else {
+    drupal_write_record('springboard_action_opt_in_block', $data, 'nid');
   }
 
   if (!empty($node->action_submit_button_text) || !empty($node->social_submit_button_text)) {

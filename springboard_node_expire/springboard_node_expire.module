@@ -86,7 +86,6 @@ function springboard_node_expire_form_alter(&$form, &$form_state, $form_id) {
         '#title' => t('Expiration date'),
         '#description' => t('Date on which this page will expire.'),
         '#type' => 'textfield',
-        '#maxlength' => 25,
         '#required' => FALSE,
         '#date_label_position' => 'none',
         '#default_value' => '',

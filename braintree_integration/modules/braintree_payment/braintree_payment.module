@@ -113,6 +113,11 @@ function braintree_form_elements($payment_type, $config) {
     drupal_alter($hook, $context);
   }
 
+  $form['nonce'] = array(
+    '#type' => 'hidden',
+    '#name' => 'payment_method_nonce',
+  );
+
   $js_settings['storeName'] = variable_get('site_name');
   $form['#attached']['js'][] = array(
     'data' => array('braintree' => $js_settings),

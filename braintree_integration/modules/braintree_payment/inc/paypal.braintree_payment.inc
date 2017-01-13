@@ -21,10 +21,6 @@ function braintree_payment_braintree_payment_form__paypal__alter(&$context) {
     '#type' => 'container',
     '#id' => 'paypal-container',
   );
-  $form['braintree']['new']['paypal']['nonce'] = array(
-    '#type' => 'hidden',
-    '#name' => 'payment_method_nonce',
-  );
   $form['braintree']['new']['paypal']['loggedin'] = array(
     '#type' => 'container',
     '#id' => 'braintree-paypal-loggedin',

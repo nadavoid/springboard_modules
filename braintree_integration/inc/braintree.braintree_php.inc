@@ -155,7 +155,7 @@ function braintree_delete_card($card_id) {
     $result = Braintree_PaymentMethod::delete($card_id);
   }
   catch (Exception $e) {
-    $error_message = braintree_exception_error_message($e);
+    $error_message = braintree_report_error($e);
     watchdog('commerce_braintree_web', 'Error deleting cardonfile id: %card_id (Braintree payment_method id: %remote_id) with Braintree error message: %error_message', array(
       '%card_id' => $card_data->card_id,
       '%remote_id' => $card_data->remote_id,

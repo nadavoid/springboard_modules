@@ -102,7 +102,9 @@ define('SALESFORCE_SYNC_ITEM_FAIL_TOKEN', 'Item failed due to bad token.');
 function salesforce_sync_entity_delete($entity, $type) {
   // If any of these entities are deleted, delete their corresponding record
   // from salesforce_sync_map.
-  $entity_id = array_shift(entity_extract_ids($type,$entity));
+  $entity_extract_ids = entity_extract_ids($type, $entity); 
+  $entity_id = array_shift($entity_extract_ids);
+
   if ($type == 'user' || $type == 'commerce_order' || $type == 'fundraiser_sustainer_record') {
     if ($type == 'commerce_order') {
       $type = 'salesforce_donation';
