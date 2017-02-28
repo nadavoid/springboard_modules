@@ -40,7 +40,7 @@
 
         // Custom Validation Regex rules: AMEX, VISA, MASTERCARD, DISCOVER, Diner's Club, JCB
         $.validator.addMethod('creditcard', function(value, element) {
-          return this.optional(element) || /^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5]\d{14}$|^2(?:2(?:2[1-9]|[3-9]\d)|[3-6]\d\d|7(?:[01]\d|20))\d{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$/i.test(value);
+          return this.optional(element) || /^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5]\d{14}$|^2(?:2(?:2[1-9]|[3-9]\d)|[3-6]\d\d|7(?:[01]\d|20))\d{12}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})$/i.test(value);
           // Doesn't work for Australian Bankcard, Dankort (PBS) cards or
           // Switch/Solo (Paymentech).
           // Bankcard regexp below needs fixing:
