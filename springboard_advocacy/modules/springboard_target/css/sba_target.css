@@ -61,7 +61,9 @@ input#edit-submit {
     float: right;
 }
 
-
+.group-edit-form input#edit-submit {
+    float: left;
+}
 
 div.form-item-gender,
 div.form-item-salutation,

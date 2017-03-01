@@ -56,33 +56,39 @@
       }
     }
     // Landing page query params are present in Drupal.settings.
-    if(typeof(settings.fundraiser_designations) != "undefined" && location.hash != '#fdprocessed') {
+    if(typeof(settings.fundraiser_designations) != "undefined") {
+
+      var query_cookie = $.cookie('designations_query_' + Drupal.settings.fdNid);
       var sfd = settings.fundraiser_designations;
-      var cartEmpty = $('input[name$="[fund_catcher]"]').val().replace(/&quot;/g, '"').length;
-      self.repopCart(sfd);
-      $('select#funds-select-' + sfd.fundGroup + ' option[value=' + sfd.fundId +']').prop('selected', true)
-      if (typeof(sfd.recurs) != 'undefined' && cartEmpty === 0) {
-        var rcr = $('input[name*="[recurs_monthly]"]');
-        var freq = sfd.recurs;
-        switch (freq) {
-          case 'one-time':
-          case 'yearly':
-            rcr.each(function(){
-              if (this.value == 'NO_RECURR') {
-                $(this).attr('checked', true);
-              }
-            });
-            break;
-          case 'monthly':
-            rcr.each(function(){
-              if (this.value == 'recurs') {
-                $(this).attr('checked', true);
-              }
-            });
-            break;
+      var sfdString = JSON.stringify(sfd);
+
+      if(query_cookie !== sfdString) {
+        var cartEmpty = $('input[name$="[fund_catcher]"]').val().replace(/&quot;/g, '"').length;
+        self.repopCart(sfd);
+        $('select#funds-select-' + sfd.fundGroup + ' option[value=' + sfd.fundId + ']').prop('selected', true)
+        if (typeof(sfd.recurs) != 'undefined' && cartEmpty === 0) {
+          var rcr = $('input[name*="[recurs_monthly]"]');
+          var freq = sfd.recurs;
+          switch (freq) {
+            case 'one-time':
+            case 'yearly':
+              rcr.each(function () {
+                if (this.value == 'NO_RECURR') {
+                  $(this).attr('checked', true);
+                }
+              });
+              break;
+            case 'monthly':
+              rcr.each(function () {
+                if (this.value == 'recurs') {
+                  $(this).attr('checked', true);
+                }
+              });
+              break;
+          }
         }
+        $.cookie('designations_query_' + Drupal.settings.fdNid, JSON.stringify(sfd));
       }
-      location.hash = 'fdprocessed';
     }
   };
 

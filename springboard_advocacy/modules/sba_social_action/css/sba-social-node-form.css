@@ -14,8 +14,8 @@
     z-index: 1;
 }
 
-#sba-social-action-node-form fieldset.filter-wrapper.collapsed {
-    height: 20px;
+#edit-field-sba-action-step-two-submit input {
+    max-width: 320px;
 }
 
 #node_sba_social_action_form_group_sba_test_mode {

@@ -21,6 +21,10 @@
 
         // Helper function, provides the total display.
         function _recalculate_quantity_total() {
+          if (!$('select[name*="quantity"]').length) {
+            return;
+          }
+
           $('#quantity-total').empty();
           var amount = $('input[type="radio"][name*="amount"]:checked:visible').val();
           if (amount == 'other') {
@@ -114,8 +118,15 @@
           $(document).on('braintree.fieldEvent', function(event, param) {
             var field = param.fields[param.emittedBy];
             var $field = $(field.container);
-            braintreeFields[param.emittedBy] = field.isValid;
-            if (!field.isValid) {
+
+            if (param.emittedBy == 'cvv') {
+              braintreeFields[param.emittedBy] = field.isValid || !field.isEmpty;
+            }
+            else {
+              braintreeFields[param.emittedBy] = field.isValid;
+            }
+
+            if (!braintreeFields[param.emittedBy]) {
               $field.closest('.control-group').removeClass('success').addClass('error');
             }
             else {
@@ -140,16 +151,30 @@
               return $nonce.length > 0 && $checkedAmounts.length && (!$otherAmount.length || $otherAmount.length && $otherAmountValue.val().length);
             }
             else {
+              var isBillingUpdate = undefined !== Drupal.settings.braintree.billing_update_type;
               var braintreeFieldsAreValid = function() {
+                // Considered valid when not on a billing update form and all
+                // fields are filled out, or on a billing update form and either
+                // no fields are filled out or all fields are filled out.
                 var returnValue = true;
+                var atLeastOneTrue = false;
                 $.each(braintreeFields, function(index, value) {
-                  if (value == false) {
+                  if (!value) {
                     returnValue = false;
-                    // Break out of $.each early since we know we'll be
-                    // returning false.
-                    return false;
+                    // We can return early if not on a billing update form.
+                    if (!isBillingUpdate) {
+                      return false;
+                    }
+                  }
+                  else {
+                    atLeastOneTrue = true;
                   }
                 });
+
+                if (!returnValue && isBillingUpdate && !atLeastOneTrue) {
+                  returnValue = true;
+                }
+
                 return returnValue;
               };
 
@@ -222,8 +247,16 @@
 
         // Other Amount
         var $other_amount = $('input[name*="other_amount"][type!="hidden"]');
+        $($other_amount).blur(function () {
+          var otherAmountField = $(this);
+          if (otherAmountField.parent().children('.field-suffix').length > 0) {
+            var errorMessage = otherAmountField.parent().children('label.error').detach();
+            otherAmountField.parent().children('.description').after(errorMessage);
+          }
+        });
         if ($other_amount.length) {
           $($other_amount).each(function() {
+            var otherAmountField = $(this);
             $(this).rules('add', {
               required: function(element) {
                 return $('input[type="radio"][name$="[amount]"]:checked').length == 0 || $('input[type="radio"][name$="[amount]"][value="other"]:visible').is(":checked");
