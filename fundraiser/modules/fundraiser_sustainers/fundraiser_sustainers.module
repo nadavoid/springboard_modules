@@ -4646,7 +4646,7 @@ function fundraiser_sustainers_fundraiser_commerce_cardonfile_used_for($card_id)
       '@type' => 'monthly',
       '@amount' => empty($result['amount']) ? '' : '$' . number_format($result['amount'], 2, '.', '') . ',',
       '@space' => empty($result['amount']) ? '' : ' ',
-      '@day' => date("jS", strtotime($result['next_charge'])),
+      '@day' => date("jS", $result['next_charge']),
     ));
   }
 
