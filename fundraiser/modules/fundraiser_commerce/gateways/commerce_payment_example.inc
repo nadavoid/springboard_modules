@@ -194,7 +194,6 @@ function commerce_payment_example_fundraiser_commerce_refund($payment_method, $r
  *   Card on file entity for the new/updated card data.
  */
 function commerce_payment_example_fundraiser_commerce_update($donation, $card_data = NULL, $action = 'update') {
-  dpm(__FUNCTION__);
   module_load_include('inc', 'fundraiser_commerce', 'includes/fundraiser_commerce.credit_card');
   $payment_method = $donation->gateway['gateway_details'];
 
