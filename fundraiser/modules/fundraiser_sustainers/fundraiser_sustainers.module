@@ -4634,15 +4634,8 @@ function fundraiser_sustainers_fundraiser_commerce_cardonfile_used_for($card_id)
 
   foreach ($results as $result) {
     $used_for[] = t('Recurring @type donation (@amount@spacecharged on the @day)', array(
-      // @todo This used to be `strtolower($result['npsp_installment_period'])`,
-      // but yearly donations aren't yet supported, and not all clients use
-      // npsp. When yearly donations are supported, need to revisit this.
-      // Suggestions for when that time comes: add a "installment period" record
-      // to the fundraiser_sustainers table which is set to "monthly" or
-      // "yearly"; or compute the difference between the last charge date and
-      // the next charge date and compare if it is less than a year or greater
-      // than a year. The former would be preferred since it's less
-      // computationally taxing.
+      // @todo Change from hardcoded 'monthly' to variable 'monthly'/'yearly'
+      // when annual recurring donations are supported.
       '@type' => 'monthly',
       '@amount' => empty($result['amount']) ? '' : '$' . number_format($result['amount'], 2, '.', '') . ',',
       '@space' => empty($result['amount']) ? '' : ' ',
