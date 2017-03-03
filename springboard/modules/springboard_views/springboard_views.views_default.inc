@@ -3080,6 +3080,7 @@ function springboard_views_views_default_views() {
   $handler->display->display_options['access']['perm'] = 'access springboard dashboard';
   $handler->display->display_options['cache']['type'] = 'none';
   $handler->display->display_options['query']['type'] = 'views_query';
+  $handler->display->display_options['query']['options']['distinct'] = TRUE;
   $handler->display->display_options['exposed_form']['type'] = 'basic';
   $handler->display->display_options['pager']['type'] = 'full';
   $handler->display->display_options['pager']['options']['items_per_page'] = '10';
@@ -3146,6 +3147,10 @@ function springboard_views_views_default_views() {
   $handler->display->display_options['empty']['area']['content'] = 'No %1s have been created yet. ';
   $handler->display->display_options['empty']['area']['format'] = 'filtered_html';
   $handler->display->display_options['empty']['area']['tokenize'] = TRUE;
+  /* Relationship: OG membership: Group Node from OG membership */
+  $handler->display->display_options['relationships']['og_membership_related_node_group']['id'] = 'og_membership_related_node_group';
+  $handler->display->display_options['relationships']['og_membership_related_node_group']['table'] = 'og_membership';
+  $handler->display->display_options['relationships']['og_membership_related_node_group']['field'] = 'og_membership_related_node_group';
   /* Field: Content: Title */
   $handler->display->display_options['fields']['title']['id'] = 'title';
   $handler->display->display_options['fields']['title']['table'] = 'node';
@@ -3159,6 +3164,12 @@ function springboard_views_views_default_views() {
   $handler->display->display_options['fields']['status']['label'] = 'Status';
   $handler->display->display_options['fields']['status']['type'] = 'published-notpublished';
   $handler->display->display_options['fields']['status']['not'] = 0;
+  /* Field: Content: Title */
+  $handler->display->display_options['fields']['title_sb_group']['id'] = 'title_sb_group';
+  $handler->display->display_options['fields']['title_sb_group']['table'] = 'node';
+  $handler->display->display_options['fields']['title_sb_group']['field'] = 'title';
+  $handler->display->display_options['fields']['title_sb_group']['relationship'] = 'og_membership_related_node_group';
+  $handler->display->display_options['fields']['title_sb_group']['label'] = 'Owner';
   /* Field: Content: Post date */
   $handler->display->display_options['fields']['created']['id'] = 'created';
   $handler->display->display_options['fields']['created']['table'] = 'node';
