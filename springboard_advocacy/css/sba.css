@@ -53,7 +53,8 @@
     margin-right: 10px;
 }
 
-#views-exposed-form-sba-custom-targets-block-1 #edit-combine {
+#views-exposed-form-sba-custom-targets-block-1 #edit-combine,
+#views-exposed-form-sba-custom-targets-block-2 #edit-group-name{
     border-radius: 5px;
     width: 190px;
 }

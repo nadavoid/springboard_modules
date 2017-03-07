@@ -43,14 +43,14 @@ function commerce_authnet_fundraiser_donation_form_config_check($node) {
 }
 
 function commerce_authnet_fundraiser_gateway_status_cron_check($details) {
-  if ($details['method_id'] == 'authnet_aim') { 
+  if ($details['method_id'] == 'authnet_aim') {
     if ($details['settings']['txn_mode'] != AUTHNET_TXN_MODE_LIVE) {
       return $details['settings']['txn_mode'];
     }
     else {
       return 'live';
     }
-  } 
+  }
 }
 
 
@@ -187,7 +187,7 @@ function commerce_authnet_fundraiser_commerce_update($donation, $card_data = NUL
       WATCHDOG_CRITICAL
     );
 
-    return;
+    return $card_data;
   }
 
   // Pull the new credit card values from the donation
@@ -200,13 +200,16 @@ function commerce_authnet_fundraiser_commerce_update($donation, $card_data = NUL
   // If it does then we use the update function
   // if its a new card check if we should create a new CIM profile
   $action = 'update';
-  if ($cardonfile_fields['card_number'] != $card_data->card_number) {
+  // If the card_number in $cardonfile_fields is FALSE, the number wasn't
+  // entered, so the address might need updating.
+  if ($cardonfile_fields['card_number'] && $cardonfile_fields['card_number'] != $card_data->card_number) {
     // This is a new card for this donation, make sure we don't have an existing profile
     // First check with the card number and date
     if ($existing = _fundraiser_commerce_cardonfile_match($cardonfile_fields)) {
       // Set the existing card on the donation and return it
       $donation->data['cardonfile'] = $existing->card_id;
       $card_data = $existing;
+      return $card_data;
     }
     // Check if we have a mismatched exp date record
     elseif ($mismatch =  _fundraiser_commerce_cardonfile_exp_date_mismatch($cardonfile_fields)) {
@@ -219,7 +222,11 @@ function commerce_authnet_fundraiser_commerce_update($donation, $card_data = NUL
     }
   }
   if ($action == 'update') {
-    $card_data->card_number = $cardonfile_fields['card_number'];
+    $donation->old_card = clone $card_data;
+
+    if (!empty($cardonfile_fields['card_number'])) {
+      $card_data->card_number = $cardonfile_fields['card_number'];
+    }
     $card_data->card_exp_month = $cardonfile_fields['card_exp_month'];
     $card_data->card_exp_year = $cardonfile_fields['card_exp_year'];
 
@@ -290,6 +297,7 @@ function commerce_authnet_fundraiser_commerce_update($donation, $card_data = NUL
       return $new_data;
     }
   }
+  return $card_data;
 }
 
 /**
@@ -304,7 +312,7 @@ function _commerce_authnet_fundraiser_commerce_authnet_cim_cardonfile_update($fo
   // Extract the Customer Profile and Payment Profile IDs from the remote_id.
   list($cim_customer_profile_id, $cim_payment_profile_id) = explode('|', $card_data->remote_id);
 
-  if ($form_state['values']['credit_card']['number'] != $form['credit_card']['number']['#default_value']) {
+  if (!empty($form['credit_card']['number']['#default_value']) && $form_state['values']['credit_card']['number'] != $form['credit_card']['number']['#default_value']) {
     $number = $form_state['values']['credit_card']['number'];
   }
   else {
@@ -376,7 +384,7 @@ function _commerce_authnet_fundraiser_commerce_authnet_cim_cardonfile_update($fo
  *        - Invalid type (A valid type would be "credit")
  *        - invalid reference transaction ID
  *        - Wrong currency
- * 
+ *
  * For more: http://developer.authorize.net/api/reference/dist/json/responseCodes.json
  */
 function commerce_authnet_fundraiser_commerce_refund($payment_method, $refund) {
@@ -405,7 +413,7 @@ function commerce_authnet_fundraiser_commerce_refund($payment_method, $refund) {
   $transactions = commerce_payment_transaction_load_multiple(array(), $conditions = array('order_id' => $refunding_order->order_id));
   $transaction = array_pop($transactions);
   $payload = array_pop($transaction->payload);
-  
+
   // Get authnet's response code from the payload:
   $response_code_index = 2;
   $response_code = (string) $payload[$response_code_index];
@@ -438,7 +446,7 @@ function commerce_authnet_fundraiser_commerce_refund($payment_method, $refund) {
   if ($response_code === '1' && $result !== FALSE) {
     $refund_was_successful = TRUE;
   }
-  
+
   return $refund_was_successful;
 }
 
@@ -603,7 +611,7 @@ function _commerce_authnet_extra_fields() {
 
 /**
  * Callback for fundraiser_commerce to discover what gateway response fields are available for mapping.
- * 
+ *
  * @param array $gateway_info
  */
 function commerce_authnet_fundraiser_commerce_response_fields($gateway_info) {
@@ -619,7 +627,7 @@ function commerce_authnet_fundraiser_commerce_response_fields($gateway_info) {
 
 /**
  * Callback to save gateway response fields when a donation is successfully completed.
- * 
+ *
  * @param stdClass $donation
  */
 function commerce_authnet_fundraiser_commerce_response_save($donation) {
@@ -647,7 +655,7 @@ function commerce_authnet_fundraiser_commerce_response_save($donation) {
 
 /**
  * Definition of all Authorize.net response fields available for mapping.
- * 
+ *
  * Derived from http://www.authorize.net/support/merchant/wwhelp/wwhimpl/common/html/wwhelp.htm#context=Merchant_Integration_Guide&file=4_TransResponse.html
  * Note that the actual payloads we get from AIM contain more fields than documented by Authorize.net,
  * and the credit card fields' numeric indeces don't match the documentation.

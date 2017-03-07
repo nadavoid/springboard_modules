@@ -1,5 +1,5 @@
-#springboard-advocacy-message-recipients .sba-target-status,
-#springboard-advocacy-message-recipients .sba-charcount-status {
+#springboard-advocacy-target-recipients .sba-target-status,
+#springboard-advocacy-target-recipients .sba-charcount-status {
     margin-left: 1.5em;
     color: #000;
 }

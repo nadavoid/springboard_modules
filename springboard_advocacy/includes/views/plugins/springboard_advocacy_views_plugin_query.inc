@@ -7,6 +7,8 @@
 /**
  * Class springboard_advocacy_views_plugin_query
  * Override views default db query with advocacy REST API query.
+ * Queries transaction server for Advocacy targets and custom groups
+ *
  */
 class springboard_advocacy_views_plugin_query extends views_plugin_query {
 
@@ -109,34 +111,75 @@ class springboard_advocacy_views_plugin_query extends views_plugin_query {
       $fields['offset'] = $this->offset;
 
       if (isset($this->orderby)) {
-        $fields['sort'] = $this->orderby[0]['field'];
+        $sort_field = $this->orderby[0]['field'];
+        if ($sort_field == 'group_name') {
+          $sort_field = 'name';
+        }
+        $fields['sort'] = $sort_field;
         $fields['direction'] = $this->orderby[0]['direction'];
       }
 
       // Get the targets.
-      $targets = $api_call->invokeClientMethod('searchTargets', $fields);
-
-      if (!empty($targets->data->targets)) {
-
+      // Custom Group search.
+      if (isset($fields['class_name']) && $fields['class_name'] == 'Group') {
+        $params = $fields;
+        unset($params['class_name']);
+        $response = $api_call->invokeClientMethod('searchTargetGroups', $params);
+      }
+      // Legislative and custom individuals.
+      else {
+        $response = $api_call->invokeClientMethod('searchTargets', $fields);
+      }
+      $items = array();
+      if (isset($response->data->targets)) {
+        $items = $response->data->targets;
+        foreach ($items as $key => $item) {
+          $items[$key]->created_at = date('m/j/Y', strtotime($item->created_at));
+          $items[$key]->updated_at = date('m/j/Y', strtotime($item->updated_at));
+        }
+      }
+      elseif (isset($response->data->groups)) {
+        // To prevent recursion on group create/edit pages, we will find the
+        // parent group ID and filter that result if it is present.
+        $parent_group_id = -1;
+        if (arg(4) == "custom-groups" && is_numeric(arg(5))) {
+          $parent_group_id = arg(5);
+        }
+        $groups = $response->data->groups;
+        foreach ($groups as $key => $item) {
+          if ($item->id != $parent_group_id) {
+            $items[$item->id] = new stdClass();
+            $items[$item->id]->group_name = $item->name;
+            $items[$item->id]->id = $item->id;
+            $items[$item->id]->matching_targets = sba_target_search_process_matches($item->matching_targets);
+            $items[$item->id]->child_groups = sba_target_search_process_groups($item->groups);
+            $items[$item->id]->created_at = date('m/j/Y', strtotime($item->created_at));
+            $items[$item->id]->updated_at = date('m/j/Y', strtotime($item->updated_at));
+          }
+        }
+      }
+      if (!empty($items)) {
         // Build the pager.
         if ($this->pager->use_pager()) {
-          $this->pager->total_items = $targets->data->count;
+          $this->pager->total_items = $response->data->count;
           if (!empty($this->pager->options['offset'])) {
             $this->pager->total_items -= $this->pager->options['offset'];
           }
-          $this->pager->update_page_info();
         }
-
         // Add target IDs to build info. We retrieve elsewhere for use in
         // Target Add links.
-        $view->build_info['target_ids'] = $targets->data->ids;
+        $view->build_info['target_ids'] = $response->data->ids;
+      }
+
+      if ($this->pager->use_pager()) {
+        $this->pager->update_page_info();
       }
 
       $view->result = array();
 
       // Put target data into results array.
-      if (!empty($targets->data->targets)) {
-        $view->result = $targets->data->targets;
+      if (!empty($items)) {
+        $view->result = $items;
       }
 
       // Build the pager.

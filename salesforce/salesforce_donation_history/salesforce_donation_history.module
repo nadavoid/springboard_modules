@@ -210,7 +210,6 @@ function salesforce_donation_history_get_opportunity($user_sfid, $donation_sfid)
   $opportunities = salesforce_donation_history_get_opportunities($user_sfid);
   if (count($opportunities) > 0) {
     foreach ($opportunities as $opportunity) {
-      // dpm($opportunity->Id);
       foreach ($opportunity->Id as $id) {
         if ($id == $donation_sfid) {
           $results[] = $opportunity;

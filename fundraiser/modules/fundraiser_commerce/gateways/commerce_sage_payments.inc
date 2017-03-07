@@ -287,10 +287,10 @@ function commerce_sage_payments_fundraiser_commerce_update($donation, $card_data
   }
 
   if ($donation->donation['payment_method'] == 'credit') {
-    _commerce_sage_payments_fundraiser_commerce_update_cc($donation, $card_data);
+    return _commerce_sage_payments_fundraiser_commerce_update_cc($donation, $card_data);
   }
   elseif ($donation->donation['payment_method'] == 'bank account') {
-    _commerce_sage_payments_fundraiser_commerce_update_eft($donation, $card_data);
+    return _commerce_sage_payments_fundraiser_commerce_update_eft($donation, $card_data);
   }
 }
 
@@ -311,6 +311,12 @@ function _commerce_sage_payments_fundraiser_commerce_update_cc($donation, $card_
 
   // Pull the new credit card values from the donation
   $pane_values = _fundraiser_commerce_credit_card_pane_values($donation);
+
+  // If no new information is present, return early.
+  if (empty($pane_values['credit_card']['number']) && empty($pane_values['credit_card']['code'])) {
+    return;
+  }
+
   $cardonfile_fields = _fundraiser_commerce_credit_card_cardonfile_fields($donation);
 
   // Check the card number to see if it matches the current card data number
@@ -337,6 +343,8 @@ function _commerce_sage_payments_fundraiser_commerce_update_cc($donation, $card_
   }
 
   if ($action == 'update') {
+    $donation->old_card = clone $card_data;
+
     $card_data->card_number = $cardonfile_fields['card_number'];
     $card_data->card_exp_month = $cardonfile_fields['card_exp_month'];
     $card_data->card_exp_year = $cardonfile_fields['card_exp_year'];
@@ -402,6 +410,8 @@ function _commerce_sage_payments_fundraiser_commerce_update_cc($donation, $card_
       return $card_data;
     }
   }
+
+  return $card_data;
 }
 
 /**
@@ -423,7 +433,7 @@ function _commerce_sage_payments_fundraiser_commerce_update_eft($donation, $card
   $cardonfile_fields = _fundraiser_commerce_sage_payments_cardonfile_fields($donation);
 
   // Bank account info isn't updated, so check if we have new account #
-  if ($cardonfile_fields != $card_data->card_number) {
+  if (!empty($cardonfile_fields['card_number']) && $cardonfile_fields['card_number'] != $card_data->card_number) {
     $pane_values['bank_account'] = $donation->donation['payment_fields']['bank account'];
 
     // Build a payment details array for the bank account.
@@ -442,7 +452,7 @@ function _commerce_sage_payments_fundraiser_commerce_update_eft($donation, $card
       $billing_address = $order_wrapper->commerce_customer_billing->commerce_customer_address->value();
       $card_name = $billing_address['name_line'];
     }
- 
+
     // Save the credit card in the Vault.
     $vault_response = commerce_sage_payments_vault_request_insert($payment_method, $payment_details);
 

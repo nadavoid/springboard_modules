@@ -84,7 +84,7 @@
 
     <!-- Quick target button -->
     <div class="views-exposed-widget views-targets-button-wrapper">
-    <?php if (user_access('add target to action')): ?>
+    <?php if (springboard_target_target_access('add target to action')): ?>
       <div class="target-button-header">Quick Group Targeting</div>
       <div class="target-button-help">Add this group in one click.</div>
       <div class="views-exposed-widget views-targets-button">
