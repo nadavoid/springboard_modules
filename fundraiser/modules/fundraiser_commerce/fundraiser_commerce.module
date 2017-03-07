@@ -1935,7 +1935,7 @@ function fundraiser_commerce_fundraiser_donation_update($donation) {
           // that use this card_id.
           db_update('fundraiser_donation')
             ->fields(array('card_id' => $card_data->card_id))
-            ->condition('card_id', $old_card_id, '=')
+            ->condition('card_id', $old_card->card_id, '=')
             ->condition('status', 'pending_future_payment', '=')
             ->execute();
         }

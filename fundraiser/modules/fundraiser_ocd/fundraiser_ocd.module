@@ -350,32 +350,43 @@ function _fundraiser_ocd_check_ocd_default($form, $form_state) {
   }
 
   $old_card = $values['cardonfile']['old_card'];
-  $card = $form_state['card'];
+  $new_card = $form_state['card'];
   if (!empty($values['cardonfile']['card'])) {
-    $card = $values['cardonfile']['card'];
+    $new_card = $values['cardonfile']['card'];
   }
 
-  // If the card number is the same, don't do anything.
-  if ($old_card->card_number == $card->card_number) {
+  if (empty($new_card)) {
+    if (empty($values['credit_card'])) {
+      $cardonfile_fields = array(
+        'card_number' => substr($values['payment_fields']['credit']['card_number'], -4),
+        'card_exp_month' => $values['payment_fields']['credit']['expiration_date']['card_expiration_month'],
+        'card_exp_year' => $values['payment_fields']['credit']['expiration_date']['card_expiration_year'],
+      ) + array('instance_id' => $donation->gateway['id'], 'uid' => $donation->uid);
+    }
+    else {
+      $cardonfile_fields = array(
+        'card_number' => substr($values['credit_card']['number'], -4),
+        'card_exp_month' => $values['credit_card']['exp_month'],
+        'card_exp_year' => $values['credit_card']['exp_year'],
+      ) + array('instance_id' => $donation->gateway['id'], 'uid' => $donation->uid);
+    }
+
+    $new_card = _fundraiser_commerce_cardonfile_match($cardonfile_fields, TRUE);
+  }
+
+  if (empty($new_card)) {
     return;
   }
 
-  $cardonfile_fields = array(
-    'card_number' => substr($values['credit_card']['number'], -4),
-    'card_exp_month' => $values['credit_card']['exp_month'],
-    'card_exp_year' => $values['credit_card']['exp_year'],
-  ) + array('instance_id' => $donation->gateway['id'], 'uid' => $donation->uid);
-
-  $new_card = _fundraiser_commerce_cardonfile_match($cardonfile_fields, TRUE);
-
-  if (empty($new_card)) {
+  // If the card number is the same, don't do anything.
+  if ($old_card->card_number == $new_card->card_number) {
     return;
   }
 
   // If the card number has changed, we need to check if the card was QD enabled
   // and if so, set the new card to QD enabled and disable the old one.
   $ocd = db_query('SELECT * FROM {fundraiser_ocd_cardonfile} WHERE card_id = :card_id AND uid = :uid AND status = 1', array(
-    ':card_id' => $card->card_id,
+    ':card_id' => $old_card->card_id,
     ':uid' => $values['uid'],
   ))->fetch();
 
@@ -387,7 +398,7 @@ function _fundraiser_ocd_check_ocd_default($form, $form_state) {
     ->fields(array(
       'status' => 0,
     ))
-    ->condition('card_id', $card->card_id, '=')
+    ->condition('card_id', $old_card->card_id, '=')
     ->execute();
   db_merge('fundraiser_ocd_cardonfile')
     ->key(array('card_id' => $new_card->card_id))
@@ -405,7 +416,7 @@ function _fundraiser_ocd_check_ocd_default($form, $form_state) {
     ->execute();
 
   $user = user_load($donation->uid);
-  module_invoke_all('fundraiser_ocd_optin_update', $user, $donation, $card, $new_card);
+  module_invoke_all('fundraiser_ocd_optin_update', $user, $donation, $old_card, $new_card);
 }
 
 /**
