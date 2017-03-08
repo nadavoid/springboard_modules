@@ -676,6 +676,7 @@ function fundraiser_tickets_form_node_type_form_alter(&$form, &$form_state) {
   if (isset($form['type'])) {
     $form['fundraiser_type']['fundraiser_tickets'] = array(
       '#type' => 'checkbox',
+      '#disabled' => variable_get('fundraiser_' . $form['#node_type']->type, FALSE), // Prevent toggling tickets support if Fundraiser is enabled.
       '#title' => t('Enable ticketed events?'),
       '#default_value' => variable_get('fundraiser_tickets_' . $form['#node_type']->type, FALSE),
       '#description' => t('Enable this checkbox if this content type should provide ticketed event sales.  Fundraiser must be enabled as well.'),

@@ -43,7 +43,7 @@ function salesforce_ocd_map_optin_date() {
   $user_map = salesforce_mapping_load('user_to_contact');
 
   if (!salesforce_ocd_field_is_mapped($user_map->field_mappings, 'field_ocd_opt_in')) {
-    $user_map->field_mappings[] = salesforce_ocd_mapped_date_field("field_ocd_opt_in", "One Click Donate Opt-In Date", "ocd_Opt_In_Date__c");
+    $user_map->field_mappings[] = salesforce_ocd_mapped_date_field("field_ocd_opt_in", "One Click Donate Opt-In Date", "OCDonate_Opt_In_Date__c");
   }
 
   // Resave the map with the new fields.
@@ -57,7 +57,7 @@ function salesforce_ocd_map_optout_date() {
   $user_map = salesforce_mapping_load('user_to_contact');
 
   if (!salesforce_ocd_field_is_mapped($user_map->field_mappings, 'field_ocd_opt_out')) {
-    $user_map->field_mappings[] = salesforce_ocd_mapped_date_field("field_ocd_opt_out", "One Click Donate Opt-Out Date", "ocd_Opt_Out_Date__c");
+    $user_map->field_mappings[] = salesforce_ocd_mapped_date_field("field_ocd_opt_out", "One Click Donate Opt-Out Date", "OCDonate_Opt_Out_Date__c");
   }
 
   // Resave the map with the new fields.

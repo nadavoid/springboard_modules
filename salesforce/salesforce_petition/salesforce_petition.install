@@ -57,7 +57,8 @@ function salesforce_petition_create_petition_action_fieldmap() {
       'device_name' => 'Device_Name__c',
       'device_os' => 'Device_OS__c',
       'device_browser' => 'Device_Browser__c',
-      'sba_quicksign_flag' =>'Quick_Sign__c',
+      'sba_quicksign_flag' => 'Quick_Sign__c',
+      'secure_prepop_autofilled' => 'Autofilled__c',
     ),
     'salesforce_node_map' => array(
       'title' => 'Name',

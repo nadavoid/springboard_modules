@@ -293,7 +293,7 @@ function salesforce_donation_fundraiser_donation_cancel($donation) {
   // It's necessary at this point to invoke the fundraiser_donation_get_donation
   // hook, but we don't want to load the sustainer data from the database and
   // overwrite unsaved data. Cache the recurring property in a variable here.
-  $recurring = $donation->recurring;
+  $recurring = !empty($donation->recurring);
   $donation = fundraiser_donation_get_donation($donation->did);
   $donation->recurring = $recurring;
 
@@ -624,7 +624,7 @@ function salesforce_donation_salesforce_genmap_map_fields(stdClass $donation, En
 
   // If the donation was canceled append the reason because it's not
   // currently mappable.
-  if (($donation->status == 'canceled' || $donation->status == 'auto_canceled') && !empty($donation->recurring)) {
+  if (($donation->status == 'canceled' || $donation->status == 'auto_canceled') && !empty($donation->recurring) && !empty($donation->deleted)) {
     $fields['Cancellation_Reason__c'] = $donation->recurring->cancellation_reason;
   }
 
@@ -632,12 +632,12 @@ function salesforce_donation_salesforce_genmap_map_fields(stdClass $donation, En
 }
 
 /**
- * Implements hook_salesforce_genmap_map_fields_alter()
+ * Implements hook_salesforce_genmap_map_fields_alter().
  */
 function salesforce_donation_salesforce_genmap_map_fields_alter(&$fields, $context) {
   if ($context['module'] == 'salesforce_donation') {
     $donation = $context['object'];
-    if (($donation->status == 'canceled' || $donation->status == 'auto_canceled') && !empty($donation->recurring)) {
+    if (($donation->status == 'canceled' || $donation->status == 'auto_canceled') && !empty($donation->recurring) && !empty($donation->deleted)) {
       $fields['Cancellation_Reason__c'] = $donation->recurring->cancellation_reason;
     }
   }

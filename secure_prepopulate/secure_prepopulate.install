@@ -75,3 +75,60 @@ function secure_prepopulate_update_7001() {
   db_add_index('secure_prepopulate_expired', 'hash', array('hash'));
   db_add_index('secure_prepopulate_expired', 'expired', array('expire_date'));
 }
+
+/**
+ * Add the secure preopoulate autofill field to existing webforms.
+ */
+function secure_prepopulate_update_7002(&$sandbox) {
+
+  if (!isset($sandbox['progress'])) {
+    $sandbox['progress'] = 0;
+    $sandbox['max'] = db_query('SELECT COUNT(nid) FROM {webform}')->fetchField();
+    $sandbox['messages'] = array();
+    $sandbox['current_node'] = -1;
+  }
+
+  $limit = 25;
+
+  $nodes = db_select('webform', 'n')
+    ->fields('n', array('nid'))
+    ->orderBy('n.nid', 'ASC')
+    ->where('n.nid > :nid', array(':nid' => $sandbox['current_node']))
+    ->extend('PagerDefault')
+    ->limit($limit)
+    ->execute();
+
+  foreach ($nodes as $node) {
+    $sandbox['progress']++;
+    $sandbox['current_node'] = $node->nid;
+
+    $cid = db_query('select wc.cid from {webform_component} wc
+      WHERE wc.nid = :nid AND wc.form_key = :key',
+      array(':nid' => $node->nid, ':key' => 'secure_prepop_autofilled')
+    )->fetchAssoc();
+
+    if (!$cid) {
+      $field = array(
+        'nid' => $node->nid,
+        'form_key' => 'secure_prepop_autofilled',
+        'pid' => 0,
+        'name' => t('Autofilled'),
+        'type' => 'hidden',
+        'value' => 0,
+        'weight' => 13,
+        'email' => 1,
+        '#extra' => array(
+          'description' => '',
+          'hidden_type' => 'hidden',
+        ),
+      );
+      webform_component_insert($field);
+    }
+  }
+
+  $sandbox['#finished'] = ($sandbox['progress'] >= $sandbox['max']) ? TRUE : ($sandbox['progress'] / $sandbox['max']);
+
+  if ($sandbox['#finished']) {
+    return t('Autofill field has been added to existing webforms.');
+  }
+}

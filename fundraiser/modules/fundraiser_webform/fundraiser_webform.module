@@ -1375,6 +1375,7 @@ function fundraiser_webform_get_submission($sid) {
   $query->fields('sd', array('no', 'data'))
     ->fields('sc', array('form_key'))
     ->condition('sd.sid', $sid)
+    ->isNotNull('sc.form_key')
     ->orderBy('sd.sid', 'ASC')
     ->orderBy('sd.cid', 'ASC')
     ->orderBy('sd.no', 'ASC');

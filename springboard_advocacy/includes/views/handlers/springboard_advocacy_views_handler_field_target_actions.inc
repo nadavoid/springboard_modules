@@ -42,7 +42,7 @@ class springboard_advocacy_views_handler_field_target_actions extends views_hand
       '#options' => drupal_map_assoc(array(t('edit'), t('delete'), t('add'))),
       '#title' => t('Which links should show'),
       '#default_value' => $this->options['which_links'],
-      '#description' => t('Select whether view, edit and/or delete links are visible. Edit and Delete links will only be visible on custom targets, and to properly permissioned users.')
+      '#description' => t('Select whether view, edit and/or delete links are visible. Edit and Delete links will only be visible on custom targets, and to properly permissioned users.'),
     );
     parent::options_form($form, $form_state);
   }
@@ -61,56 +61,86 @@ class springboard_advocacy_views_handler_field_target_actions extends views_hand
   /**
    * Render Helper.
    *
-   * Display links based on option choices, result class type and user permission.
+   * Display links based on option choices, result class
+   * type and user permission.
    *
    * @param $values
    * @return string
    */
   function render_links($values) {
-    $legislator = TRUE;
+    $type = '';
+    $path = '';
+    if (isset($values->class_name)) {
+      switch ($values->class_name) {
+        case "Legislator":
+          $path = 'springboard/advocacy/targets/legislator';
+          $type = "legislator";
+          break;
 
-    if (isset($values->class_name) && $values->class_name == "Legislator") {
-      $path = 'springboard/advocacy/targets/legislator';
-    }
-    else {
-      $path = 'springboard/advocacy/targets/custom-targets';
-      $legislator = FALSE;
+        case "group":
+          $path = 'springboard/advocacy/targets/custom-groups';
+          $type = "group";
+          break;
+
+        default:
+          $path = 'springboard/advocacy/targets/custom-targets';
+          $type = "target";
+          break;
+      }
     }
 
     $links  = array();
-    // Add Target to Action Link used in message entity's target search form results.
-    if (user_access('add target to action') && !empty($this->options['which_links']['add'])) {
+    // Add Target to Action Link used in message entity's
+    // target search form results.
+    if (!empty($this->options['which_links']['add'])) {
+      $query = array();
+      // Groups do not use the class_name attribute.
+      if (!isset($values->class_name) && module_exists('springboard_target') && springboard_target_target_access('add group to action')) {
+        $query = array(
+          'id' => $values->id,
+          'type' => 'group',
+          'name' => !empty($values->group_name) ? $values->group_name : '',
+        );
+      }
+      else {
+        if (module_exists('springboard_target') && springboard_target_target_access('add target to action')) {
+          $query = array(
+            'id' => $values->id,
+            'type' => !empty($values->class_name) ? $values->class_name : '',
+            'name' => !empty($values->name) ? $values->name : '',
+            'first' => !empty($values->first_name) ? $values->first_name : '',
+            'last' => !empty($values->last_name) ? $values->last_name : '',
+            'sal' => !empty($values->salutation) ? $values->salutation : '',
+            'twitter' => !empty($values->twitter) ? $values->twitter : '',
+            'facebook' => !empty($values->facebook) ? $values->facebook : '',
+            'org' => !empty($values->organization) ? $values->organization : '',
+            'title' => !empty($values->title) ? $values->title : '',
+            'state' => !empty($values->state) ? $values->state : '',
+            'district' => !empty($values->district_name) ? $values->district_name : '',
+            'role' => !empty($values->role) ? $values->role : '',
+
+            // Need to send an empty string if the last query segment is empty
+            // so that the query string
+            // contains "party=", otherwise, without "=" javascript chokes.
+            'party' => !empty($values->party) ? $values->party : '',
+          );
+        }
+      }
       $links[] = l(t('add'), 'add-target', array(
         'external' => TRUE,
-        'attributes' => array('class' => array('advocacy-add-target')),
-        'query' => array(
-          'id' => $values->id,
-          'type' => !empty($values->class_name) ? $values->class_name : '',
-          'first' => !empty($values->first_name) ? $values->first_name : '',
-          'last' => !empty($values->last_name) ? $values->last_name : '',
-          'sal' => !empty($values->salutation) ? $values->salutation : '',
-          'twitter' => !empty($values->twitter) ? $values->twitter : '',
-          'facebook' => !empty($values->facebook) ? $values->facebook : '',
-          'org' => !empty($values->organization) ? $values->organization : '',
-          'title' => !empty($values->title) ? $values->title : '',
-          'state' => !empty($values->state) ? $values->state : '',
-          'district' => !empty($values->district_name) ? $values->district_name : '',
-          'role' => !empty($values->role) ? $values->role : '',
-
-          // Need to send an empty string if the last query segment is empty
-          // so that the query string
-          // contains "party=", otherwise, without "=" javascript chokes.
-          'party' => !empty($values->party) ? $values->party: '',
-        )
+        'attributes' => array(
+          'class' => array('advocacy-add-target'),
+        ),
+        'query' => $query,
       ));
     }
 
     // Custom targets can be edited and deleted. Legislators can't.
-    if (!$legislator) {
-      if (user_access('edit targets') && !empty($this->options['which_links']['edit'])) {
+    if ($type != "legislator") {
+      if (module_exists('springboard_target') && springboard_target_target_access('edit ' . $type . 's') && !empty($this->options['which_links']['edit'])) {
         $links[] = l(t('edit'), $path . '/' . $values->id . '/edit');
       }
-      if (user_access('delete targets') && !empty($this->options['which_links']['delete'])) {
+      if (module_exists('springboard_target') && springboard_target_target_access('delete ' . $type . 's') && !empty($this->options['which_links']['delete'])) {
         $links[] = l(t('delete'), $path . '/' . $values->id . '/delete');
       }
     }
@@ -118,5 +148,3 @@ class springboard_advocacy_views_handler_field_target_actions extends views_hand
     return implode(' | ', $links);
   }
 }
-
-

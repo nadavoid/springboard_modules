@@ -64,6 +64,7 @@ function salesforce_donation_install() {
       'device_name' => 'Device_Name__c',
       'device_os' => 'Device_OS__c',
       'device_browser' => 'Device_Browser__c',
+      'secure_prepop_autofilled' => 'Autofilled__c',
     ),
     'salesforce_node_map' => array(
       'title' => 'Donation_Form_Name__c',

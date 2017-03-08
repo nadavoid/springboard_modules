@@ -4,6 +4,56 @@
  * Module file for fundraiser_commerce_cardonfile.
  */
 
+require_once 'includes/fundraiser_commerce_cardonfile.fundraiser.inc';
+
+/**
+ * Implements hook_menu().
+ */
+function fundraiser_commerce_cardonfile_menu() {
+  $items = array();
+
+  $items['admin/springboard/options/fundraiser/fundraiser_commerce_cardonfile'] = array(
+    'title' => 'Fundraiser Cardonfile Settings',
+    'description' => 'Settings for fundraiser cardonfile.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('fundraiser_commerce_cardonfile_admin_settings'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer fundraiser configuration'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'includes/fundraiser_commerce_cardonfile.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_menu_alter().
+ */
+function fundraiser_commerce_cardonfile_menu_alter(&$items) {
+  if (module_exists('commerce_cardonfile')) {
+    $items['user/%user/cards/%commerce_cardonfile/edit'] += array(
+      'page callback' => 'fundraiser_commerce_cardonfile_form_commerce_cardonfile_card_form',
+      'page arguments' => array(3, 1),
+    );
+  }
+  return $items;
+}
+
+/**
+ * Implements hook_springboard_admin_admin_menu_items_alter().
+ */
+function fundraiser_commerce_cardonfile_springboard_admin_admin_menu_items_alter(&$items) {
+  // Settings > Settings > Sustainer Upsell.
+  $items['admin/springboard/settings']['_children']['admin/springboard/settings/config']['_children']['admin/springboard/options/fundraiser/fundraiser_commerce_cardonfile'] = array(
+    'link_path' => 'admin/springboard/options/fundraiser/fundraiser_commerce_cardonfile',
+    'link_title' => 'Fundraiser Cardonfile Settings',
+    'menu_name' => 'springboard_admin_menu',
+    'expanded' => 0,
+    'customized' => 1,
+    'weight' => 0,
+  );
+}
+
 /**
  * Implements hook_views_api().
  */
@@ -12,38 +62,6 @@ function fundraiser_commerce_cardonfile_views_api() {
     'api' => 3,
     'path' => drupal_get_path('module', 'fundraiser_commerce_cardonfile') . '/includes/views',
   );
-}
-
-/**
- * Implements hook_fundraiser_donation_post_create().
- */
-function fundraiser_commerce_cardonfile_fundraiser_donation_post_create($donation) {
-  fundraiser_commerce_cardonfile_fundraiser_donation_post_update($donation);
-}
-
-/**
- * Implements hook_fundraiser_donation_post_update().
- *
- * This function will update the 'field_data_commerce_cardonfile_profile'
- * field's value to the correct billing profile ID when a donation is created
- * or updated.
- *
- * @todo This can be removed once the commerce_cardonfile module supports
- * billing addresses for individual cards.
- */
-function fundraiser_commerce_cardonfile_fundraiser_donation_post_update($donation) {
-  if (empty($donation->data['cardonfile']) || empty($donation->did)) {
-    return;
-  }
-
-  $card = commerce_cardonfile_load($donation->data['cardonfile']);
-  $card_wrapper = entity_metadata_wrapper('commerce_cardonfile', $card);
-
-  $order = commerce_order_load($donation->did);
-  $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
-
-  $card_wrapper->commerce_cardonfile_profile = $order_wrapper->commerce_customer_billing->value();
-  $card_wrapper->save();
 }
 
 /**
@@ -67,7 +85,6 @@ function fundraiser_commerce_cardonfile_views_pre_render(&$view) {
 
     // Array of payment gateways used for cards that should not be displayed.
     $blacklist = array(
-      'braintree_hostedfields|commerce_payment_braintree_hostedfields',
       'commerce_psi_credit|commerce_payment_commerce_psi_credit',
     );
 
@@ -86,9 +103,178 @@ function fundraiser_commerce_cardonfile_views_pre_render(&$view) {
 
     // Unset the card name and billing profile label if the card name and name
     // on the billing profile is the same.
-    if (!empty($result->field_commerce_cardonfile_profile) && strpos($result->field_commerce_cardonfile_profile[0]['rendered']['#markup'], $result->commerce_cardonfile_card_name) !== FALSE) {
+    if (!empty($result->field_commerce_cardonfile_profile) && !empty($result->commerce_cardonfile_card_name) && strpos($result->field_commerce_cardonfile_profile[0]['rendered']['#markup'], $result->commerce_cardonfile_card_name) !== FALSE) {
       unset($view->field['card_name']);
       $view->field['commerce_cardonfile_profile']->options['label'] = '';
     }
   }
+}
+
+/**
+ * Implements hook_entity_delete().
+ *
+ * Delete donations attached to a card when the card is deleted.
+ */
+function fundraiser_commerce_cardonfile_entity_delete($entity, $type) {
+  // If this isn't a cardonfile, return early.
+  if ($type != 'commerce_cardonfile') {
+    return;
+  }
+
+  // Get any pending donations associated with the card_id.
+  $donations = db_query('SELECT did FROM {fundraiser_donation} WHERE card_id = :card_id AND status = :pending_status', array(
+    ':card_id' => $entity->card_id,
+    ':pending_status' => 'pending_future_payment',
+  ))->fetchAllAssoc('did', PDO::FETCH_ASSOC);
+  $donations = array_keys($donations);
+
+  if (empty($donations)) {
+    return;
+  }
+
+  // Allow other modules to alter the array of donations that will be deleted.
+  drupal_alter('fundraiser_commerce_cardonfile_deleted_card_donations', $donations);
+
+  foreach ($donations as $key => $donation_id) {
+    $donation = fundraiser_donation_get_donation($donation_id);
+    fundraiser_donation_cancel($donation);
+    unset($donation);
+  }
+}
+
+/**
+ * Implements hook_entity_view().
+ *
+ * Shows a confirmation page before a card is deleted.
+ */
+function fundraiser_commerce_cardonfile_entity_view($entity, $type, $view_mode, $langcode) {
+  $arg = arg();
+  if ($type == 'commerce_cardonfile' && $view_mode == 'customer' && !empty($arg[4]) && $arg[4] == 'delete') {
+    $hidden = array('card_name', 'card_exp');
+    foreach ($hidden as $field) {
+      $entity->content[$field]['#access'] = FALSE;
+    }
+
+    if (!function_exists('entity_property_default_render_value_by_type')) {
+      module_load_include('inc', 'entity', 'theme/entity.theme');
+    }
+
+    $show = array('card_type', 'card_number');
+    foreach ($show as $index => $field) {
+      $entity->content[$field] = array_merge($entity->content[$field], array(
+        '#theme' => 'html_tag',
+        '#tag' => 'span',
+        '#value' => entity_property_default_render_value_by_type($entity->content[$field]['#entity_wrapped']->{$entity->content[$field]['#property_name']}),
+      ));
+    }
+  }
+}
+
+/**
+ * Implements hook_FORM_ID_alter().
+ *
+ * Add a confirmation dialog to the cancel card form to ensure the user really
+ * wants to delete their card.
+ */
+function fundraiser_commerce_cardonfile_form_commerce_cardonfile_delete_form_alter($form, $form_state) {
+  $script = <<<EOT
+jQuery(document).ready(function() {
+  jQuery('#commerce-cardonfile-delete-form').on('submit', function() {
+    var conf = confirm('Are you sure you want to delete this card? Any future and recurring donations associated with it will be canceled.');
+    return conf;
+  });
+});
+EOT;
+  drupal_add_js($script, 'inline');
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function fundraiser_commerce_cardonfile_form_commerce_cardonfile_card_form($card, $user) {
+  // Let other modules adjust the card we use.
+  drupal_alter('fundraiser_commerce_cardonfile_update_billing_card', $card);
+
+  // Load the user's newest donation for the card's gateway.
+  $donation = fundraiser_donation_get_donations_by_uid($user->uid, 1, 'DESC', $card->instance_id, $card->card_id);
+  if (empty($donation)) {
+    return;
+  }
+
+  drupal_set_title('Edit Payment Method');
+
+  $data = array(
+    'calling module' => 'fundraiser_commerce_cardonfile',
+    'donation' => $donation,
+    'card' => $card,
+    'update other orders' => TRUE,
+    'payment_fields' => array(
+      'credit' => array(
+        'expiration_date' => array(
+          'card_expiration_month' => array(
+            '#default_value' => $card->card_exp_month,
+          ),
+          'card_expiration_year' => array(
+            '#default_value' => $card->card_exp_year,
+          ),
+        ),
+      ),
+    ),
+  );
+
+  $form = drupal_get_form('fundraiser_update_billing_form', $data);
+
+  $title = array(
+    '#type' => 'html_tag',
+    '#tag' => 'h4',
+    '#value' => t('You are editing billing information for:'),
+  );
+  $title = drupal_render($title);
+  $card_title = array(
+    '#type' => 'html_tag',
+    '#tag' => 'span',
+    '#value' => format_string('@type - XXXX-XXXX-XXXX-@number', array(
+      '@type' => strtoupper($card->card_type),
+      '@number' => $card->card_number,
+    )),
+  );
+  $card_title = drupal_render($card_title);
+  $expires = array(
+    '#type' => 'html_tag',
+    '#tag' => 'div',
+    '#value' => t('Expires: @month/@year', array(
+      '@month' => sprintf('%02d', $card->card_exp_month),
+      '@year' => $card->card_exp_year,
+    )),
+  );
+  $expires = drupal_render($expires);
+  $form = array(
+    'message' => array(
+      '#type' => 'markup',
+      '#markup' => $title . $card_title . $expires,
+    ),
+  ) + $form;
+
+  $form['actions']['cancel'] = array(
+    '#markup' => '<span class="cancel"> or ' . l(t('Cancel'), 'user/' . $card->uid . '/cards') . '</span>',
+    '#weight' => 20,
+  );
+
+  return $form;
+}
+
+/**
+ * Implements hook_fundraiser_update_billing_form__CALLING_MODULE__alter().
+ *
+ * Redirect to the users stored cards page after saving billing information.
+ */
+function fundraiser_commerce_cardonfile_fundraiser_update_billing_form__fundraiser_commerce_cardonfile__alter(&$form, $form_state) {
+  $form['actions']['submit']['#submit'][] = '_fundraiser_commerce_cardonfile_fundraiser_billing_update_form_submit';
+}
+
+/**
+ * Submission handler for billing update form.
+ */
+function _fundraiser_commerce_cardonfile_fundraiser_billing_update_form_submit($form, &$form_state) {
+  $form_state['redirect'] = 'user/' . $form_state['card']->uid . '/cards';
 }

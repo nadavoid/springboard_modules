@@ -153,9 +153,14 @@ function _fundraiser_ocd_get_nid($payload) {
   $gateway_id = $card_on_file->instance_id;
 
   // If a form_id was passed, let's try to use it first.
-  if (isset($parameters['form_id']) && is_numeric($parameters['form_id']) &&
+  if (!empty($parameters['form_id']) && is_numeric($parameters['form_id']) &&
     fundraiser_ocd_form_has_gateway($parameters['form_id'], $gateway_id)) {
-    return $parameters['form_id'];
+    $ocd_enabled = db_query('SELECT COUNT(fundraiser_nid) FROM {fundraiser_ocd} WHERE fundraiser_nid = :fid', array(
+      ':fid' => $parameters['form_id'],
+    ))->fetchField();
+    if ($ocd_enabled > 0) {
+      return $parameters['form_id'];
+    }
   }
 
   // Get the default nid for the gateway instance.
@@ -182,7 +187,7 @@ function _fundraiser_ocd_get_nid($payload) {
  *   The nid of the default form for the gateway instance or FALSE.
  */
 function fundraiser_ocd_get_default_form_for_gateway($gateway_id) {
-  $default_data = variable_get(fundraiser_ocd_DEFAULT_FORM_PREFIX . $gateway_id, array());
+  $default_data = variable_get(FUNDRAISER_OCD_DEFAULT_FORM_PREFIX . $gateway_id, array());
   if (!empty($default_data)) {
     $default_data = unserialize($default_data);
     return $default_data['nid'];
@@ -249,7 +254,8 @@ function fundraiser_ocd_springboard_hmac_failure($reason, $payload) {
 
   // If the payload didn't validate any number of things could have happened,
   // therefore let's fallback to the donation form.
-  //@TODO: Add a drupal_set_message() here to indicate an HMAC error is why this isn't the exact experience expected?
+  // @TODO: Add a drupal_set_message() here to indicate an HMAC error is why
+  // this isn't the exact experience expected?
   drupal_goto('node/' . $nid);
 }
 
