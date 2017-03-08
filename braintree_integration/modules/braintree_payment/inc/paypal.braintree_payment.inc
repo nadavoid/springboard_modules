@@ -64,7 +64,6 @@ function braintree_payment_form_node_form_alter(&$form, &$form_state, $form_id) 
   if (empty($form['payment_methods']['gateways']) || !element_get_visible_children($form['payment_methods']['gateways'])) {
     return;
   }
-  // dpm($form['#node']);
   // Is Paypal Braintree an available payment method?
   if (isset($form['payment_methods']['gateways']['paypal']) &&
     array_key_exists('braintree_paypal|commerce_payment_braintree_paypal', $form['payment_methods']['gateways']['paypal']['id']['#options'])) {
@@ -269,7 +268,7 @@ function braintree_payment_clone_node_alter(&$node, $context) {
     $enabled_form_ids = variable_get('braintree_paypal_compact', array());
     if (in_array($context['original_node']->nid, $enabled_form_ids)) {
       // if the source node for cloning has the compact flow enabled, set this flag
-      // for node_insert()
+      // for our implementation of hook_node_insert()
       $node->braintree_paypal_compact = TRUE;
     }
   }
