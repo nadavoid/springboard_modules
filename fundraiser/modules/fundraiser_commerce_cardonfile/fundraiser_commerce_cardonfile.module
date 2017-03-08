@@ -49,7 +49,7 @@ function fundraiser_commerce_cardonfile_fundraiser_donation_post_update($donatio
 /**
  * Implements hook_views_pre_render().
  *
- * Remove cards that have no used by entries; remove card name and billing
+ * Remove cards that have no used for entries; remove card name and billing
  * profile label if the card name is the same as the billing profile name.
  */
 function fundraiser_commerce_cardonfile_views_pre_render(&$view) {
@@ -58,14 +58,14 @@ function fundraiser_commerce_cardonfile_views_pre_render(&$view) {
   }
 
   foreach ($view->result as $key => $result) {
-    // If this card isn't being used by quick donate or for a recurring donation
-    // unset it.
-    if (empty($result->used_by)) {
+    // If this card isn't being used for one-click donate or for a recurring
+    // donation unset it.
+    if (empty($result->used_for)) {
       unset($view->result[$key]);
       continue;
     }
 
-    // Array of payment gateways used by cards that should not be displayed.
+    // Array of payment gateways used for cards that should not be displayed.
     $blacklist = array(
       'braintree_hostedfields|commerce_payment_braintree_hostedfields',
       'commerce_psi_credit|commerce_payment_commerce_psi_credit',

@@ -4570,22 +4570,22 @@ function _fundraiser_sustainers_get_payment_info_for_card_id($card_id) {
 }
 
 /**
- * Implements hook_fundraiser_commerce_cardonfile_used_by().
+ * Implements hook_fundraiser_commerce_cardonfile_used_for().
  *
  * Used to inform fundraiser_commerce_cardonfile if the card is used for Quick
  * Donations.
  */
-function fundraiser_sustainers_fundraiser_commerce_cardonfile_used_by($card_id) {
+function fundraiser_sustainers_fundraiser_commerce_cardonfile_used_for($card_id) {
   $results = _fundraiser_sustainers_get_payment_info_for_card_id($card_id);
 
   if (empty($results)) {
     return;
   }
 
-  $used_by = array();
+  $used_for = array();
 
   foreach ($results as $result) {
-    $used_by[] = t('Recurring @type donation (@amount@spacecharged on the @day)', array(
+    $used_for[] = t('Recurring @type donation (@amount@spacecharged on the @day)', array(
       '@type' => strtolower($result['npsp_installment_period']),
       '@amount' => empty($result['amount']) ? '' : '$' . number_format($result['amount'], 2, '.', '') . ',',
       '@space' => empty($result['amount']) ? '' : ' ',
@@ -4593,5 +4593,5 @@ function fundraiser_sustainers_fundraiser_commerce_cardonfile_used_by($card_id) 
     ));
   }
 
-  return $used_by;
+  return $used_for;
 }

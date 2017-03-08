@@ -1,14 +1,13 @@
 <?php
-
 /**
  * @file
- * Springboard Quick Donation admin functions.
+ * Fundraiser One Click Donation admin functions.
  */
 
 /**
  * Admin settings form.
  */
-function fundraiser_quick_donate_admin_settings($form, $form_state) {
+function fundraiser_ocd_admin_settings($form, $form_state) {
   $form['default_forms'] = array(
     '#type' => 'fieldset',
     '#title' => t('Default Forms'),
@@ -38,106 +37,106 @@ function fundraiser_quick_donate_admin_settings($form, $form_state) {
   $gateway_keys = array_keys($gateways);
   foreach ($gateway_keys as $gateway_key) {
     $default = '';
-    $data = variable_get(FUNDRAISER_QUICK_DONATE_DEFAULT_FORM_PREFIX . $gateway_key, array());
+    $data = variable_get(FUNDRAISER_ocd_DEFAULT_FORM_PREFIX . $gateway_key, array());
     if (!empty($data)) {
       $data = unserialize($data);
       $default = $data['title'];
     }
-    $form['default_forms'][FUNDRAISER_QUICK_DONATE_DEFAULT_FORM_PREFIX . $gateway_key] = array(
+    $form['default_forms'][FUNDRAISER_ocd_DEFAULT_FORM_PREFIX . $gateway_key] = array(
       '#type' => 'textfield',
       '#title' => t('Default node ID for @gateway', array(
         '@gateway' => isset($gateways[$gateway_key]['title']) ? $gateways[$gateway_key]['title'] : $gateway_key,
       )),
       '#description' => t('The node ID of the form you want to be used as default.'),
-      '#autocomplete_path' => 'admin/springboard/options/fundraiser/fundraiser_quick_donate/autocomplete/' . $gateway_key,
+      '#autocomplete_path' => 'admin/springboard/options/fundraiser/fundraiser_ocd/autocomplete/' . $gateway_key,
       '#default_value' => $default,
     );
   }
 
-  $data = variable_get(FUNDRAISER_QUICK_DONATE_DEFAULT_FORM_PREFIX . 'default', array());
+  $data = variable_get(FUNDRAISER_ocd_DEFAULT_FORM_PREFIX . 'default', array());
   if (!empty($data)) {
     $data = unserialize($data);
     $default = $data['title'];
   }
-  $form['default_forms'][FUNDRAISER_QUICK_DONATE_DEFAULT_FORM_PREFIX . 'default'] = array(
+  $form['default_forms'][FUNDRAISER_ocd_DEFAULT_FORM_PREFIX . 'default'] = array(
     '#type' => 'textfield',
     '#title' => t('Default node ID for all gateways'),
     '#description' => t('The node ID of the form you want to be used as default.'),
-    '#autocomplete_path' => 'admin/springboard/options/fundraiser/fundraiser_quick_donate/autocomplete/all',
+    '#autocomplete_path' => 'admin/springboard/options/fundraiser/fundraiser_ocd/autocomplete/all',
     '#default_value' => $default,
   );
 
   $form['default_messages'] = array(
     '#type' => 'fieldset',
     '#title' => t('Default Messages'),
-    '#description' => t('Configure the default quick donate messages that will be displayed to the end user.'),
+    '#description' => t('Configure the default one-click messages that will be displayed to the end user.'),
   );
-  $form['default_messages']['fundraiser_quick_donate_default_optin_message_new_user'] = array(
+  $form['default_messages']['fundraiser_ocd_default_optin_message_new_user'] = array(
     '#type' => 'textfield',
-    '#title' => t('"Quick Donation" opt-in text (for users not already set up with Quick Donate)'),
+    '#title' => t('"One Click" opt-in text (for users not currently enrolled in One Click)'),
     '#description' => t('This is the title of the opt-in checkbox. The "@type" placeholder can be used to specify the type of payment method (either credit card or bank account). Defaults to "Save this @type for future use".'),
-    '#default_value' => variable_get('fundraiser_quick_donate_default_optin_message_new_user', t('Save this @type for future use')),
+    '#default_value' => variable_get('fundraiser_ocd_default_optin_message_new_user', t('Save this @type for future use')),
   );
-  $form['default_messages']['fundraiser_quick_donate_default_help_message_new_user'] = array(
+  $form['default_messages']['fundraiser_ocd_default_help_message_new_user'] = array(
     '#type' => 'text_format',
-    '#title' => t('"Quick Donation" help text (for users not already set up with Quick Donate)'),
-    '#description' => t('This message will be shown to users to provide information about quick donations. Use !type to print the type of payment method, which will be either credit or bank account.<br/><br/>', array('!type' => '<strong>@type</strong>')),
-    '#default_value' => variable_get('fundraiser_quick_donate_default_help_message_new_user', t('Save your @type details and donate faster next time. We may email you from time to time with quick donate opportunities. You can update your @type details or cancel your enrollment at any time.')),
-    '#format' => variable_get('fundraiser_quick_donate_default_help_message_new_user_format', 'plain_text'),
+    '#title' => t('"One Click" help text (for users not currently enrolled in One Click)'),
+    '#description' => t('This message will be shown to users to provide information about one-click donations. Use !type to print the type of payment method, which will be either credit or bank account.<br/><br/>', array('!type' => '<strong>@type</strong>')),
+    '#default_value' => variable_get('fundraiser_ocd_default_help_message_new_user', t('Save your @type details and donate faster next time. We may email you from time to time with one-click opportunities. You can update your @type details or cancel your enrollment at any time.')),
+    '#format' => variable_get('fundraiser_ocd_default_help_message_new_user_format', 'plain_text'),
   );
-  $form['default_messages']['fundraiser_quick_donate_default_optin_message_existing_user'] = array(
+  $form['default_messages']['fundraiser_ocd_default_optin_message_existing_user'] = array(
     '#type' => 'textfield',
-    '#title' => t('"Quick Donation" opt-in text (for users already set up with Quick Donate)'),
+    '#title' => t('"One Click" opt-in text (for users currently enrolled in One Click)'),
     '#description' => t('This is the title of the opt-in checkbox. The "@type" placeholder can be used to specify the type of payment method (either credit card or bank account). Defaults to "Save this @type for future use".'),
-    '#default_value' => variable_get('fundraiser_quick_donate_default_optin_message_existing_user', t('Update your saved @type?')),
+    '#default_value' => variable_get('fundraiser_ocd_default_optin_message_existing_user', t('Update your saved @type?')),
   );
-  $form['default_messages']['fundraiser_quick_donate_default_help_message_existing_user'] = array(
+  $form['default_messages']['fundraiser_ocd_default_help_message_existing_user'] = array(
     '#type' => 'text_format',
-    '#title' => t('"Quick Donation" help text (for users already set up with Quick Donate)'),
-    '#description' => t('This message will be shown to users to provide information about quick donations. Use !type to print the type of payment method, which will be either credit or bank account.<br/><br/>', array('!type' => '<strong>@type</strong>')),
-    '#default_value' => variable_get('fundraiser_quick_donate_default_help_message_existing_user', t('Check this box if you want to make this new @type your default for future donations.')),
-    '#format' => variable_get('fundraiser_quick_donate_default_help_message_existing_user_format', 'plain_text'),
+    '#title' => t('"One Click" help text (for users currently enrolled in One Click)'),
+    '#description' => t('This message will be shown to users to provide information about one-click donations. Use !type to print the type of payment method, which will be either credit or bank account.<br/><br/>', array('!type' => '<strong>@type</strong>')),
+    '#default_value' => variable_get('fundraiser_ocd_default_help_message_existing_user', t('Check this box if you want to make this new @type your default for future donations.')),
+    '#format' => variable_get('fundraiser_ocd_default_help_message_existing_user_format', 'plain_text'),
   );
-  $form['default_messages']['fundraiser_quick_donate_default_login_message'] = array(
+  $form['default_messages']['fundraiser_ocd_default_login_message'] = array(
     '#type' => 'textfield',
-    '#title' => t('"Quick Donation" login text'),
+    '#title' => t('"One Click" login text'),
     '#description' => t('This is the title of the log-in checkbox. The "@type" placeholder can be used to specify the type of payment method (credit card or bank account). Defaults to "Already have a saved @type?".'),
-    '#default_value' => variable_get('fundraiser_quick_donate_default_login_message', t('Already have a saved @type?')),
+    '#default_value' => variable_get('fundraiser_ocd_default_login_message', t('Already have a saved @type?')),
   );
-  $form['default_messages']['fundraiser_quick_donate_default_login_link_message'] = array(
+  $form['default_messages']['fundraiser_ocd_default_login_link_message'] = array(
     '#type' => 'textfield',
-    '#title' => t('"Quick Donation" login link text'),
+    '#title' => t('"One Click" login link text'),
     '#description' => t('This is the title of the log-in checkbox. Defaults to "Click here to login".'),
-    '#default_value' => variable_get('fundraiser_quick_donate_default_login_link_message', t('Click here to login')),
+    '#default_value' => variable_get('fundraiser_ocd_default_login_link_message', t('Click here to login')),
   );
-  /*$form['default_messages']['fundraiser_quick_donate_default_default_message'] = array(
+  /*$form['default_messages']['fundraiser_ocd_default_default_message'] = array(
     '#type' => 'textfield',
     '#title' => t('"Set as default card" text'),
     '#description' => t('The text of the "Set as default card" checkbox, which asks users if they want this card they are adding to be their default card for future payments. Defaults to "Set as your default payment method?"'),
-    '#default_value' => variable_get('fundraiser_quick_donate_default_default_message', t('Set as your default payment method?')),
+    '#default_value' => variable_get('fundraiser_ocd_default_default_message', t('Set as your default payment method?')),
   );*/
 
   // @todo Uncomment the following when we're ready to allow multiple cards to
-  // be used for quick donating.
+  // be used for one-click donating.
   // $form['other'] = array(
   //   '#type' => 'fieldset',
   //   '#title' => t('Other options'),
   // );
-  // $form['other']['fundraiser_quick_donate_allow_multiple_cards'] = array(
+  // $form['other']['fundraiser_ocd_allow_multiple_cards'] = array(
   //   '#type' => 'checkbox',
-  //   '#title' => t('Allow multiple stored cards to be configured for quick donations'),
-  //   '#default_value' => variable_get('fundraiser_quick_donate_allow_multiple_cards', FALSE),
+  //   '#title' => t('Allow multiple stored cards to be configured for one-click donations'),
+  //   '#default_value' => variable_get('fundraiser_ocd_allow_multiple_cards', FALSE),
   // );
 
-  $form['#submit'][] = 'fundraiser_quick_donate_admin_settings_submit';
+  $form['#submit'][] = 'fundraiser_ocd_admin_settings_submit';
 
   return system_settings_form($form);
 }
 
 /**
- * Autocomplete callback function for fundraiser_quick_donate_admin_settings().
+ * Autocomplete callback function for fundraiser_ocd_admin_settings().
  */
-function fundraiser_quick_donate_admin_settings_autocomplete_callback($gateway_key = 'all', $string = '') {
+function fundraiser_ocd_admin_settings_autocomplete_callback($gateway_key = 'all', $string = '') {
   // Using db_select here because we need to also join the node table.
   $result = db_select('node', 'n')
     ->fields('n', array('nid', 'title'));
@@ -165,11 +164,11 @@ function fundraiser_quick_donate_admin_settings_autocomplete_callback($gateway_k
 }
 
 /**
- * Submission handler for fundraiser_quick_donate_admin_settings().
+ * Submission handler for fundraiser_ocd_admin_settings().
  */
-function fundraiser_quick_donate_admin_settings_submit($form, &$form_state) {
+function fundraiser_ocd_admin_settings_submit($form, &$form_state) {
   foreach ($form_state['values'] as $key => $value) {
-    if (strpos($key, FUNDRAISER_QUICK_DONATE_DEFAULT_FORM_PREFIX) === FALSE || empty($value)) {
+    if (strpos($key, FUNDRAISER_ocd_DEFAULT_FORM_PREFIX) === FALSE || empty($value)) {
       continue;
     }
     $match = preg_match('/.*\[([0-9]+)\].*/', $value, $matches);
@@ -196,16 +195,16 @@ function fundraiser_quick_donate_admin_settings_submit($form, &$form_state) {
     );
     $form_state['values'][$key] = serialize($data);
   }
-  $form_state['values']['fundraiser_quick_donate_default_help_message_new_user_format'] = $form_state['values']['fundraiser_quick_donate_default_help_message_new_user']['format'];
-  $form_state['values']['fundraiser_quick_donate_default_help_message_new_user'] = $form_state['values']['fundraiser_quick_donate_default_help_message_new_user']['value'];
-  $form_state['values']['fundraiser_quick_donate_default_help_message_existing_user_format'] = $form_state['values']['fundraiser_quick_donate_default_help_message_existing_user']['format'];
-  $form_state['values']['fundraiser_quick_donate_default_help_message_existing_user'] = $form_state['values']['fundraiser_quick_donate_default_help_message_existing_user']['value'];
+  $form_state['values']['fundraiser_ocd_default_help_message_new_user_format'] = $form_state['values']['fundraiser_ocd_default_help_message_new_user']['format'];
+  $form_state['values']['fundraiser_ocd_default_help_message_new_user'] = $form_state['values']['fundraiser_ocd_default_help_message_new_user']['value'];
+  $form_state['values']['fundraiser_ocd_default_help_message_existing_user_format'] = $form_state['values']['fundraiser_ocd_default_help_message_existing_user']['format'];
+  $form_state['values']['fundraiser_ocd_default_help_message_existing_user'] = $form_state['values']['fundraiser_ocd_default_help_message_existing_user']['value'];
 }
 
 /**
  * Upgrade link generator form.
  */
-function fundraiser_quick_donate_token_generator($form, $form_state) {
+function fundraiser_ocd_token_generator($form, $form_state) {
   $key = springboard_hmac_get_key();
   if (empty($key)) {
     drupal_set_message(t('Secure Prepopulate key and initialization vector are not set. Upgrade links will not work.'), 'error');
@@ -218,23 +217,23 @@ function fundraiser_quick_donate_token_generator($form, $form_state) {
     'gateway_id' => 'authnet_aim|commerce_payment_authnet_aim',
   );
   foreach ($default_defaults as $key => $default) {
-    if (isset($_SESSION['qd_token_generate'][$key])) {
-      $defaults[$key] = $_SESSION['qd_token_generate'][$key];
+    if (isset($_SESSION['ocd_token_generate'][$key])) {
+      $defaults[$key] = $_SESSION['ocd_token_generate'][$key];
     }
     else {
       $defaults[$key] = $default;
     }
   }
 
-  $form['fundraiser_quick_donate_springboard_hmac'] = array(
+  $form['fundraiser_ocd_springboard_hmac'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Quick Donate Token'),
+    '#title' => t('One Click Token'),
     '#collapsible' => TRUE,
     '#collapsed' => FALSE,
-    '#description' => t('To test quick donation tokens, enter the following field information and press "Generate Token".'),
+    '#description' => t('To test one-click donation tokens, enter the following field information and press "Generate Token".'),
   );
 
-  $form['fundraiser_quick_donate_springboard_hmac']['uid'] = array(
+  $form['fundraiser_ocd_springboard_hmac']['uid'] = array(
     '#type' => 'textfield',
     '#title' => t('User ID'),
     '#size' => 20,
@@ -242,7 +241,7 @@ function fundraiser_quick_donate_token_generator($form, $form_state) {
     '#description' => t('The UID of the donator.'),
   );
 
-  $form['fundraiser_quick_donate_springboard_hmac']['card_id'] = array(
+  $form['fundraiser_ocd_springboard_hmac']['card_id'] = array(
     '#type' => 'textfield',
     '#title' => t('Card ID'),
     '#description' => t('The card ID.'),
@@ -254,10 +253,10 @@ function fundraiser_quick_donate_token_generator($form, $form_state) {
     '#value' => t('Generate Token'),
   );
 
-  $form['#submit'][] = 'fundraiser_quick_donate_token_generator_validate';
-  $form['#submit'][] = 'fundraiser_quick_donate_token_generator_submit';
+  $form['#submit'][] = 'fundraiser_ocd_token_generator_validate';
+  $form['#submit'][] = 'fundraiser_ocd_token_generator_submit';
 
-  $form['#attached']['js'][] = drupal_get_path('module', 'fundraiser_quick_donate') . '/js/fundraiser_quick_donate.admin.js';
+  $form['#attached']['js'][] = drupal_get_path('module', 'fundraiser_ocd') . '/js/fundraiser_ocd.admin.js';
 
   return $form;
 }
@@ -268,7 +267,7 @@ function fundraiser_quick_donate_token_generator($form, $form_state) {
  * @param int $uid
  *   The uid of the user.
  */
-function _fundraiser_quick_donate_admin_get_card_ids_by_uid($uid) {
+function _fundraiser_ocd_admin_get_card_ids_by_uid($uid) {
   $query = new EntityFieldQuery();
   $query
     ->entityCondition('entity_type', 'commerce_cardonfile')
@@ -286,8 +285,8 @@ function _fundraiser_quick_donate_admin_get_card_ids_by_uid($uid) {
  * @param array $form_state
  *   The form state.
  */
-function fundraiser_quick_donate_token_generator_validate($form, $form_state) {
-  $_SESSION['qd_token_generate'] = $form_state['values'];
+function fundraiser_ocd_token_generator_validate($form, $form_state) {
+  $_SESSION['ocd_token_generate'] = $form_state['values'];
 }
 
 /**
@@ -298,13 +297,13 @@ function fundraiser_quick_donate_token_generator_validate($form, $form_state) {
  * @param array $form_state
  *   The form state.
  */
-function fundraiser_quick_donate_token_generator_submit($form, $form_state) {
+function fundraiser_ocd_token_generator_submit($form, $form_state) {
   $payload = array(
     'uid' => $form_state['values']['uid'],
     'card_id' => $form_state['values']['card_id'],
   );
 
-  $link = fundraiser_quick_donate_create_link($payload);
+  $link = fundraiser_ocd_create_link($payload);
 
-  drupal_set_message('Quick donate link generated! ' . l($link, $link));
+  drupal_set_message('One click donate link generated! ' . l($link, $link));
 }

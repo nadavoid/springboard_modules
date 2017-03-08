@@ -1,5 +1,5 @@
-name = Fundraiser Quick Donate
-description = Enables functionality for quick donations.
+name = Fundraiser One Click Donate
+description = Enables functionality for one-click donations.
 package = Jackson River Springboard
 core = 7.x
 dependencies[] = commerce_cardonfile

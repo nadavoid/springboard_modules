@@ -50,7 +50,7 @@ function springboard_cookie_permission() {
 function springboard_cookie_inspect($uid) {
   $cookie = springboard_cookie_get_cookie();
   $output = array();
-  
+
   $output['header'] = array(
     '#type' => 'markup',
     '#markup' => 'Springboard cookie debug info',
@@ -65,7 +65,7 @@ function springboard_cookie_inspect($uid) {
     '#suffix' => '</pre>',
   );
 
-  return $output;  
+  return $output;
 }
 
 /**
@@ -168,11 +168,11 @@ function springboard_cookie_sb_social_share_event_save($share_data) {
 }
 
 /**
- * Implements hook_springboard_quick_donate_optin_create().
+ * Implements hook_springboard_ocd_optin_create().
  */
-function springboard_cookie_springboard_quick_donate_optin_create($account, $donation, $card_id) {
+function springboard_cookie_springboard_ocd_optin_create($account, $donation, $card_id) {
   springboard_cookie_tag_client(array(
-    'quick_donate' => array(
+    'ocd' => array(
       'optin_date' => time(),
       'card_id' => $card_id,
     ),
@@ -221,7 +221,7 @@ function springboard_cookie_add_profile_values($account) {
   try {
     $user_wrapper = entity_metadata_wrapper('user', $account);
     $properties = $user_wrapper->getPropertyInfo();
-    
+
     if (array_key_exists('sbp_salutation', $properties)) {
       $profile_data['profile']['salutation'] = $user_wrapper->sbp_salutation->value();
     }
@@ -248,7 +248,7 @@ function springboard_cookie_add_profile_values($account) {
     }
     if (array_key_exists('sbp_phone', $properties)) {
       $profile_data['profile']['phone'] = $user_wrapper->sbp_phone->value();
-    }    
+    }
   }
   catch (EntityMetadataWrapperException $exc) {
     watchdog('springboard_cookie', 'Error loading user profile data into cookie for card id %uid.', array('%uid' => $account->uid), WATCHDOG_ERROR);

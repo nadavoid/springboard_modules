@@ -1,56 +1,56 @@
 <?php
 /**
  * @file
- * Module file for fundraiser_quick_donate.
+ * Module file for fundraiser_ocd.
  */
 
-define('FUNDRAISER_QUICK_DONATE_DEFAULT_FORM_PREFIX', 'fundraiser_quick_donate_default_form_');
+define('fundraiser_ocd_DEFAULT_FORM_PREFIX', 'fundraiser_ocd_default_form_');
 
-require_once 'includes/fundraiser_quick_donate.fundraiser.inc';
-require_once 'includes/fundraiser_quick_donate.node_form.inc';
-require_once 'includes/fundraiser_quick_donate.springboard_hmac.inc';
+require_once 'includes/fundraiser_ocd.fundraiser.inc';
+require_once 'includes/fundraiser_ocd.node_form.inc';
+require_once 'includes/fundraiser_ocd.springboard_hmac.inc';
 
 /**
  * Implements hook_menu().
  */
-function fundraiser_quick_donate_menu() {
+function fundraiser_ocd_menu() {
   $items = array();
 
-  $items['admin/springboard/options/fundraiser/fundraiser_quick_donate'] = array(
-    'title' => 'Quick Donate Settings',
-    'description' => 'Settings for quick donations.',
+  $items['admin/springboard/options/fundraiser/fundraiser_ocd'] = array(
+    'title' => 'One Click Donate Settings',
+    'description' => 'Settings for one-click donations.',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('fundraiser_quick_donate_admin_settings'),
+    'page arguments' => array('fundraiser_ocd_admin_settings'),
     'access callback' => 'user_access',
-    'access arguments' => array('administer quickdonate configuration'),
+    'access arguments' => array('administer ocd configuration'),
     'type' => MENU_NORMAL_ITEM,
-    'file' => 'includes/fundraiser_quick_donate.admin.inc',
+    'file' => 'includes/fundraiser_ocd.admin.inc',
   );
 
-  $items['admin/springboard/options/fundraiser/fundraiser_quick_donate/autocomplete'] = array(
-    'title' => 'Autocomplete for Quick Donation forms',
-    'page callback' => 'fundraiser_quick_donate_admin_settings_autocomplete_callback',
+  $items['admin/springboard/options/fundraiser/fundraiser_ocd/autocomplete'] = array(
+    'title' => 'Autocomplete for One Click Donation forms',
+    'page callback' => 'fundraiser_ocd_admin_settings_autocomplete_callback',
     'access arguments' => array('use autocomplete'),
     'type' => MENU_CALLBACK,
-    'file' => 'includes/fundraiser_quick_donate.admin.inc',
+    'file' => 'includes/fundraiser_ocd.admin.inc',
   );
 
-  $items['admin/springboard/options/fundraiser/fundraiser_quick_donate/card_ids_by_uid'] = array(
+  $items['admin/springboard/options/fundraiser/fundraiser_ocd/card_ids_by_uid'] = array(
     'title' => 'Autocomplete for fetching card ids associated with a user',
-    'page callback' => '_fundraiser_quick_donate_admin_get_card_ids_by_uid',
+    'page callback' => '_fundraiser_ocd_admin_get_card_ids_by_uid',
     'access arguments' => array('use autocomplete'),
     'type' => MENU_CALLBACK,
-    'file' => 'includes/fundraiser_quick_donate.admin.inc',
+    'file' => 'includes/fundraiser_ocd.admin.inc',
   );
 
   // HMAC token generator page.
-  $items['admin/config/system/fundraiser/quick-donate/token-generator'] = array(
-    'title' => 'Quick Donate Token Generator',
-    'description' => 'Generate quick donate HMAC tokens for testing or use',
+  $items['admin/config/system/fundraiser/ocd/token-generator'] = array(
+    'title' => 'One Click Donate Token Generator',
+    'description' => 'Generate one-click donate HMAC tokens for testing or use',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('fundraiser_quick_donate_token_generator'),
-    'access arguments' => array('administer fundraiser quick_donate'),
-    'file' => 'includes/fundraiser_quick_donate.admin.inc',
+    'page arguments' => array('fundraiser_ocd_token_generator'),
+    'access arguments' => array('administer fundraiser ocd'),
+    'file' => 'includes/fundraiser_ocd.admin.inc',
     'type' => MENU_LOCAL_TASK,
   );
 
@@ -60,10 +60,10 @@ function fundraiser_quick_donate_menu() {
 /**
  * Implements hook_menu_alter().
  */
-function fundraiser_quick_donate_menu_alter(&$items) {
+function fundraiser_ocd_menu_alter(&$items) {
   if (module_exists('commerce_cardonfile')) {
     $items['user/%user/cards/%commerce_cardonfile/edit'] += array(
-      'page callback' => 'fundraiser_quick_donate_form_commerce_cardonfile_card_form',
+      'page callback' => 'fundraiser_ocd_form_commerce_cardonfile_card_form',
       'page arguments' => array(3, 1),
     );
   }
@@ -73,11 +73,11 @@ function fundraiser_quick_donate_menu_alter(&$items) {
 /**
  * Implements hook_springboard_admin_admin_menu_items_alter().
  */
-function fundraiser_quick_donate_springboard_admin_admin_menu_items_alter(&$items) {
+function fundraiser_ocd_springboard_admin_admin_menu_items_alter(&$items) {
   // Settings > Settings > Sustainer Upsell.
-  $items['admin/springboard/settings']['_children']['admin/springboard/settings/config']['_children']['admin/springboard/options/fundraiser/fundraiser_quick_donate'] = array(
-    'link_path' => 'admin/springboard/options/fundraiser/fundraiser_quick_donate',
-    'link_title' => 'Quick Donate Settings',
+  $items['admin/springboard/settings']['_children']['admin/springboard/settings/config']['_children']['admin/springboard/options/fundraiser/fundraiser_ocd'] = array(
+    'link_path' => 'admin/springboard/options/fundraiser/fundraiser_ocd',
+    'link_title' => 'One Click Donate Settings',
     'menu_name' => 'springboard_admin_menu',
     'expanded' => 0,
     'customized' => 1,
@@ -88,12 +88,12 @@ function fundraiser_quick_donate_springboard_admin_admin_menu_items_alter(&$item
 /**
  * Implements hook_FORM_ID_alter().
  *
- * Used to add a quick donation related message.
+ * Used to add a one-click donation related message.
  */
-function fundraiser_quick_donate_form_user_login_alter(&$form, &$form_state) {
+function fundraiser_ocd_form_user_login_alter(&$form, &$form_state) {
   drupal_session_start();
   $destination = drupal_get_destination();
-  if (isset($_SESSION['quickdonate']) && $_SESSION['quickdonate'] && !empty($destination)) {
+  if (isset($_SESSION['ocd']) && $_SESSION['ocd'] && !empty($destination)) {
     $destination = $destination['destination'];
     $form['#prefix'] = t("Please login to verify your identity. Or if you'd prefer, you may !proceed.", array(
       '!proceed' => l(t('proceed to the full donation form'), $destination),
@@ -104,7 +104,7 @@ function fundraiser_quick_donate_form_user_login_alter(&$form, &$form_state) {
 /**
  * Implements hook_node_load().
  */
-function fundraiser_quick_donate_node_load($nodes, $types) {
+function fundraiser_ocd_node_load($nodes, $types) {
   $fundraiser_types = fundraiser_get_donation_types();
   $fundraiser_types = array_filter($fundraiser_types);
   $fundraiser_types = array_keys($fundraiser_types);
@@ -113,23 +113,23 @@ function fundraiser_quick_donate_node_load($nodes, $types) {
   }
 
   foreach ($nodes as $nid => $node) {
-    _fundraiser_quick_donate_attach_quick_donate_fields($nodes[$nid]);
+    _fundraiser_ocd_attach_ocd_fields($nodes[$nid]);
   }
 }
 
 /**
  * Implements hook_node_prepare().
  */
-function fundraiser_quick_donate_node_prepare($node) {
+function fundraiser_ocd_node_prepare($node) {
   if (!fundraiser_is_donation_type($node->type)) {
     return;
   }
 
-  _fundraiser_quick_donate_attach_quick_donate_fields($node);
+  _fundraiser_ocd_attach_ocd_fields($node);
 }
 
 /**
- * Helper function to attach quick donation settings to a node.
+ * Helper function to attach one-click donation settings to a node.
  *
  * @param object $node
  *   The node object.
@@ -137,30 +137,30 @@ function fundraiser_quick_donate_node_prepare($node) {
  * @return object
  *   The modified node object.
  */
-function _fundraiser_quick_donate_attach_quick_donate_fields(&$node) {
-  // Return early if node already has quickdonate information.
-  if (isset($node->quickdonate)) {
+function _fundraiser_ocd_attach_ocd_fields(&$node) {
+  // Return early if node already has ocd information.
+  if (isset($node->ocd)) {
     return array();
   }
 
-  if (!isset($node->nid) || empty($results = db_query('SELECT quickdonate_optin_message_new_user, quickdonate_help_message_new_user_format, quickdonate_help_message_new_user, quickdonate_optin_message_existing_user, quickdonate_help_message_existing_user_format, quickdonate_help_message_existing_user, quickdonate_login_message, quickdonate_login_link_message FROM {fundraiser_quick_donate} WHERE fundraiser_nid = :nid', array(
+  if (!isset($node->nid) || empty($results = db_query('SELECT ocd_optin_message_new_user, ocd_help_message_new_user_format, ocd_help_message_new_user, ocd_optin_message_existing_user, ocd_help_message_existing_user_format, ocd_help_message_existing_user, ocd_login_message, ocd_login_link_message FROM {fundraiser_ocd} WHERE fundraiser_nid = :nid', array(
     ':nid' => $node->nid,
   ))->fetchAssoc())) {
     // Set default values.
     $results = array(
-      'quickdonate_optin_message_new_user' => variable_get('fundraiser_quick_donate_default_optin_message_new_user', 'Save this @type for future use?'),
-      'quickdonate_help_message_new_user_format' => 'filtered_html',
-      'quickdonate_help_message_new_user' => variable_get('fundraiser_quick_donate_default_help_message_new_user', 'Save your @type details and donate faster next time. We may email you from time to time with quick donate opportunities. You can update your @type details or cancel your enrollment at any time.'),
-      'quickdonate_optin_message_existing_user' => variable_get('fundraiser_quick_donate_default_optin_message_existing_user', 'Update your saved @type?'),
-      'quickdonate_help_message_existing_user_format' => 'filtered_html',
-      'quickdonate_help_message_existing_user' => variable_get('fundraiser_quick_donate_default_help_message_existing_user', 'Check this box if you want to make this new @type your default for future donations.'),
-      'quickdonate_login_message' => variable_get('fundraiser_quick_donate_default_login_message', t('Already have a saved @type?')),
-      'quickdonate_login_link_message' => variable_get('fundraiser_quick_donate_default_login_link_message', t('Click here to login')),
-      'quickdonate' => FALSE,
+      'ocd_optin_message_new_user' => variable_get('fundraiser_ocd_default_optin_message_new_user', 'Save this @type for future use?'),
+      'ocd_help_message_new_user_format' => 'filtered_html',
+      'ocd_help_message_new_user' => variable_get('fundraiser_ocd_default_help_message_new_user', 'Save your @type details and donate faster next time. We may email you from time to time with donation opportunities. You can update your @type details or cancel your enrollment at any time.'),
+      'ocd_optin_message_existing_user' => variable_get('fundraiser_ocd_default_optin_message_existing_user', 'Update your saved @type?'),
+      'ocd_help_message_existing_user_format' => 'filtered_html',
+      'ocd_help_message_existing_user' => variable_get('fundraiser_ocd_default_help_message_existing_user', 'Check this box if you want to make this new @type your default for future donations.'),
+      'ocd_login_message' => variable_get('fundraiser_ocd_default_login_message', t('Already have a saved @type?')),
+      'ocd_login_link_message' => variable_get('fundraiser_ocd_default_login_link_message', t('Click here to login')),
+      'ocd' => FALSE,
     );
   }
   else {
-    $results['quickdonate'] = TRUE;
+    $results['ocd'] = TRUE;
   }
 
   foreach ($results as $key => $result) {
@@ -173,21 +173,21 @@ function _fundraiser_quick_donate_attach_quick_donate_fields(&$node) {
 /**
  * Implements hook_node_insert().
  */
-function fundraiser_quick_donate_node_insert($node) {
-  if (!empty($node->quickdonate)) {
+function fundraiser_ocd_node_insert($node) {
+  if (!empty($node->ocd)) {
     $fields = array(
       'fundraiser_nid' => $node->nid,
-      'quickdonate_optin_message_new_user' => $node->quickdonate_optin_message_new_user,
-      'quickdonate_help_message_new_user' => !is_array($node->quickdonate_help_message_new_user) ? $node->quickdonate_help_message_new_user : $node->quickdonate_help_message_new_user['value'],
-      'quickdonate_help_message_new_user_format' => isset($node->quickdonate_help_message_new_user_format) ? $node->quickdonate_help_message_new_user_format : $node->quickdonate_help_message_new_user['format'],
-      'quickdonate_optin_message_existing_user' => $node->quickdonate_optin_message_existing_user,
-      'quickdonate_help_message_existing_user' => !is_array($node->quickdonate_help_message_existing_user) ? $node->quickdonate_help_message_existing_user : $node->quickdonate_help_message_existing_user['value'],
-      'quickdonate_help_message_existing_user_format' => isset($node->quickdonate_help_message_existing_user_format) ? $node->quickdonate_help_message_existing_user_format : $node->quickdonate_help_message_existing_user['format'],
-      'quickdonate_login_message' => $node->quickdonate_login_message,
-      'quickdonate_login_link_message' => $node->quickdonate_login_link_message,
+      'ocd_optin_message_new_user' => $node->ocd_optin_message_new_user,
+      'ocd_help_message_new_user' => !is_array($node->ocd_help_message_new_user) ? $node->ocd_help_message_new_user : $node->ocd_help_message_new_user['value'],
+      'ocd_help_message_new_user_format' => isset($node->ocd_help_message_new_user_format) ? $node->ocd_help_message_new_user_format : $node->ocd_help_message_new_user['format'],
+      'ocd_optin_message_existing_user' => $node->ocd_optin_message_existing_user,
+      'ocd_help_message_existing_user' => !is_array($node->ocd_help_message_existing_user) ? $node->ocd_help_message_existing_user : $node->ocd_help_message_existing_user['value'],
+      'ocd_help_message_existing_user_format' => isset($node->ocd_help_message_existing_user_format) ? $node->ocd_help_message_existing_user_format : $node->ocd_help_message_existing_user['format'],
+      'ocd_login_message' => $node->ocd_login_message,
+      'ocd_login_link_message' => $node->ocd_login_link_message,
     );
 
-    db_merge('fundraiser_quick_donate')
+    db_merge('fundraiser_ocd')
       ->key(array('fundraiser_nid' => $fields['fundraiser_nid']))
       ->fields($fields)
       ->execute();
@@ -197,9 +197,9 @@ function fundraiser_quick_donate_node_insert($node) {
 /**
  * Implements hook_node_delete().
  */
-function fundraiser_quick_donate_node_delete($node) {
-  if (!empty($node->quickdonate)) {
-    db_delete('fundraiser_quick_donate')
+function fundraiser_ocd_node_delete($node) {
+  if (!empty($node->ocd)) {
+    db_delete('fundraiser_ocd')
       ->condition('fundraiser_nid', $node->nid)
       ->execute();
   }
@@ -208,7 +208,7 @@ function fundraiser_quick_donate_node_delete($node) {
 /**
  * Implements hook_payment_method_fields_alter().
  */
-function fundraiser_quick_donate_payment_method_fields_alter(&$element, &$payment_method, &$context) {
+function fundraiser_ocd_payment_method_fields_alter(&$element, &$payment_method, &$context) {
   if (array_key_exists('bank_name', $element)) {
     $keys = array(
       'bank_name' => array(),
@@ -233,16 +233,16 @@ function fundraiser_quick_donate_payment_method_fields_alter(&$element, &$paymen
   // fields will be required. We need to change that by copying the #states
   // value in the parent element to each applicable child element, then unset
   // the #states element in the parent.
-  _fundraiser_quick_donate_payment_method_fields_alter_states($element['#states'], $keys, $element);
+  _fundraiser_ocd_payment_method_fields_alter_states($element['#states'], $keys, $element);
 
-  $element['quickdonate'] = array(
+  $element['ocd'] = array(
     '#type' => 'hidden',
     '#value' => FALSE,
     '#states' => array(
       'visible' => $element['#states']['visible'],
     ),
   );
-  unset($element['quickdonate']['#states']['required']);
+  unset($element['ocd']['#states']['required']);
   unset($element['#states']['required']);
 }
 
@@ -257,10 +257,10 @@ function fundraiser_quick_donate_payment_method_fields_alter(&$element, &$paymen
  * @param array $element
  *   The form element array.
  */
-function _fundraiser_quick_donate_payment_method_fields_alter_states($states, $keys, &$element) {
+function _fundraiser_ocd_payment_method_fields_alter_states($states, $keys, &$element) {
   foreach ($keys as $key => $value) {
     if (count($value)) {
-      _fundraiser_quick_donate_payment_method_fields_alter_states($states, $value, $element[$key]);
+      _fundraiser_ocd_payment_method_fields_alter_states($states, $value, $element[$key]);
     }
     else {
       $element[$key]['#states'] = $states;
@@ -271,14 +271,14 @@ function _fundraiser_quick_donate_payment_method_fields_alter_states($states, $k
 /**
  * Implements hook_webform_user_save_profile_map_alter().
  */
-function fundraiser_quick_donate_webform_user_save_profile_map_alter(&$account, $form, $form_state) {
+function fundraiser_ocd_webform_user_save_profile_map_alter(&$account, $form, $form_state) {
   if (empty($form['#node']->type) || !fundraiser_is_donation_type($form['#node']->type)) {
     return;
   }
 
   $values = $form_state['values']['submitted_tree']['payment_information'];
-  if (isset($form['#node']->quickdonate) && $form['#node']->quickdonate && $values['payment_fields'][$values['payment_method']]['quickdonate']) {
-    $account->field_quick_donate_opt_in = array(
+  if (isset($form['#node']->ocd) && $form['#node']->ocd && $values['payment_fields'][$values['payment_method']]['ocd']) {
+    $account->field_ocd_opt_in = array(
       LANGUAGE_NONE => array(
         0 => array(
           'value' => date("Y-m-d H:i:s"),
@@ -289,7 +289,7 @@ function fundraiser_quick_donate_webform_user_save_profile_map_alter(&$account, 
       ),
     );
     // If there was an opt-out date previously, reset it now.
-    $account->field_quick_donate_opt_out = array(
+    $account->field_ocd_opt_out = array(
       LANGUAGE_NONE => array(
         0 => NULL,
       ),
@@ -300,31 +300,31 @@ function fundraiser_quick_donate_webform_user_save_profile_map_alter(&$account, 
 /**
  * Implements hook_webform_user_profile_fields_alter().
  *
- * Used to remove the user profile field for quick donations from webform
+ * Used to remove the user profile field for one-click donations from webform
  * components, which is a date field. Replaced with a flag in
- * fundraiser_quick_donate_fundraiser_field_info_alter().
+ * fundraiser_ocd_fundraiser_field_info_alter().
  */
-function fundraiser_quick_donate_webform_user_profile_fields_alter(&$fields, $node) {
+function fundraiser_ocd_webform_user_profile_fields_alter(&$fields, $node) {
   $fields = array_filter($fields, function($value) {
-    return ($value['name'] != 'field_quick_donate_opt_in' && $value['name'] != 'field_quick_donate_opt_out');
+    return ($value['name'] != 'field_ocd_opt_in' && $value['name'] != 'field_ocd_opt_out');
   });
 }
 
 /**
  * Implements hook_fundraiser_field_info().
  *
- * Used to add a webform component for quick donations.
+ * Used to add a webform component for one-click donations.
  */
-function fundraiser_quick_donate_fundraiser_field_info_alter(&$fields) {
-  $fields['quick_donate_opt_in'] = array(
+function fundraiser_ocd_fundraiser_field_info_alter(&$fields) {
+  $fields['ocd_opt_in'] = array(
     '#type' => 'hidden',
-    '#name' => 'sbp_quick_donate_opt_in',
-    '#title' => 'Quick Donate Opt-in',
+    '#name' => 'sbp_ocd_opt_in',
+    '#title' => 'One Click Donate Opt-in',
   );
-  $fields['quick_donate_opt_out'] = array(
+  $fields['ocd_opt_out'] = array(
     '#type' => 'hidden',
-    '#name' => 'sbp_quick_donate_opt_out',
-    '#title' => 'Quick Donate Opt-out',
+    '#name' => 'sbp_ocd_opt_out',
+    '#title' => 'One Click Donate Opt-out',
   );
   return $fields;
 }
@@ -332,18 +332,18 @@ function fundraiser_quick_donate_fundraiser_field_info_alter(&$fields) {
 /**
  * Implements hook_form_FORM_ID_alter().
  */
-function fundraiser_quick_donate_form_commerce_cardonfile_card_form($card, $user) {
-  // Load the cardonfile's quick donation record, return early if empty.
-  $qd = _fundraiser_quick_donate_get_payment_info_for_card_id($card->card_id, FALSE);
-  if (!empty($qd)) {
-    $card_id = $qd['card_id'];
+function fundraiser_ocd_form_commerce_cardonfile_card_form($card, $user) {
+  // Load the cardonfile's one-click donation record, return early if empty.
+  $ocd = _fundraiser_ocd_get_payment_info_for_card_id($card->card_id, FALSE);
+  if (!empty($ocd)) {
+    $card_id = $ocd['card_id'];
   }
   else {
     $card_id = $card->card_id;
   }
 
   // Load the user's newest donation for the card's gateway.
-  $donation = fundraiser_donation_get_donations_by_uid($user->uid, 1, 'DESC', $qd['gateway'], $card_id);
+  $donation = fundraiser_donation_get_donations_by_uid($user->uid, 1, 'DESC', $ocd['gateway'], $card_id);
   if (empty($donation)) {
     return;
   }
@@ -351,7 +351,7 @@ function fundraiser_quick_donate_form_commerce_cardonfile_card_form($card, $user
   drupal_set_title('Edit Payment Method');
 
   $data = array(
-    'calling module' => 'fundraiser_quick_donate',
+    'calling module' => 'fundraiser_ocd',
     'donation' => $donation,
     'card' => $card,
     'payment_fields' => array(
@@ -377,15 +377,15 @@ function fundraiser_quick_donate_form_commerce_cardonfile_card_form($card, $user
  * Updates the billing update form on cardonfile card edit pages to redirect
  * back to the cards overview page.
  */
-function fundraiser_quick_donate_fundraiser_update_billing_form_postprocess($form, $form_state) {
-  $form['actions']['submit']['#submit'][] = '_fundraiser_quick_donate_check_qd_default';
+function fundraiser_ocd_fundraiser_update_billing_form_postprocess($form, $form_state) {
+  $form['actions']['submit']['#submit'][] = '_fundraiser_ocd_check_ocd_default';
   return $form;
 }
 
 /**
- * Submit handler to check if the quick donate card needs to be updated.
+ * Submit handler to check if the one-click donate card needs to be updated.
  */
-function _fundraiser_quick_donate_check_qd_default($form, $form_state) {
+function _fundraiser_ocd_check_ocd_default($form, $form_state) {
   $donation = $form_state['donation'];
   $card = $form_state['card'];
   $values = $form_state['values'];
@@ -409,38 +409,38 @@ function _fundraiser_quick_donate_check_qd_default($form, $form_state) {
 
   // If the card number has changed, we need to check if the card was QD enabled
   // and if so, set the new card to QD enabled and disable the old one.
-  $qd = db_query('SELECT * FROM {fundraiser_quick_donate_cardonfile} WHERE card_id = :card_id AND uid = :uid AND status = 1', array(
+  $ocd = db_query('SELECT * FROM {fundraiser_ocd_cardonfile} WHERE card_id = :card_id AND uid = :uid AND status = 1', array(
     ':card_id' => $card->card_id,
     ':uid' => $values['uid'],
   ))->fetch();
 
-  if (empty($qd)) {
+  if (empty($ocd)) {
     return;
   }
 
-  db_update('fundraiser_quick_donate_cardonfile')
+  db_update('fundraiser_ocd_cardonfile')
     ->fields(array(
       'status' => 0,
     ))
     ->condition('card_id', $card->card_id, '=')
     ->execute();
-  db_merge('fundraiser_quick_donate_cardonfile')
+  db_merge('fundraiser_ocd_cardonfile')
     ->key(array('card_id' => $new_card->card_id))
     ->fields(array(
       'status' => 1,
       'uid' => $donation->uid,
-      'optin_date' => $qd->optin_date,
-      'did' => $qd->did,
-      'ms' => $qd->ms,
-      'cid' => $qd->cid,
-      'nid' => $qd->nid,
+      'optin_date' => $ocd->optin_date,
+      'did' => $ocd->did,
+      'ms' => $ocd->ms,
+      'cid' => $ocd->cid,
+      'nid' => $ocd->nid,
       'gateway' => $donation->gateway['id'],
     ))
     ->condition('card_id', $new_card->card_id, '=')
     ->execute();
 
   $user = user_load($donation->uid);
-  module_invoke_all('fundraiser_quick_donate_optin_update', $user, $donation, $card->card_id, $new_card->card_id);
+  module_invoke_all('fundraiser_ocd_optin_update', $user, $donation, $card->card_id, $new_card->card_id);
 }
 
 /**
@@ -449,7 +449,7 @@ function _fundraiser_quick_donate_check_qd_default($form, $form_state) {
  * Updates the billing update form on cardonfile card edit pages to redirect
  * back to the cards overview page.
  */
-function fundraiser_quick_donate_fundraiser_update_billing_form__fundraiser_quick_donate__alter(&$form, $form_state) {
+function fundraiser_ocd_fundraiser_update_billing_form__fundraiser_ocd__alter(&$form, $form_state) {
   $card = $form_state['card'];
 
   $title = array(
@@ -484,17 +484,17 @@ function fundraiser_quick_donate_fundraiser_update_billing_form__fundraiser_quic
   ) + $form;
 
   $gateway_type = $form['payment_method']['#value'];
-  $enabled = db_query('SELECT card_id FROM {fundraiser_quick_donate_cardonfile} WHERE card_id = :card_id AND status = 1', array(
+  $enabled = db_query('SELECT card_id FROM {fundraiser_ocd_cardonfile} WHERE card_id = :card_id AND status = 1', array(
     ':card_id' => $card->card_id,
   ))->fetchField();
 
-  $form['payment_fields'][$gateway_type]['quickdonate'] = array(
+  $form['payment_fields'][$gateway_type]['ocd'] = array(
     '#type' => 'checkbox',
-    '#title' => '&nbsp;' . t('Use this card for Quick Donate'),
+    '#title' => '&nbsp;' . t('Use this card for One Click Donate'),
     '#default_value' => !!$enabled,
   );
 
-  $form['actions']['submit']['#submit'][] = '_fundraiser_quick_donate_set_new_qd_cof';
+  $form['actions']['submit']['#submit'][] = '_fundraiser_ocd_set_new_ocd_cof';
 
   $form['actions']['cancel'] = array(
     '#markup' => '<span class="cancel"> or ' . l(t('Cancel'), 'user/' . $card->uid . '/cards') . '</span>',
@@ -503,15 +503,15 @@ function fundraiser_quick_donate_fundraiser_update_billing_form__fundraiser_quic
 }
 
 /**
- * Submission handler to update {fundraiser_quick_donate_cardonfile}.
+ * Submission handler to update {fundraiser_ocd_cardonfile}.
  *
- * Updated when user selects "Make this my default Quick Donate card" on the
+ * Updated when user selects "Make this my default One Click Donate card" on the
  * user's stored cards page.
  *
- * @see fundraiser_quick_donate_fundraiser_update_billing_form__fundraiser_quick_donate__alter()
+ * @see fundraiser_ocd_fundraiser_update_billing_form__fundraiser_ocd__alter()
  * @see fundraiser_update_billing_form()
  */
-function _fundraiser_quick_donate_set_new_qd_cof(&$form, &$form_state) {
+function _fundraiser_ocd_set_new_ocd_cof(&$form, &$form_state) {
   // Check if the expiration date changed. If it has and this is a recurring
   // series, we need to add the submission handler from the
   // fundraiser_sustainers module to the submission handler array.
@@ -528,18 +528,18 @@ function _fundraiser_quick_donate_set_new_qd_cof(&$form, &$form_state) {
   $payment_fields = $values['payment_fields'];
   $payment_method = $values['payment_method'];
 
-  // If quickdonate is not true the user may be opting this card out.
-  if (!$payment_fields['credit']['quickdonate']) {
-    fundraiser_quick_donate_opt_out_card($values['uid'], $form_state['card']->card_id);
+  // If ocd is not true the user may be opting this card out.
+  if (!$payment_fields['credit']['ocd']) {
+    fundraiser_ocd_opt_out_card($values['uid'], $form_state['card']->card_id);
   }
 
   // First reset all existing cards' status to 0.
-  db_query('UPDATE {fundraiser_quick_donate_cardonfile} SET status = 0 WHERE uid = :uid', array(
+  db_query('UPDATE {fundraiser_ocd_cardonfile} SET status = 0 WHERE uid = :uid', array(
     ':uid' => $values['uid'],
   ));
 
   // If the checkbox was left unchecked, we can return early.
-  if (empty($payment_fields[$payment_method]['quickdonate'])) {
+  if (empty($payment_fields[$payment_method]['ocd'])) {
     return;
   }
 
@@ -547,9 +547,9 @@ function _fundraiser_quick_donate_set_new_qd_cof(&$form, &$form_state) {
   $did = NULL;
 
   // Check if the card has a corresponding record in
-  // {fundraiser_quick_donate_cardonfile}, if it does just update that one.
+  // {fundraiser_ocd_cardonfile}, if it does just update that one.
   // Otherwise we'll need to create one.
-  $results = db_query('SELECT card_id, did FROM {fundraiser_quick_donate_cardonfile} WHERE card_id = :card_id ORDER BY optin_date LIMIT 1', array(
+  $results = db_query('SELECT card_id, did FROM {fundraiser_ocd_cardonfile} WHERE card_id = :card_id ORDER BY optin_date LIMIT 1', array(
     ':card_id' => $form_state['card']->card_id,
   ))->fetchAllKeyed();
   $did = reset($results);
@@ -557,17 +557,17 @@ function _fundraiser_quick_donate_set_new_qd_cof(&$form, &$form_state) {
   if (empty($results)) {
     // Need a node id, query the table for any pre-existing ones the user has
     // opted into.
-    $nid = db_query('SELECT nid FROM {fundraiser_quick_donate_cardonfile} WHERE uid = :uid LIMIT 1', array(
+    $nid = db_query('SELECT nid FROM {fundraiser_ocd_cardonfile} WHERE uid = :uid LIMIT 1', array(
       ':uid' => $values['uid'],
     ))->fetchField();
 
-    // If the user isn't currently opted into any quick donation forms, select
-    // one from {fundraiser_quick_donate}.
+    // If the user isn't currently opted into any one-click donation forms,
+    // select one from {fundraiser_ocd}.
     if (empty($nid)) {
-      $nid = db_query('SELECT fundraiser_nid FROM {fundraiser_quick_donate} LIMIT 1')->fetchField();
+      $nid = db_query('SELECT fundraiser_nid FROM {fundraiser_ocd} LIMIT 1')->fetchField();
     }
 
-    // If no quick donation forms exist, we'll need to exit prematurely.
+    // If no one-click donation forms exist, we'll need to exit prematurely.
     if (empty($nid)) {
       return;
     }
@@ -578,13 +578,13 @@ function _fundraiser_quick_donate_set_new_qd_cof(&$form, &$form_state) {
     ))->fetchField();
 
     // Set all existing cards to status=0.
-    db_query('UPDATE {fundraiser_quick_donate_cardonfile} SET status = 0 WHERE uid = :uid', array(
+    db_query('UPDATE {fundraiser_ocd_cardonfile} SET status = 0 WHERE uid = :uid', array(
       ':uid' => $values['uid'],
     ));
 
     // Set the opted in card to status=1. Using db_merge in case card doesn't
     // exist in table yet.
-    db_insert('fundraiser_quick_donate_cardonfile')
+    db_insert('fundraiser_ocd_cardonfile')
       ->fields(array(
         'uid' => $values['uid'],
         'status' => 1,
@@ -599,7 +599,7 @@ function _fundraiser_quick_donate_set_new_qd_cof(&$form, &$form_state) {
       ->execute();
   }
   else {
-    db_query('UPDATE {fundraiser_quick_donate_cardonfile} SET status = 1, optin_date = :time WHERE card_id = :card_id', array(
+    db_query('UPDATE {fundraiser_ocd_cardonfile} SET status = 1, optin_date = :time WHERE card_id = :card_id', array(
       ':time' => time(),
       ':card_id' => $form_state['card']->card_id,
     ));
@@ -607,22 +607,22 @@ function _fundraiser_quick_donate_set_new_qd_cof(&$form, &$form_state) {
 
   if (!empty($did)) {
     $donation = fundraiser_donation_get_donation($did);
-    module_invoke_all('fundraiser_quick_donate_optin_create', $user, $donation, $form_state['card']->card_id);
+    module_invoke_all('fundraiser_ocd_optin_create', $user, $donation, $form_state['card']->card_id);
   }
 }
 
 /**
- * Returns a user's quick donate card or FALSE if they have none.
+ * Returns a user's one-click donate card or FALSE if they have none.
  *
  * @param int $uid
- *   The id of the user whose quick donate card you want to retreive.
+ *   The id of the user whose one-click donate card you want to retreive.
  */
-function fundraiser_quick_donate_get_default_card($uid) {
-  return db_query('SELECT card_id FROM {fundraiser_quick_donate_cardonfile} WHERE status = 1 and uid = :uid', array(':uid' => $uid))->fetchField();
+function fundraiser_ocd_get_default_card($uid) {
+  return db_query('SELECT card_id FROM {fundraiser_ocd_cardonfile} WHERE status = 1 and uid = :uid', array(':uid' => $uid))->fetchField();
 }
 
 /**
- * Helper function to invoke a hook when a card is opted out of Quick Donate.
+ * Helper function to invoke a hook when a card is opted out of OneClick Donate.
  *
  * Whenever a card is taken out of QD eligility, either by explicit opting out
  * or by deletion, check if it was the QD default and if so make opt-out-related
@@ -635,13 +635,13 @@ function fundraiser_quick_donate_get_default_card($uid) {
  *
  * @throws \Exception
  */
-function fundraiser_quick_donate_opt_out_card($uid, $card_id) {
+function fundraiser_ocd_opt_out_card($uid, $card_id) {
   // See if the user currently has a default card.
-  $default_card = fundraiser_quick_donate_get_default_card($uid);
+  $default_card = fundraiser_ocd_get_default_card($uid);
   if ($default_card && $default_card == $card_id) {
     // Update the user, setting the opt-out date.
     $account = user_load($uid);
-    $account->field_quick_donate_opt_out = array(
+    $account->field_ocd_opt_out = array(
       LANGUAGE_NONE => array(
         0 => array(
           'value' => date("Y-m-d H:i:s"),
@@ -652,8 +652,8 @@ function fundraiser_quick_donate_opt_out_card($uid, $card_id) {
       ),
     );
     user_save($account);
-    // Invoke quick donate opt-out hook.
-    module_invoke_all('fundraiser_quick_donate_optout', $card_id, $uid);
+    // Invoke one-click donate opt-out hook.
+    module_invoke_all('fundraiser_ocd_optout', $card_id, $uid);
   }
 }
 
@@ -666,7 +666,7 @@ function fundraiser_quick_donate_opt_out_card($uid, $card_id) {
  * This function is needed because the cardonfile module doesn't tell us when
  * it's updating a card, or what the new card values are.
  */
-function fundraiser_quick_donate_entity_presave($entity, $type) {
+function fundraiser_ocd_entity_presave($entity, $type) {
   $args = arg();
   if ($type == 'commerce_cardonfile' && isset($args[2]) && $args[2] == 'cards' && isset($_SESSION['card_number']) && strlen($_SESSION['card_number']) > 4) {
     $entity->card_number = substr($_SESSION['card_number'], -4);
@@ -677,26 +677,27 @@ function fundraiser_quick_donate_entity_presave($entity, $type) {
 /**
  * Implements hook_entity_delete().
  */
-function fundraiser_quick_donate_entity_delete($entity, $type) {
+function fundraiser_ocd_entity_delete($entity, $type) {
   if ($type == 'commerce_cardonfile') {
-    fundraiser_quick_donate_opt_out_card($entity->uid, $entity->card_id);
+    fundraiser_ocd_opt_out_card($entity->uid, $entity->card_id);
   }
 }
 
 /**
  * Implements hook_form_FORM_ID_alter().
  *
- * Remove the Quick Donate Opt In and Opt Out fields from appearing on the user edit form.
+ * Remove the One Click Donate Opt In and Opt Out fields from appearing on the
+ * user edit form.
  */
-function fundraiser_quick_donate_form_user_profile_form_alter(&$form, $form_state) {
-  unset($form['field_quick_donate_opt_in']);
-  unset($form['field_quick_donate_opt_out']);
+function fundraiser_ocd_form_user_profile_form_alter(&$form, $form_state) {
+  unset($form['field_ocd_opt_in']);
+  unset($form['field_ocd_opt_out']);
 }
 
 /**
  * Implements hook_webform_user_send_mail_alter().
  */
-function fundraiser_quick_donate_webform_user_send_mail_alter(&$options) {
+function fundraiser_ocd_webform_user_send_mail_alter(&$options) {
   if (empty($options['parameters'])) {
     return;
   }
@@ -707,13 +708,13 @@ function fundraiser_quick_donate_webform_user_send_mail_alter(&$options) {
     return;
   }
 
-  // Since this is coming from the webform_user module, and if this is a Quick
+  // Since this is coming from the webform_user module, and if this is a One Click
   // Donation, set the email to send regardless of what the node's settings are.
   if (isset($params['form_state']['values']['submitted_tree']['payment_information'])) {
     $payment_info = $params['form_state']['values']['submitted_tree']['payment_information'];
     if (isset($payment_info['payment_method']) && isset($payment_info['payment_fields'][$payment_info['payment_method']])) {
       $payment_method = $payment_info['payment_fields'][$payment_info['payment_method']];
-      if (!empty($payment_method['quickdonate'])) {
+      if (!empty($payment_method['ocd'])) {
         $options['send'] = TRUE;
       }
     }
@@ -729,9 +730,9 @@ function fundraiser_quick_donate_webform_user_send_mail_alter(&$options) {
  * @return array
  *   The QD field record.
  */
-function _fundraiser_quick_donate_get_payment_info_for_card_id($card_id, $status = TRUE) {
-  $query = db_select('fundraiser_quick_donate_cardonfile', 'fqdc')
-    ->fields('fqdc')
+function _fundraiser_ocd_get_payment_info_for_card_id($card_id, $status = TRUE) {
+  $query = db_select('fundraiser_ocd_cardonfile', 'focdc')
+    ->fields('focdc')
     ->condition('card_id', $card_id, '=');
   if ($status) {
     $query->condition('status', TRUE, '=');
@@ -740,17 +741,17 @@ function _fundraiser_quick_donate_get_payment_info_for_card_id($card_id, $status
 }
 
 /**
- * Implements hook_fundraiser_commerce_cardonfile_used_by().
+ * Implements hook_fundraiser_commerce_cardonfile_used_for().
  *
- * Used to inform fundraiser_commerce_cardonfile if the card is used for Quick
- * Donations.
+ * Used to inform fundraiser_commerce_cardonfile if the card is used for One
+ * Click Donations.
  */
-function fundraiser_quick_donate_fundraiser_commerce_cardonfile_used_by($card_id) {
-  $result = _fundraiser_quick_donate_get_payment_info_for_card_id($card_id);
+function fundraiser_ocd_fundraiser_commerce_cardonfile_used_for($card_id) {
+  $result = _fundraiser_ocd_get_payment_info_for_card_id($card_id);
   if (empty($result)) {
     return;
   }
-  return t('Quick Donate');
+  return t('One Click Donate');
 }
 
 /**
@@ -758,7 +759,7 @@ function fundraiser_quick_donate_fundraiser_commerce_cardonfile_used_by($card_id
  *
  * Re-weight the profile fields so they appear in the correct order.
  */
-function fundraiser_quick_donate_user_view_alter(&$build) {
+function fundraiser_ocd_user_view_alter(&$build) {
   $ordered_fields = array(
     'first_name',
     'last_name',
@@ -780,7 +781,7 @@ function fundraiser_quick_donate_user_view_alter(&$build) {
  * Moves the summary field for the user profile so that it appears below every-
  * thing else.
  */
-function fundraiser_quick_donate_field_extra_fields_display_alter(&$displays, $context) {
+function fundraiser_ocd_field_extra_fields_display_alter(&$displays, $context) {
   if (!empty($displays['summary'])) {
     $displays['summary']['weight'] = 8;
   }

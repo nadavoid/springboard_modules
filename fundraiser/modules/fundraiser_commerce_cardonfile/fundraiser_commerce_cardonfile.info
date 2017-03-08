@@ -6,4 +6,4 @@ dependencies[] = commerce_cardonfile
 dependencies[] = fundraiser
 
 ; Views handlers
-files[] = includes/views/handlers/fundraiser_commerce_cardonfile_handler_field_used_by.inc
+files[] = includes/views/handlers/fundraiser_commerce_cardonfile_handler_field_used_for.inc

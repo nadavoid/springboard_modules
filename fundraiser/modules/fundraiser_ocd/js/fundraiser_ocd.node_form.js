@@ -1,8 +1,8 @@
 (function($) {
-  Drupal.behaviors.fundraiser_quick_donate = {
+  Drupal.behaviors.fundraiser_ocd = {
     attach: function(context, settings) {
       // Return early if no payment processors are available.
-      if (undefined == Drupal.settings.fundraiser_quick_donate) {
+      if (undefined == Drupal.settings.fundraiser_ocd) {
         return;
       }
 
@@ -13,7 +13,7 @@
       };
 
       var $gateways_enabled;
-      var $quickdonate = $('.form-item-quickdonate');
+      var $ocd = $('.form-item-ocd');
       var gateway_available = {'credit': true, 'bank': false, 'paypal': false};
 
       var gateways_enabled = function() {
@@ -26,20 +26,20 @@
       gateways_enabled();
 
       var disabled = false;
-      var wasChecked = $quickdonate.find('input[type=checkbox]').is(':checked');
+      var wasChecked = $ocd.find('input[type=checkbox]').is(':checked');
       var checkGateway = function($this, type) {
         gateways_enabled();
 
         var $selected = $gateways[type].find('option:selected');
         var $option_name = $selected.text();
         var $option_value = $selected.val();
-        var $pleasenote = $quickdonate.next('.pleasenote');
+        var $pleasenote = $ocd.next('.pleasenote');
         var $note = $pleasenote.next('.note');
         if (!$pleasenote.length) {
           $pleasenote = $('<div/>', {
             class: 'pleasenote'
-          }).html('<strong>Please note</strong>, donors will not be able to opt-in to Quick Donate when using a bank account or PayPal.');
-          $quickdonate.after($pleasenote);
+          }).html('<strong>Please note</strong>, donors will not be able to opt-in to One Click Donate when using a bank account or PayPal.');
+          $ocd.after($pleasenote);
         }
         if ($gateways_enabled.bank || $gateways_enabled.paypal) {
           $pleasenote.show();
@@ -50,42 +50,42 @@
         if (!$note.length) {
           $note = $('<div/>', {
             class: 'note'
-          }).html('Please select a compatible credit gateway in order to enable Quick Donate.');
+          }).html('Please select a compatible credit gateway in order to enable One Click Donate.');
           $pleasenote.after($note);
         }
 
         if (type == 'credit') {
-          if (!$gateways_enabled[type] || $gateways_enabled[type] && Drupal.settings.fundraiser_quick_donate.usable_paypment_processors[type].indexOf($option_value) < 0) {
+          if (!$gateways_enabled[type] || $gateways_enabled[type] && Drupal.settings.fundraiser_ocd.usable_paypment_processors[type].indexOf($option_value) < 0) {
             gateway_available[type] = false;
           }
-          else if ($gateways_enabled[type] && Drupal.settings.fundraiser_quick_donate.usable_paypment_processors[type].indexOf($option_value) >= 0) {
+          else if ($gateways_enabled[type] && Drupal.settings.fundraiser_ocd.usable_paypment_processors[type].indexOf($option_value) >= 0) {
             gateway_available[type] = true;
           }
         }
 
         if (!$gateways_enabled.credit || ($gateways_enabled.credit && !gateway_available.credit)) {
-          $quickdonate.find('input[type=checkbox]').attr('checked', false).attr('disabled', 'disabled');
-          $quickdonate.nextAll('.form-item, .form-wrapper').hide();
-          $('#edit-quickdonate-message-container').hide();
+          $ocd.find('input[type=checkbox]').attr('checked', false).attr('disabled', 'disabled');
+          $ocd.nextAll('.form-item, .form-wrapper').hide();
+          $('#edit-ocd-message-container').hide();
           $note.show();
         }
         else {
-          $quickdonate.find('input[type=checkbox]').removeAttr('disabled');
+          $ocd.find('input[type=checkbox]').removeAttr('disabled');
           if (wasChecked) {
-            $quickdonate.find('input[type=checkbox]').attr('checked', wasChecked);
+            $ocd.find('input[type=checkbox]').attr('checked', wasChecked);
           }
-          $quickdonate.nextAll('.form-item, .form-wrapper').show();
-          $('#edit-quickdonate-message-container').show();
+          $ocd.nextAll('.form-item, .form-wrapper').show();
+          $('#edit-ocd-message-container').show();
           $note.hide();
         }
 
-        if (!$('#edit-quickdonate').is(':checked')) {
-          $quickdonate.nextAll('.form-item, .form-wrapper').hide();
-          $('#edit-quickdonate-message-container').hide();
+        if (!$('#edit-ocd').is(':checked')) {
+          $ocd.nextAll('.form-item, .form-wrapper').hide();
+          $('#edit-ocd-message-container').hide();
         }
       };
 
-      $quickdonate.find('input[type=checkbox]').on('change', function() {
+      $ocd.find('input[type=checkbox]').on('change', function() {
         wasChecked = $(this).is(':checked');
       });
 

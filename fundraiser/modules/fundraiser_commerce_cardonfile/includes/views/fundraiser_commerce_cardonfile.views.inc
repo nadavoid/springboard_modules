@@ -9,13 +9,13 @@
  * Implements hook_views_data_alter().
  */
 function fundraiser_commerce_cardonfile_views_data_alter(&$data) {
-  $data['commerce_cardonfile']['used_by'] = array(
-    'title' => t('Used by'),
-    'help' => t('What this card is used for, i.e. quick donations or recurring donations.'),
+  $data['commerce_cardonfile']['used_for'] = array(
+    'title' => t('Used for'),
+    'help' => t('What this card is used for, i.e. one-click donations or recurring donations.'),
     'field' => array(
-      'title' => t('Used By'),
+      'title' => t('Used For'),
       'help' => t('Display which fundraiser modules use this card.'),
-      'handler' => 'fundraiser_commerce_cardonfile_handler_field_used_by',
+      'handler' => 'fundraiser_commerce_cardonfile_handler_field_used_for',
     ),
   );
 
@@ -94,13 +94,13 @@ function fundraiser_commerce_cardonfile_views_default_views_alter(&$views) {
   $handler->display->display_options['fields']['commerce_cardonfile_profile']['field'] = 'commerce_cardonfile_profile';
   $handler->display->display_options['fields']['commerce_cardonfile_profile']['label'] = 'Billing Information';
   if (module_exists('fundraiser_commerce_cardonfile')) {
-    /* Field: Commerce Card on File: Used By */
-    $handler->display->display_options['fields']['used_by']['id'] = 'used_by';
-    $handler->display->display_options['fields']['used_by']['table'] = 'commerce_cardonfile';
-    $handler->display->display_options['fields']['used_by']['field'] = 'used_by';
-    $handler->display->display_options['fields']['used_by']['element_type'] = 'div';
-    $handler->display->display_options['fields']['used_by']['element_label_type'] = 'span';
-    $handler->display->display_options['fields']['used_by']['hide_empty'] = TRUE;
+    /* Field: Commerce Card on File: Used For */
+    $handler->display->display_options['fields']['used_for']['id'] = 'used_for';
+    $handler->display->display_options['fields']['used_for']['table'] = 'commerce_cardonfile';
+    $handler->display->display_options['fields']['used_for']['field'] = 'used_for';
+    $handler->display->display_options['fields']['used_for']['element_type'] = 'div';
+    $handler->display->display_options['fields']['used_for']['element_label_type'] = 'span';
+    $handler->display->display_options['fields']['used_for']['hide_empty'] = TRUE;
   }
   /* Field: Commerce Card on File: Operations links */
   $handler->display->display_options['fields']['operations']['id'] = 'operations';
@@ -147,12 +147,12 @@ function fundraiser_commerce_cardonfile_views_default_views_alter(&$views) {
 /**
  * Implements hook_views_data().
  */
-function fundraiser_quick_donate_views_data() {
-  $data['fundraiser_quick_donate_cardonfile']['table'] = array(
-    'group' => t('Springboard Quick Donations'),
+function fundraiser_ocd_views_data() {
+  $data['fundraiser_ocd_cardonfile']['table'] = array(
+    'group' => t('Springboard One Click Donations'),
     'base' => array(
-      'title' => t('Springboard Quck Donation Opt In'),
-      'help' => t('Tracks users opted into quick donations.'),
+      'title' => t('Springboard One Click Donation Opt In'),
+      'help' => t('Tracks users opted into one-click donations.'),
     ),
     'join' => array(
       'node' => array(
@@ -173,7 +173,7 @@ function fundraiser_quick_donate_views_data() {
       ),
     ),
   );
-  $data['fundraiser_quick_donate_cardonfile']['nid'] = array(
+  $data['fundraiser_ocd_cardonfile']['nid'] = array(
     'title' => t('Fundraiser node'),
     'help' => t('Fundraiser form node id.'),
     'relationship' => array(
@@ -196,9 +196,9 @@ function fundraiser_quick_donate_views_data() {
       'handler' => 'views_handler_argument_numeric',
     ),
   );
-  $data['fundraiser_quick_donate_cardonfile']['uid'] = array(
-    'title' => t('Quick donation opt-in user'),
-    'help' => t('User associated with quick donation opt-in record.'),
+  $data['fundraiser_ocd_cardonfile']['uid'] = array(
+    'title' => t('One Click donation opt-in user'),
+    'help' => t('User associated with one-click donation opt-in record.'),
     'relationship' => array(
       'base' => 'users',
       'base field' => 'uid',
@@ -219,9 +219,9 @@ function fundraiser_quick_donate_views_data() {
       'handler' => 'views_handler_argument_numeric',
     ),
   );
-  $data['fundraiser_quick_donate_cardonfile']['status'] = array(
-    'title' => t('Quick donation opt-in status'),
-    'help' => t('Whether the user is actively enrolled in quick donations.'),
+  $data['fundraiser_ocd_cardonfile']['status'] = array(
+    'title' => t('One Click donation opt-in status'),
+    'help' => t('Whether the user is actively enrolled in one-click donations.'),
     'field' => array(
       'handler' => 'views_handler_field',
       'click sortable' => TRUE,
@@ -236,9 +236,9 @@ function fundraiser_quick_donate_views_data() {
       'handler' => 'views_handler_argument_numeric',
     ),
   );
-  $data['fundraiser_quick_donate_cardonfile']['card_id'] = array(
-    'title' => t('Quick donation opt-in card ID'),
-    'help' => t('The card ID associated with the quick donation.'),
+  $data['fundraiser_ocd_cardonfile']['card_id'] = array(
+    'title' => t('One Click donation opt-in card ID'),
+    'help' => t('The card ID associated with the one-click donation.'),
     'relationship' => array(
       'base' => 'commerce_cardonfile',
       'base field' => 'card_id',
@@ -259,9 +259,9 @@ function fundraiser_quick_donate_views_data() {
       'handler' => 'views_handler_argument_numeric',
     ),
   );
-  $data['fundraiser_quick_donate_cardonfile']['did'] = array(
-    'title' => t('Quick donation opt-in donation ID'),
-    'help' => t('The donation ID associated with the quick donation.'),
+  $data['fundraiser_ocd_cardonfile']['did'] = array(
+    'title' => t('One Click donation opt-in donation ID'),
+    'help' => t('The donation ID associated with the one-click donation.'),
     'relationship' => array(
       'base' => 'fundraiser_donation',
       'base field' => 'did',
@@ -282,9 +282,9 @@ function fundraiser_quick_donate_views_data() {
       'handler' => 'views_handler_argument_string',
     ),
   );
-  $data['fundraiser_quick_donate_cardonfile']['optin_date'] = array(
-    'title' => t('Quick donation opt-in time'),
-    'help' => t('Timestamp of when user opted into quick donations.'),
+  $data['fundraiser_ocd_cardonfile']['optin_date'] = array(
+    'title' => t('One Click donation opt-in time'),
+    'help' => t('Timestamp of when user opted into one-click donations.'),
     'field' => array(
       'handler' => 'views_handler_field_date',
       'click sortable' => TRUE,
@@ -296,9 +296,9 @@ function fundraiser_quick_donate_views_data() {
       'handler' => 'views_handler_sort_date',
     ),
   );
-  $data['fundraiser_quick_donate_cardonfile']['ms'] = array(
-    'title' => t('Quick donation market source'),
-    'help' => t('Market source value for the quick donation record.'),
+  $data['fundraiser_ocd_cardonfile']['ms'] = array(
+    'title' => t('One Click donation market source'),
+    'help' => t('Market source value for the one-click donation record.'),
     'field' => array(
       'handler' => 'views_handler_field',
       'click sortable' => TRUE,

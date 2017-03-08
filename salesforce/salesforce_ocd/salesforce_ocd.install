@@ -1,29 +1,28 @@
 <?php
-
 /**
  * @file
- * Install and update routines for Salesforce quick donate module.
+ * Install and update routines for Salesforce one-click donate module.
  */
 
 /**
  * Implements hook_install().
  */
-function salesforce_quick_donate_install() {
-  salesforce_quick_donate_map_optin_date();
-  salesforce_quick_donate_map_optout_date();
+function salesforce_ocd_install() {
+  salesforce_ocd_map_optin_date();
+  salesforce_ocd_map_optout_date();
 }
 
-function salesforce_quick_donate_uninstall() {
-  salesforce_quick_donate_unmap_field('field_quick_donate_opt_in');
-  salesforce_quick_donate_unmap_field('field_quick_donate_opt_out');
+function salesforce_ocd_uninstall() {
+  salesforce_ocd_unmap_field('field_ocd_opt_in');
+  salesforce_ocd_unmap_field('field_ocd_opt_out');
 }
 
 /**
  * Implements hook_update_dependencies().
  */
-function salesforce_quick_donate_update_dependencies() {
-  $dependencies['salesforce_quick_donate'][7000] = array(
-    'fundraiser_quick_donate' => 7002,
+function salesforce_ocd_update_dependencies() {
+  $dependencies['salesforce_ocd'][7000] = array(
+    'fundraiser_ocd' => 7002,
   );
   return $dependencies;
 }
@@ -31,20 +30,20 @@ function salesforce_quick_donate_update_dependencies() {
 /**
  * Implements hook_update_N().
  *
- * Map the Quick Donate Opt-Out date profile field.
+ * Map the One-Click Donate Opt-Out date profile field.
  */
-function salesforce_quick_donate_update_7000() {
-  salesforce_quick_donate_map_optout_date();
+function salesforce_ocd_update_7000() {
+  salesforce_ocd_map_optout_date();
 }
 
 /**
- * Maps the quick donate opt-in date profile field.
+ * Maps the one-click donate opt-in date profile field.
  */
-function salesforce_quick_donate_map_optin_date() {
+function salesforce_ocd_map_optin_date() {
   $user_map = salesforce_mapping_load('user_to_contact');
 
-  if (!salesforce_quick_donate_field_is_mapped($user_map->field_mappings, 'field_quick_donate_opt_in')) {
-    $user_map->field_mappings[] = salesforce_quick_donate_mapped_date_field("field_quick_donate_opt_in", "Quick Donate Opt-In Date", "Quick_Donate_Opt_In_Date__c");
+  if (!salesforce_ocd_field_is_mapped($user_map->field_mappings, 'field_ocd_opt_in')) {
+    $user_map->field_mappings[] = salesforce_ocd_mapped_date_field("field_ocd_opt_in", "One Click Donate Opt-In Date", "ocd_Opt_In_Date__c");
   }
 
   // Resave the map with the new fields.
@@ -52,13 +51,13 @@ function salesforce_quick_donate_map_optin_date() {
 }
 
 /**
- * Maps the quick donate opt-out date profile field.
+ * Maps the one-click donate opt-out date profile field.
  */
-function salesforce_quick_donate_map_optout_date() {
+function salesforce_ocd_map_optout_date() {
   $user_map = salesforce_mapping_load('user_to_contact');
 
-  if (!salesforce_quick_donate_field_is_mapped($user_map->field_mappings, 'field_quick_donate_opt_out')) {
-    $user_map->field_mappings[] = salesforce_quick_donate_mapped_date_field("field_quick_donate_opt_out", "Quick Donate Opt-Out Date", "Quick_Donate_Opt_Out_Date__c");
+  if (!salesforce_ocd_field_is_mapped($user_map->field_mappings, 'field_ocd_opt_out')) {
+    $user_map->field_mappings[] = salesforce_ocd_mapped_date_field("field_ocd_opt_out", "One Click Donate Opt-Out Date", "ocd_Opt_Out_Date__c");
   }
 
   // Resave the map with the new fields.
@@ -66,9 +65,9 @@ function salesforce_quick_donate_map_optout_date() {
 }
 
 /**
- * Unmaps the quick donate opt-in field.
+ * Unmaps the one-click donate opt-in field.
  */
-function salesforce_quick_donate_unmap_field($field_name) {
+function salesforce_ocd_unmap_field($field_name) {
   $user_map = salesforce_mapping_load('user_to_contact');
 
   $index = 0;
@@ -92,7 +91,7 @@ function salesforce_quick_donate_unmap_field($field_name) {
 /**
  * Helper function to determine if a field is already mapped.
  */
-function salesforce_quick_donate_field_is_mapped($mapping, $field) {
+function salesforce_ocd_field_is_mapped($mapping, $field) {
   foreach ($mapping as $mapped_field) {
     if ($mapped_field['drupal_field']['fieldmap_value'] == $field) {
       return TRUE;
@@ -103,9 +102,9 @@ function salesforce_quick_donate_field_is_mapped($mapping, $field) {
 }
 
 /**
- * Defines the quick donate opt-in mapping record.
+ * Defines the one-click donate opt-in mapping record.
  */
-function salesforce_quick_donate_mapped_date_field($fieldmap_value, $sf_label, $sf_name) {
+function salesforce_ocd_mapped_date_field($fieldmap_value, $sf_label, $sf_name) {
   return json_decode(' {
       "drupal_field" : {
         "fieldmap_type" : "property",
