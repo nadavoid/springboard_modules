@@ -3,7 +3,7 @@
   Drupal.behaviors.braintreePaypal = {
     attach: function(context, settings) {
       settings = settings.braintree;
-      settings.paypal.autofill = 'never';
+      settings.paypal.autofill = 'always';
       $(document).on('braintree.methodChange', function(event, paymentMethod) {
         compactPaypal(paymentMethod == 'paypal');
       });
