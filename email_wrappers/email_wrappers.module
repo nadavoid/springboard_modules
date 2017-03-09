@@ -166,6 +166,43 @@ function email_wrappers_form_email_wrapper_node_form_alter(&$form, &$form_state,
     '#title' => t('Webform tokens'),
     '#description' => theme('webform_token_help', array()),
   );
+  
+  $form['#validate'][] = '_email_wrappers_node_edit_email_fields_validate';
+}
+
+/**
+ * Email field validation.
+ */
+function _email_wrappers_node_edit_email_fields_validate($form, $form_state) {
+  $email_fields = array(
+    'email_wrapper_from_email' => t('From Email'),
+    'email_wrapper_reply_email' => t('Reply To Email'),
+    'email_wrapper_bcc_email' => t('BCC Emails'),
+  );
+  foreach ($email_fields as $email_field => $email_field_label) {
+    // Ensure data is present and support a multilingual setup:
+    if (isset($form_state['values']['language'])
+      && isset($form_state['values'][$email_field][$form_state['values']['language']])) {
+      $lang = $form_state['values']['language'];
+    }
+    else if (isset($form_state['values'][$email_field][LANGUAGE_NONE])) {
+      $lang = LANGUAGE_NONE;
+    }
+    else {
+      continue;
+    }
+    if (!is_array($form_state['values'][$email_field][$lang])) {
+      continue;
+    }
+
+    // Validate the field's value or values:
+    foreach ($form_state['values'][$email_field][$lang] as $key => $email_value) {
+      if (isset($email_value['value']) && !valid_email_address($email_value['value'])) {
+        form_set_error($email_field, t('Please enter a valid email address for field :email_field_label.',
+          array(':email_field_label' => $email_field_label)));
+      }
+    }
+  }
 }
 
 /**

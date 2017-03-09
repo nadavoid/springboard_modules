@@ -161,19 +161,20 @@ class springboard_advocacy_views_plugin_query extends views_plugin_query {
         }
       }
       if (!empty($items)) {
-
         // Build the pager.
         if ($this->pager->use_pager()) {
           $this->pager->total_items = $response->data->count;
           if (!empty($this->pager->options['offset'])) {
             $this->pager->total_items -= $this->pager->options['offset'];
           }
-          $this->pager->update_page_info();
         }
-
         // Add target IDs to build info. We retrieve elsewhere for use in
         // Target Add links.
         $view->build_info['target_ids'] = $response->data->ids;
+      }
+
+      if ($this->pager->use_pager()) {
+        $this->pager->update_page_info();
       }
 
       $view->result = array();

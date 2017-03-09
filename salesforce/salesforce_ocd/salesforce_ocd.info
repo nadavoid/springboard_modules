@@ -1,5 +1,5 @@
-name = Salesforce Quick Donate
-description = Salesforce integration support for quick donate.
+name = Salesforce One Click Donate
+description = Salesforce integration support for one-click donate.
 package = Salesforce
 core = 7.x
 version = 7.x-4.x-dev
@@ -8,4 +8,4 @@ dependencies[] = libraries
 dependencies[] = salesforce
 dependencies[] = salesforce_soap
 dependencies[] = salesforce_sync
-dependencies[] = fundraiser_quick_donate
+dependencies[] = fundraiser_ocd

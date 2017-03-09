@@ -83,7 +83,7 @@ function springboard_p2p_personal_campaign_roll_render($subtype, $conf, $panel_a
 
     if ($comment['show_name'] && !empty($comment['donor_name'])) {
       $output[] = '<td>';
-      $output[] = $comment['donor_name'];
+      $output[] = check_plain($comment['donor_name']);
       $output[] = '</td>';
     }
     else {

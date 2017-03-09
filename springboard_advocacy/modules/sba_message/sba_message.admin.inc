@@ -221,48 +221,49 @@ function sba_message_edit_form($form, &$form_state, $sba_message) {
     // recipients as a re-usable custom group.
     $recipients = isset($sba_message->data['recipients']) ? json_decode($sba_message->data['recipients'], TRUE) : '';
     $form['save_target_group_toggle_val'] = array(
-        '#type' => 'hidden',
-        '#value' => '',
-        '#attributes' => array('id' => 'edit-save-target-group-save-target-group-toggle_val'),
-      );
-      $form['save_target_group_name_val'] = array(
-        '#type' => 'hidden',
-        '#value' => '',
-        '#attributes' => array('id' => 'edit-save-target-group-save-target-group-name_val'),
+      '#type' => 'hidden',
+      '#value' => '',
+      '#attributes' => array('id' => 'edit-save-target-group-save-target-group-toggle_val'),
+    );
+    $form['save_target_group_name_val'] = array(
+      '#type' => 'hidden',
+      '#value' => '',
+      '#attributes' => array('id' => 'edit-save-target-group-save-target-group-name_val'),
 
+    );
+    if ($sba_message->type != 'sba_social_action_twitter_message') {
+      $form['save_target_group'] = array(
+        '#tree' => TRUE,
+        '#type' => 'container',
+        '#title' => 'save target group',
+        '#weight' => 99,
       );
-      if ($sba_message->type != 'sba_social_action_twitter_message') {
-        $form['save_target_group'] = array(
-          '#tree' => TRUE,
-          '#type' => 'container',
-          '#title' => 'save target group',
-          '#weight' => 99,
-        );
-        $form['save_target_group']['save_target_group_toggle'] = array(
-          '#type' => 'checkbox',
-          '#title' => t('Save these targets as a custom group.'),
-          '#weight' => 0,
-        );
-        // If recipients are already set, hide the option to save as target group.
-        if(!empty($recipients)) {
-          $form['save_target_group']['#attributes']['class'] = array('hidden');
-        }
-        $form['save_target_group']['save_target_group_name'] = array(
-          '#type' => 'textfield',
-          '#title' => t('Group name'),
-          '#weight' => 1,
-          '#states' => array(
-            'invisible' => array(
-              ':input[name="save_target_group[save_target_group_toggle]"]' => array('checked' => FALSE),
-            ),
-            'required' => array(
-              ':input[name="save_target_group[save_target_group_toggle]"]' => array('checked' => TRUE),
-            ),
-          ),
-        );
-        $form['#validate'][] = 'sba_message_save_target_group_validate';
+      $form['save_target_group']['save_target_group_toggle'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Save these targets as a custom group.'),
+        '#weight' => 0,
+        '#value' => !empty($form_state['input']['save_target_group_toggle_val']) ? 1 : 0,
+      );
+      // If recipients are already set, hide the option to save as target group.
+      if (!empty($recipients) && empty($form_state['input']['save_target_group_toggle_val'])) {
+        $form['save_target_group']['#attributes']['class'] = array('hidden');
       }
+      $form['save_target_group']['save_target_group_name'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Group name'),
+        '#weight' => 1,
+        '#states' => array(
+          'invisible' => array(
+            ':input[name="save_target_group[save_target_group_toggle]"]' => array('checked' => FALSE),
+          ),
+          'required' => array(
+            ':input[name="save_target_group[save_target_group_toggle]"]' => array('checked' => TRUE),
+          ),
+        ),
+      );
+      $form['#validate'][] = 'sba_message_save_target_group_validate';
     }
+  }
 
 
   $form['#attached']['js'][] = drupal_get_path('module', 'sba_message') . '/js/sba_message.js';

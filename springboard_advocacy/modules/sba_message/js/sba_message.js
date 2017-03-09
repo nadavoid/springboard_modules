@@ -35,20 +35,27 @@
                // the visible UI form inputs (because they need to be moved outside
                // the real form for UI presentation)
                $('#edit-save-target-group input').change(function(){
-                    var id = $(this).attr('id');
-                    console.log('change ' + id);
-                    if($(this).attr('type') == 'checkbox') {
-                         if($(this).prop('checked')) {
-                              $('input#' + id + '_val').val($(this).val());
-                         }
-                         else {
-                              $('input#' + id + '_val').val(null);
-                         }
-                    }
-                    else {
-                         $('input#' + id + '_val').val($(this).val());
-                    }
+                    Sbam.messageFormUIPopHidden(this);
                });
+               // Do it again after validation failure.
+               $('#edit-save-target-group input').each(function(){
+                    Sbam.messageFormUIPopHidden(this);
+               });
+          }
+     };
+
+     Sbam.messageFormUIPopHidden = function(item) {
+          var id = $(item).attr('id');
+          if($(item).attr('type') == 'checkbox') {
+               if($(item).prop('checked')) {
+                    $('input#' + id + '_val').val($(item).val());
+               }
+               else {
+                    $('input#' + id + '_val').val(null);
+               }
+          }
+          else {
+               $('input#' + id + '_val').val($(item).val());
           }
      };
 

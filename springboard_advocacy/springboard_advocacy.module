@@ -554,21 +554,23 @@ function springboard_advocacy_springboard_admin_views_alter(&$names) {
  *   An array of config settings.
  */
 function springboard_advocacy_api_unconfigured($type = 'All') {
+  $unconfigured = &drupal_static(__FUNCTION__);
+  if (!isset($unconfigured)) {
+    if ($type == 'springboard') {
+      $settings = springboard_advocacy_api_vars();
+    }
+    elseif ($type == 'smarty') {
+      $settings = springboard_advocacy_smarty_vars();
+    }
+    else {
+      $settings = springboard_advocacy_api_vars() + springboard_advocacy_smarty_vars();
+    }
 
-  if ($type == 'springboard') {
-    $settings = springboard_advocacy_api_vars();
-  }
-  elseif ($type == 'smarty') {
-    $settings = springboard_advocacy_smarty_vars();
-  }
-  else {
-    $settings = springboard_advocacy_api_vars() + springboard_advocacy_smarty_vars();
-  }
-
-  $unconfigured  = array();
-  foreach ($settings as $key => $setting) {
-    if ($setting == '') {
-      $unconfigured[] = $key;
+    $unconfigured = array();
+    foreach ($settings as $key => $setting) {
+      if ($setting == '') {
+        $unconfigured[] = $key;
+      }
     }
   }
 

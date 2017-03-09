@@ -10,7 +10,6 @@ dependencies[] = sba_target_search
 dependencies[] = springboard_target
 
 files[] = sba_message.admin.inc
-files[] = sba_message.api_calls.inc
 files[] = views/sba_message.views.inc
 files[] = views/sba_message_handler_link_field.inc
 files[] = views/sba_message_handler_delete_link_field.inc

@@ -25,7 +25,7 @@ function springboard_advocacy_requirements($phase) {
 
   if ($phase == 'runtime' && !empty($lib['installed'])) {
     $requirements['springboard_advocacy']['severity'] = REQUIREMENT_OK;
-  } 
+  }
   elseif($phase == 'runtime') {
     $requirements['springboard_advocacy']['severity'] = REQUIREMENT_ERROR;
     $requirements['springboard_advocacy']['description'] = 'Springboard Advocacy library not installed';

@@ -336,14 +336,14 @@ function sba_target_search_convert_recipients($group) {
       'type' => $target->target->class_name,
       'first' => $target->target->first_name,
       'last' => $target->target->last_name,
-      'sal' => $target->target->salutation,
-      'twitter' => $target->target->twitter,
-      'facebook' => $target->target->facebook,
-      'org' => $target->target->organization,
-      'title' => $target->target->title,
-      'state' => $target->target->state,
-      'district' => $target->target->district_name,
-      'party' => $target->target->party,
+      'sal' => isset($target->target->salutation) ? $target->target->salutation : '',
+      'twitter' => isset($target->target->twitter) ? $target->target->twitter : '',
+      'facebook' => isset($target->target->facebook) ? $target->target->facebook : '',
+      'org' => isset($target->target->organization) ? $target->target->organization : '',
+      'title' => isset( $target->target->title) ? $target->target->title : '',
+      'state' => isset($target->target->state) ? $target->target->state : '',
+      'district' => isset($target->target->district_name) ? $target->target->district_name : '',
+      'party' => isset($target->target->party) ? $target->target->party : '',
     );
 
   }

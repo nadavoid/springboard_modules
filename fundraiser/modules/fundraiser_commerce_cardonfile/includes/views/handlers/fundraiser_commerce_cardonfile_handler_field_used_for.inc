@@ -1,13 +1,13 @@
 <?php
 /**
  * @file
- * Handler for the Used By field.
+ * Handler for the Used For field.
  */
 
 /**
  * Field handler to present the card expiration date.
  */
-class fundraiser_commerce_cardonfile_handler_field_used_by extends views_handler_field_entity {
+class fundraiser_commerce_cardonfile_handler_field_used_for extends views_handler_field_entity {
 
   function pre_render(&$rows) {
     foreach ($rows as &$values) {
@@ -15,27 +15,27 @@ class fundraiser_commerce_cardonfile_handler_field_used_by extends views_handler
         return;
       }
 
-      $used_by = &drupal_static(__METHOD__);
+      $used_for = &drupal_static(__METHOD__);
 
       $card_id = $values->card_id;
-      if (empty($used_by[$card_id])) {
-        $used_by[$card_id] = module_invoke_all('fundraiser_commerce_cardonfile_used_by', $card_id);
+      if (empty($used_for[$card_id])) {
+        $used_for[$card_id] = module_invoke_all('fundraiser_commerce_cardonfile_used_for', $card_id);
       }
 
-      $values->used_by = $used_by[$card_id];
+      $values->used_for = $used_for[$card_id];
     }
   }
 
   function render($values) {
-    if (!is_object($values) || !isset($values->used_by)) {
+    if (!is_object($values) || !isset($values->used_for)) {
       return '';
     }
 
-    $used_by = $values->used_by;
+    $used_for = $values->used_for;
 
     $output = '';
-    if (count($used_by)) {
-      foreach ($used_by as $u) {
+    if (count($used_for)) {
+      foreach ($used_for as $u) {
         if (!empty($this->options['element_type'])) {
           $element = array(
             'element' => array(

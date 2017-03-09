@@ -1209,9 +1209,22 @@
                 // Make pre-groups committees into group-era committees
                 else if(obj.hasOwnProperty('search_committee') && name != 'ids') {
                     if (!obj.hasOwnProperty('committee_id')) {
-                        var com_id = value.match("id:[0-9]*");
-                        com_id = com_id[0].replace('id%3A', '');
-                        return ["committee=" + value, "committee_id=" + com_id]
+                        // The id: colon may or may not be escaped, possibly.
+                        var com_id = value.match("id%3A[0-9]*");
+                        if (com_id) {
+                            com_id = com_id[0].replace('id%3A', '');
+                            return ["committee=" + value, "committee_id=" + com_id]
+                        }
+                        else {
+                            com_id = value.match("id:[0-9]*");
+                            if (com_id) {
+                                com_id = com_id[0].replace('id:', '');
+                                return ["committee=" + value, "committee_id=" + com_id]
+                            }
+                            else {
+                                return ["committee=Unknown Committee", "committee_id="]
+                            }
+                        }
                     }
                     else {
                         return name + '=' + value
@@ -1308,6 +1321,10 @@
          if(individs > 0 || groups > 0) {
             $('#springboard-advocacy-target-recipients-content').append(counter);
         }
+         else {
+             $('#edit-save-target-group').show().removeClass('hidden');
+
+         }
 
         $('.remove-all-targets').click(function() {
 

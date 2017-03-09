@@ -19,6 +19,6 @@ fieldset .text-format-wrapper fieldset legend,
     z-index: 1;
 }
 
-#sba-message-action-node-form fieldset.filter-wrapper.collapsed {
-    height: 40px;
+#edit-field-sba-action-step-two-submit input {
+    max-width: 320px;
 }

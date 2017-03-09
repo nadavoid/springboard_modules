@@ -1,7 +1,7 @@
 (function($) {
-  Drupal.behaviors.fundraiser_quick_donate_fundraiser = {
+  Drupal.behaviors.fundraiser_ocd_fundraiser = {
     attach: function(context, settings) {
-      if (Drupal.settings.fundraiser.quickdonate.readonly) {
+      if (Drupal.settings.fundraiser.ocd.readonly) {
         var fieldsets = {};
         var $readonly = {};
         var readonlyize = function(elements) {
