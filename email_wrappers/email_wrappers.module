@@ -702,7 +702,12 @@ $html_raw
     $token_set['donation'] = $message['params']['donation'];
   }
 
-  drupal_alter('email_wrappers_email_body_messages', $html_raw, $text_raw, $message);
+  $data = array(
+    'html_raw' => &$html_raw,
+    'text_raw' => &$text_raw,
+    'message' => &$message,
+  );
+  drupal_alter('email_wrappers_email_body_messages', $data);
 
   $multi_body = token_replace($multi_body, $token_set, array('clear' => TRUE));
   if ($eid) {

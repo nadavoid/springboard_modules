@@ -167,14 +167,17 @@ function springboard_twig_form_webform_email_edit_form_alter(&$form, &$form_stat
  *
  * Process the email messages with the Twig templating language.
  */
-function springboard_twig_email_wrappers_email_body_messages_alter(&$html_raw, &$text_raw, &$message) {
+function springboard_twig_email_wrappers_email_body_messages_alter(&$data) {
+  if (empty($data['message']['params']['donation'])) {
+    $data['message']['params']['donation'] = fundraiser_donation_get_donation($data['message']['params']['submission']->sid);
+  }
   $replacements = array(
-    'donation' => $message['params']['donation'],
-    'node' => $message['params']['node'],
-    'submission' => $message['params']['submission'],
+    'donation' => $data['message']['params']['donation'],
+    'node' => $data['message']['params']['node'],
+    'submission' => $data['message']['params']['submission'],
   );
-  $html_raw = _springboard_twig_process_text($html_raw, $replacements);
-  $text_raw = _springboard_twig_process_text($text_raw, $replacements);
+  $data['html_raw'] = _springboard_twig_process_text($data['html_raw'], $replacements);
+  $data['text_raw'] = _springboard_twig_process_text($data['text_raw'], $replacements);
 }
 
 /**
