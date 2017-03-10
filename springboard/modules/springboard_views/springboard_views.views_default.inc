@@ -3081,24 +3081,32 @@ function springboard_views_views_default_views() {
   $handler->display->display_options['cache']['type'] = 'none';
   $handler->display->display_options['query']['type'] = 'views_query';
   $handler->display->display_options['query']['options']['distinct'] = TRUE;
+  $handler->display->display_options['query']['options']['pure_distinct'] = TRUE;
   $handler->display->display_options['exposed_form']['type'] = 'basic';
   $handler->display->display_options['pager']['type'] = 'full';
   $handler->display->display_options['pager']['options']['items_per_page'] = '10';
   $handler->display->display_options['style_plugin'] = 'table';
   $handler->display->display_options['style_options']['columns'] = array(
     'title' => 'title',
+    'og_group_ref_page_wrapper' => 'og_group_ref_page_wrapper',
     'status' => 'status',
     'created' => 'created',
-    'clone_node' => 'edit_node',
-    'delete_node' => 'edit_node',
-    'edit_node' => 'edit_node',
+    'changed' => 'changed',
+    'name' => 'name',
     'view_node' => 'edit_node',
+    'edit_node' => 'edit_node',
+    'clone_node' => 'edit_node',
   );
-  $handler->display->display_options['style_options']['default'] = '-1';
+  $handler->display->display_options['style_options']['default'] = 'changed';
   $handler->display->display_options['style_options']['info'] = array(
     'title' => array(
       'sortable' => 0,
       'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'og_group_ref_page_wrapper' => array(
       'align' => '',
       'separator' => '',
       'empty_column' => 0,
@@ -3111,18 +3119,27 @@ function springboard_views_views_default_views() {
       'empty_column' => 0,
     ),
     'created' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'desc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'changed' => array(
+      'sortable' => 1,
+      'default_sort_order' => 'desc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'name' => array(
       'sortable' => 0,
       'default_sort_order' => 'asc',
       'align' => '',
       'separator' => '',
       'empty_column' => 0,
     ),
-    'clone_node' => array(
-      'align' => '',
-      'separator' => '',
-      'empty_column' => 0,
-    ),
-    'delete_node' => array(
+    'view_node' => array(
       'align' => '',
       'separator' => '',
       'empty_column' => 0,
@@ -3132,7 +3149,7 @@ function springboard_views_views_default_views() {
       'separator' => ' | ',
       'empty_column' => 0,
     ),
-    'view_node' => array(
+    'clone_node' => array(
       'align' => '',
       'separator' => '',
       'empty_column' => 0,
@@ -3147,16 +3164,26 @@ function springboard_views_views_default_views() {
   $handler->display->display_options['empty']['area']['content'] = 'No %1s have been created yet. ';
   $handler->display->display_options['empty']['area']['format'] = 'filtered_html';
   $handler->display->display_options['empty']['area']['tokenize'] = TRUE;
-  /* Relationship: OG membership: Group Node from OG membership */
-  $handler->display->display_options['relationships']['og_membership_related_node_group']['id'] = 'og_membership_related_node_group';
-  $handler->display->display_options['relationships']['og_membership_related_node_group']['table'] = 'og_membership';
-  $handler->display->display_options['relationships']['og_membership_related_node_group']['field'] = 'og_membership_related_node_group';
+  /* Relationship: Content: Author */
+  $handler->display->display_options['relationships']['uid']['id'] = 'uid';
+  $handler->display->display_options['relationships']['uid']['table'] = 'node';
+  $handler->display->display_options['relationships']['uid']['field'] = 'uid';
   /* Field: Content: Title */
   $handler->display->display_options['fields']['title']['id'] = 'title';
   $handler->display->display_options['fields']['title']['table'] = 'node';
   $handler->display->display_options['fields']['title']['field'] = 'title';
   $handler->display->display_options['fields']['title']['alter']['word_boundary'] = FALSE;
   $handler->display->display_options['fields']['title']['alter']['ellipsis'] = FALSE;
+  /* Field: Content: Groups audience */
+  $handler->display->display_options['fields']['og_group_ref_page_wrapper']['id'] = 'og_group_ref_page_wrapper';
+  $handler->display->display_options['fields']['og_group_ref_page_wrapper']['table'] = 'og_membership';
+  $handler->display->display_options['fields']['og_group_ref_page_wrapper']['field'] = 'og_group_ref_page_wrapper';
+  $handler->display->display_options['fields']['og_group_ref_page_wrapper']['label'] = 'Owner';
+  $handler->display->display_options['fields']['og_group_ref_page_wrapper']['settings'] = array(
+    'link' => 1,
+  );
+  $handler->display->display_options['fields']['og_group_ref_page_wrapper']['delta_offset'] = '0';
+  $handler->display->display_options['fields']['og_group_ref_page_wrapper']['multi_type'] = 'ul';
   /* Field: Content: Published */
   $handler->display->display_options['fields']['status']['id'] = 'status';
   $handler->display->display_options['fields']['status']['table'] = 'node';
@@ -3164,12 +3191,6 @@ function springboard_views_views_default_views() {
   $handler->display->display_options['fields']['status']['label'] = 'Status';
   $handler->display->display_options['fields']['status']['type'] = 'published-notpublished';
   $handler->display->display_options['fields']['status']['not'] = 0;
-  /* Field: Content: Title */
-  $handler->display->display_options['fields']['title_sb_group']['id'] = 'title_sb_group';
-  $handler->display->display_options['fields']['title_sb_group']['table'] = 'node';
-  $handler->display->display_options['fields']['title_sb_group']['field'] = 'title';
-  $handler->display->display_options['fields']['title_sb_group']['relationship'] = 'og_membership_related_node_group';
-  $handler->display->display_options['fields']['title_sb_group']['label'] = 'Owner';
   /* Field: Content: Post date */
   $handler->display->display_options['fields']['created']['id'] = 'created';
   $handler->display->display_options['fields']['created']['table'] = 'node';
@@ -3177,6 +3198,20 @@ function springboard_views_views_default_views() {
   $handler->display->display_options['fields']['created']['label'] = 'Date Created';
   $handler->display->display_options['fields']['created']['date_format'] = 'custom';
   $handler->display->display_options['fields']['created']['custom_date_format'] = 'm/d/Y';
+  /* Field: Content: Updated date */
+  $handler->display->display_options['fields']['changed']['id'] = 'changed';
+  $handler->display->display_options['fields']['changed']['table'] = 'node';
+  $handler->display->display_options['fields']['changed']['field'] = 'changed';
+  $handler->display->display_options['fields']['changed']['label'] = 'Date updated';
+  $handler->display->display_options['fields']['changed']['date_format'] = 'custom';
+  $handler->display->display_options['fields']['changed']['custom_date_format'] = 'm/d/y';
+  $handler->display->display_options['fields']['changed']['second_date_format'] = 'long';
+  /* Field: User: Name */
+  $handler->display->display_options['fields']['name']['id'] = 'name';
+  $handler->display->display_options['fields']['name']['table'] = 'users';
+  $handler->display->display_options['fields']['name']['field'] = 'name';
+  $handler->display->display_options['fields']['name']['relationship'] = 'uid';
+  $handler->display->display_options['fields']['name']['label'] = 'Creator';
   /* Field: Content: Link */
   $handler->display->display_options['fields']['view_node']['id'] = 'view_node';
   $handler->display->display_options['fields']['view_node']['table'] = 'views_entity_node';
@@ -3194,12 +3229,6 @@ function springboard_views_views_default_views() {
   $handler->display->display_options['fields']['clone_node']['field'] = 'clone_node';
   $handler->display->display_options['fields']['clone_node']['label'] = '';
   $handler->display->display_options['fields']['clone_node']['element_label_colon'] = FALSE;
-  /* Field: Content: Delete link */
-  $handler->display->display_options['fields']['delete_node']['id'] = 'delete_node';
-  $handler->display->display_options['fields']['delete_node']['table'] = 'views_entity_node';
-  $handler->display->display_options['fields']['delete_node']['field'] = 'delete_node';
-  $handler->display->display_options['fields']['delete_node']['label'] = '';
-  $handler->display->display_options['fields']['delete_node']['element_label_colon'] = FALSE;
   /* Sort criterion: Content: Post date */
   $handler->display->display_options['sorts']['created']['id'] = 'created';
   $handler->display->display_options['sorts']['created']['table'] = 'node';
