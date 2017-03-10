@@ -228,7 +228,11 @@ function springboard_p2p_add_state_and_country_ajax(&$form) {
  * selected country.
  */
 function springboard_p2p_register_form_state_ajax_submit($form, $form_state) {
-
+  // If no zones are available and a text field is returned then empty it so its
+  // previous value is not present:
+  if ($form['sbp_state'][$form['sbp_state']['#language']]['#type'] == 'textfield') {
+    $form['sbp_state'][$form['sbp_state']['#language']]['#value'] = '';
+  }
   return $form['sbp_state'];
 }
 
