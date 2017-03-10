@@ -425,22 +425,33 @@ function _fundraiser_ocd_check_ocd_default($form, $form_state) {
  * Updates the billing update form on cardonfile card edit pages to redirect
  * back to the cards overview page.
  */
-function fundraiser_ocd_fundraiser_update_billing_form__fundraiser_ocd__alter(&$form, $form_state) {
+function fundraiser_ocd_fundraiser_update_billing_form__fundraiser_commerce_cardonfile__alter(&$form, $form_state) {
   $card = $form_state['card'];
   // If the gateway isn't configured for cardonfile, skip the one-click donate
   // feature.
-  if (!empty($form['#donation']->gateway['gateway_details']['settings']['cardonfile'])) {
-    $gateway_type = $form['#donation']->data['payment_method'];
-    $enabled = db_query('SELECT card_id FROM {fundraiser_ocd_cardonfile} WHERE card_id = :card_id AND status = 1', array(
-      ':card_id' => $card->card_id,
-    ))->fetchField();
-
-    $form['payment_fields'][$gateway_type]['ocd'] = array(
-      '#type' => 'checkbox',
-      '#title' => '&nbsp;' . t('Use this card for One Click Donate'),
-      '#default_value' => !!$enabled,
-    );
+  if (empty($form['#donation']->gateway['gateway_details']['settings']['cardonfile'])) {
+    return;
   }
+
+  // Make sure a donation is using this gateway before allowing it to be
+  // OCD-able.
+  $donations = db_query('SELECT COUNT(did) FROM {fundraiser_donation} WHERE gateway = :gateway', array(
+    ':gateway' => $form['#fundraiser_data']['donation']->gateway['id'],
+  ))->fetchField();
+  if ($donations == 0) {
+    return;
+  }
+
+  $enabled = db_query('SELECT card_id FROM {fundraiser_ocd_cardonfile} WHERE card_id = :card_id AND status = 1', array(
+    ':card_id' => $card->card_id,
+  ))->fetchField();
+
+  $gateway_type = $form['#donation']->data['payment_method'];
+  $form['payment_fields'][$gateway_type]['ocd'] = array(
+    '#type' => 'checkbox',
+    '#title' => '&nbsp;' . t('Use this card for One Click Donate'),
+    '#default_value' => !!$enabled,
+  );
 
   $form['actions']['submit']['#submit'][] = '_fundraiser_ocd_set_new_ocd_cof';
 }
