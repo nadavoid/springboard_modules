@@ -2846,3 +2846,18 @@ function springboard_p2p_get_personal_campaign_title_suggestion($title) {
 
   return $default_title . $title;
 }
+
+/**
+ * Override handling of the profile state field to support user-entered zones:
+ */
+function springboard_p2p_add_state_and_country_ajax_value_validate(&$element, &$form_state, $form) {
+  $items = array(0 => array($element['#value_key'] => $element['#value']));
+
+  form_set_value($element, $items, $form_state);
+
+  $field = field_info_instance('user', 'sbp_state', 'user');
+
+  // Set the static allowed values to bypass list_allowed_values().
+  $allowed_values[$field['field_id']] = array($element['#value'] => $element['#value']);
+  drupal_static('list_allowed_values', $allowed_values);
+}
