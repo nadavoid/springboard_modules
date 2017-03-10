@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file
  * Module file for Springboard Twig.
@@ -137,7 +138,6 @@ function _springboard_twig_process_text($text, $replacements) {
     }
   }
   else {
-    $error = $library['error'];
     $error_message = $library['error message'];
     drupal_set_message($error_message, 'warning');
   }
