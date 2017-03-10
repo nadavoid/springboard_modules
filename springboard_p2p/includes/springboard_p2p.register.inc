@@ -199,12 +199,13 @@ function springboard_p2p_set_country_and_state_defaults_and_options(&$form, $for
   }
   else {
     $form['sbp_state'][$form['sbp_state']['#language']]['#type'] = 'textfield';
-    if (isset($form['#entity']->sbp_state[$form['sbp_state']['#language']][0]['value'])) {
-      $form['sbp_state'][$form['sbp_state']['#language']]['#default_value'] = $form['#entity']->sbp_state[$form['sbp_state']['#language']][0]['value'];
-    }
     unset($form['sbp_state'][$form['sbp_state']['#language']]['#options']);
-    $form['sbp_state'][$form['sbp_state']['#language']]['#element_validate'] = array('springboard_p2p_add_state_and_country_ajax_value_validate');
   }
+
+  if (isset($form['#entity']->sbp_state[$form['sbp_state']['#language']][0]['value'])) {
+    $form['sbp_state'][$form['sbp_state']['#language']]['#default_value'] = $form['#entity']->sbp_state[$form['sbp_state']['#language']][0]['value'];
+  }
+  $form['sbp_state'][$form['sbp_state']['#language']]['#element_validate'] = array('springboard_p2p_add_state_and_country_ajax_value_validate');
 }
 
 /**
