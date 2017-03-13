@@ -1,0 +1,319 @@
+<?php
+
+/**
+ * @file
+ * Install file for fundraiser_ocd.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function fundraiser_ocd_schema() {
+  $schema = array();
+
+  $schema['fundraiser_ocd'] = array(
+    'description' => 'Stores data about one-click donations for fundraisers.',
+    'fields' => array(
+      'fundraiser_nid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'The {node}.nid of the fundraiser.',
+        'default' => 0,
+      ),
+      'ocd_optin_message_new_user' => array(
+        'description' => 'The opt-in message to display to end users (who have not opted into One Click Donate) if the fundraiser has one-click payments enabled.',
+        'type' => 'text',
+        'not null' => FALSE,
+      ),
+      'ocd_help_message_new_user' => array(
+        'description' => 'The help message to display to end users (who have not opted into One Click Donate) if the fundraiser has one-click payments enabled.',
+        'type' => 'text',
+        'not null' => FALSE,
+      ),
+      'ocd_help_message_new_user_format' => array(
+        'description' => 'The format of the help message for users not opted into One Click Donate.',
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => FALSE,
+        'default' => 'plain_text',
+      ),
+      'ocd_optin_message_existing_user' => array(
+        'description' => 'The opt-in message to display to end users (who have already opted into One Click Donate) if the fundraiser has one-click payments enabled.',
+        'type' => 'text',
+        'not null' => FALSE,
+      ),
+      'ocd_help_message_existing_user' => array(
+        'description' => 'The help message to display to end users (who have already opted into One Click Donate) if the fundraiser has one-click payments enabled.',
+        'type' => 'text',
+        'not null' => FALSE,
+      ),
+      'ocd_help_message_existing_user_format' => array(
+        'description' => 'The format of the help message for existing one-click donate users.',
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => FALSE,
+        'default' => 'plain_text',
+      ),
+      'ocd_login_message' => array(
+        'description' => 'The login message to display to end users if the fundraiser has one-click payments enabled.',
+        'type' => 'text',
+        'not null' => FALSE,
+      ),
+      'ocd_login_link_message' => array(
+        'description' => 'The login link message to display to end users if the fundraiser has one-click payments enabled.',
+        'type' => 'text',
+        'not null' => FALSE,
+      ),
+    ),
+    'primary key' => array('fundraiser_nid'),
+    'foreign keys' => array(
+      'fundraiser_nid' => array(
+        'table' => 'node',
+        'columns' => array('fundraiser_nid' => 'nid'),
+      ),
+    ),
+  );
+
+  $schema['fundraiser_ocd_cardonfile'] = array(
+    'description' => 'Stores data about user\'s payment information to be used for one-click donations.',
+    'fields' => array(
+      'ocd_id' => array(
+        'description' => 'ID for this one-click donation record.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'status' => array(
+        'description' => "If this one-click donationo method is enabled or not.",
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 1,
+      ),
+      'card_id' => array(
+        'description' => 'Numeric ID of the truncated card data in the local database.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'uid' => array(
+        'description' => 'The {users}.uid that supplied this card data.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'optin_date' => array(
+        'description' => 'The Unix timestamp when the card data was set to be used for one-click donations.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'did' => array(
+        'description' => 'The donation ID.',
+        'type' => 'int',
+        'not null' => FALSE,
+        'default' => 0,
+      ),
+      'ms' => array(
+        'description' => 'The market source.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'cid' => array(
+        'description' => 'The campaign id.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'nid' => array(
+        'description' => 'The node ID the user opted in to one-click donations.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'gateway' => array(
+        'description' => 'The gateway instance used when opting in to one-click donations.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('ocd_id', 'uid'),
+    'indexes' => array(
+      'card_id' => array('card_id'),
+      'donation_id' => array('did'),
+    ),
+    'foreign keys' => array(
+      'cardid' => array(
+        'table' => 'commerce_cardonfile',
+        'columns' => array('card_id' => 'card_id'),
+      ),
+      'creator' => array(
+        'table' => 'users',
+        'columns' => array('uid' => 'uid'),
+      ),
+      'donationid' => array(
+        'table' => 'fundraiser_donation',
+        'columns' => array('did' => 'did'),
+      ),
+    ),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implements hook_install().
+ */
+function fundraiser_ocd_install() {
+  _fundraiser_ocd_create_date_field('field_ocd_opt_in', 'One Click Donate Opt In');
+  _fundraiser_ocd_create_date_field('field_ocd_opt_out', 'One Click Donate Opt Out');
+}
+
+function _fundraiser_ocd_create_date_field($field_name, $field_label) {
+  if (empty(field_info_field($field_name))) {
+    $field = array(
+      'translatable' => '0',
+      'settings' => array(
+        'granularity' => array(
+          'month' => 'month',
+          'day' => 'day',
+          'hour' => 'hour',
+          'minute' => 'minute',
+          'second' => 'second',
+          'year' => 'year',
+        ),
+        'tz_handling' => 'site',
+        'timezone_db' => 'UTC',
+        'cache_enabled' => 0,
+        'cache_count' => '4',
+        'todate' => '',
+      ),
+      'field_name' => $field_name,
+      'type' => 'datetime',
+      'active' => '1',
+      'locked' => '0',
+      'cardinality' => '1',
+    );
+    field_create_field($field);
+
+    $instance = array(
+      'label' => $field_label,
+      'widget' => array(
+        'weight' => '28',
+        'type' => 'date_text',
+        'active' => 1,
+        'settings' => array(
+          'input_format' => 'm/d/Y - H:i:s',
+          'input_format_custom' => '',
+          'year_range' => '-3:+3',
+          'increment' => 15,
+          'label_position' => 'above',
+          'text_parts' => array(),
+        ),
+      ),
+      'settings' => array(
+        'default_value' => 'now',
+        'default_value_code' => '',
+        'default_value2' => 'same',
+        'default_value_code2' => '',
+        'user_register_form' => 0,
+      ),
+      'display' => array(
+        'default' => array(
+          'label' => 'above',
+          'type' => 'hidden',
+          'weight' => '9',
+          'settings' => array(),
+        ),
+      ),
+      'required' => 0,
+      'description' => '',
+      'field_name' => $field_name,
+      'entity_type' => 'user',
+      'bundle' => 'user',
+    );
+    field_create_instance($instance);
+  }
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function fundraiser_ocd_uninstall() {
+  $field_name = 'field_ocd_opt_in';
+  if ($instance = field_info_instance('user', $field_name, 'user')) {
+    field_delete_instance($instance);
+  }
+  field_delete_field($field_name);
+  $field_name = 'field_ocd_opt_out';
+  if ($instance = field_info_instance('user', $field_name, 'user')) {
+    field_delete_instance($instance);
+  }
+  field_delete_field($field_name);
+
+  field_purge_batch(100);
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Change the 'ocd_option_message' to 'ocd_option_message_new_
+ * user', 'ocd_help_message' to 'ocd_help_message_new_user', and
+ * 'ocd_help_message_form' to 'ocd_help_message_new_user_
+ * format'. Also add three new fields, 'ocd_optin_message_existing_
+ * _user', 'ocd_help_message_existing_user', and 'ocd_help_
+ * message_existing_user_format'.
+ */
+function fundraiser_ocd_update_7001() {
+  // If one of the old field definition exists, we assume they all exist and all
+  // must be changed.
+  if (db_field_exists('fundraiser_ocd', 'ocd_optin_message')) {
+    db_change_field('fundraiser_ocd', 'ocd_optin_message', 'ocd_optin_message_new_user', array(
+      'description' => 'The opt-in message to display to end users (who have not opted into One Click Donate) if the fundraiser has one-click payments enabled.',
+      'type' => 'text',
+      'not null' => FALSE,
+    ));
+    db_change_field('fundraiser_ocd', 'ocd_help_message', 'ocd_help_message_new_user', array(
+      'description' => 'The help message to display to end users (who have not opted into One Click Donate) if the fundraiser has one-click payments enabled.',
+      'type' => 'text',
+      'not null' => FALSE,
+    ));
+    db_change_field('fundraiser_ocd', 'ocd_help_message_format', 'ocd_help_message_new_user_format', array(
+      'description' => 'The format of the help message for users not opted into One Click Donate.',
+      'type' => 'varchar',
+      'length' => '255',
+      'not null' => FALSE,
+      'default' => 'plain_text',
+    ));
+    db_add_field('fundraiser_ocd', 'ocd_optin_message_existing_user', array(
+      'description' => 'The opt-in message to display to end users (who have already opted into One Click Donate) if the fundraiser has one-click payments enabled.',
+      'type' => 'text',
+      'not null' => FALSE,
+    ));
+    db_add_field('fundraiser_ocd', 'ocd_help_message_existing_user', array(
+      'description' => 'The help message to display to end users (who have already opted into One Click Donate) if the fundraiser has one-click payments enabled.',
+      'type' => 'text',
+      'not null' => FALSE,
+    ));
+    db_add_field('fundraiser_ocd', 'ocd_help_message_existing_user_format', array(
+      'description' => 'The format of the help message for existing one-click donate users.',
+      'type' => 'varchar',
+      'length' => '255',
+      'not null' => FALSE,
+      'default' => 'plain_text',
+    ));
+  }
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Add the 'One Click Donate Opt Out' field to Springboard user profiles.
+ */
+function fundraiser_ocd_update_7002() {
+  _fundraiser_ocd_create_date_field('field_ocd_opt_out', 'One Click Donate Opt Out');
+}

@@ -320,8 +320,13 @@ function commerce_authnet_echeck_submit_form_submit($payment_method, $pane_form,
     $payment_details = array(
       'accountNumber' => $pane_values['bank account']['acct_num'],
       'routingNumber' => $pane_values['bank account']['aba_code'],
-      'nameOnAccount' => $pane_values['bank account']['acct_name']
+      'nameOnAccount' => $pane_values['bank account']['acct_name'],
     );
+
+    $card_type = 'bank';
+    if (!empty($pane_values['bank account']['type'])) {
+      $card_type = $pane_values['bank account']['type'];
+    }
 
     // Submit a CIM request to create the Customer Profile.
     if ($response = commerce_authnet_echeck_cim_create_customer_profile_request($payment_method, $order, $payment_details)) {
@@ -334,8 +339,8 @@ function commerce_authnet_echeck_submit_form_submit($payment_method, $pane_form,
 
         // Load the card on file values for this donation
         $expires = array();
-        // If no expiration date given, use current date + 1 month
-        $expire_time = strtotime("now + 1 month");
+        // If no expiration date given, use current date + 2 years
+        $expire_time = strtotime("now + 2 years");
 
         $expires['month'] = date('m', $expire_time);
         $expires['year'] = date('Y', $expire_time);
@@ -346,15 +351,16 @@ function commerce_authnet_echeck_submit_form_submit($payment_method, $pane_form,
         $card_data->instance_id = $payment_method['instance_id'];
         $card_data->remote_id = $remote_id;
         $card_data->card_type = !empty($card_type) ? $card_type : 'card';
-        $card_data->card_name = !empty($billing_address['name_line']) ? $billing_address['name_line'] : '';
+        $card_data->card_name = !empty($billing_address['name_line']) ? $billing_address['name_line'] : !empty($payment_details['nameOnAccount']) ? $payment_details['nameOnAccount'] : '';
         $card_data->card_number = substr($pane_values['bank account']['acct_num'], -3);
         $card_data->card_exp_month = $expires['month'];
         $card_data->card_exp_year = $expires['year'];
         $card_data->status = 1;
 
         // Save and log the creation of the new card on file.
-        commerce_cardonfile_save($card_data);
+        $card = commerce_cardonfile_save($card_data);
         watchdog('commerce_authnet_echeck', 'CIM Customer Profile @profile_id created and saved to user @uid.', array('@profile_id' => (string) $response->customerProfileId, '@uid' => $order->uid));
+        return $card;
       }
       elseif ((string) $response->messages->message->code == 'E00039') {
         // But if a Customer Profile already existed for this user, attempt

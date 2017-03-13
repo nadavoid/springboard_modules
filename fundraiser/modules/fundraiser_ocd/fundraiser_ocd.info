@@ -1,0 +1,10 @@
+name = Fundraiser One Click Donate
+description = Enables functionality for one-click donations.
+package = Jackson River Springboard
+core = 7.x
+dependencies[] = commerce_cardonfile
+dependencies[] = commerce_payment
+dependencies[] = fundraiser
+dependencies[] = fundraiser_commerce_cardonfile
+dependencies[] = springboard_cookie
+dependencies[] = springboard_hmac
