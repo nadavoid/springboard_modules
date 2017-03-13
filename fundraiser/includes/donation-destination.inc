@@ -260,7 +260,6 @@ class FundraiserDonationDestination extends MigrateDestination {
     $migration = Migration::currentMigration();
 
     $donation = new stdClass();
-    $donation->created = $values->created;
     $donation->changed = REQUEST_TIME;
 
     // Load up the current user if there is one
@@ -277,6 +276,9 @@ class FundraiserDonationDestination extends MigrateDestination {
 
     // For our purposes we'll store the original order id as the sid
     $donation->sid = '';
+
+    // Imported donations will not yet have a txn_id, but it's expected in fundraiser_sustainers.
+    $donation->txn_id = NULL;
 
     // This payment has been captured
     $donation->status = 'payment_received';

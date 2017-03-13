@@ -125,6 +125,15 @@ function webform_confirmations_webform_submission_insert($node, $submission) {
 }
 
 /**
+ * Implements hook_webform_submission_delete().
+ */
+function webform_confirmations_webform_submission_delete($node, $submission) {
+  db_delete('webform_confirmations_submissions')
+    ->condition('sid', $submission->sid)
+    ->execute();
+}
+
+/**
  * Log submission ID and current session id.
  */
 function webform_confirmations_save_submission_session($sid) {

@@ -180,3 +180,57 @@ function salesforce_genmap_update_7002(&$sandbox) {
     return t('Device info field mappings have been added to salesforce_genmap records.');
   }
 }
+
+/**
+ * Create Salesforce mappings for secure preopoulate autofill.
+ */
+function salesforce_genmap_update_7003(&$sandbox) {
+  if (!module_exists('salesforce_genmap')) {
+    throw new DrupalUpdateException('Bailing out of salesforce_genmap_update_7003() because salesforce_genmap is not available.');
+  }
+
+  $path = libraries_get_path('salesforce');
+  require_once $path . '/soapclient/SforcePartnerClient.php';
+
+  // Update Salesforce mappings for webforms provided by these modules:
+  if (!isset($sandbox['progress'])) {
+    $sandbox['progress'] = 0;
+    $sandbox['current_mid'] = 0;
+    $sandbox['max'] = db_query('SELECT COUNT(`mid`) FROM {salesforce_genmap_map} WHERE `module` IN(:module1, :module2, :module3, :module4)',
+      array(
+        ':module1' => 'salesforce_donation',
+        ':module2' => 'salesforce_message_action',
+        ':module3' => 'salesforce_petition',
+        ':module4' => 'salesforce_social_action',
+      ))->fetchField();
+  }
+
+  $result = db_select('salesforce_genmap_map', 'map')
+    ->fields('map', array('mid', 'nid', 'map_handler', 'module'))
+    ->condition('map.module', array('salesforce_donation', 'salesforce_message_action', 'salesforce_petition', 'salesforce_social_action'), 'IN')
+    ->condition('map.mid', $sandbox['current_mid'], '>')
+    ->range(0, 5)
+    ->orderBy('mid', 'ASC')
+    ->execute();
+
+  while ($record = $result->fetchAssoc()) {
+    $map = salesforce_genmap_load_map($record['nid'], $record['map_handler']);
+
+    // Set the map key based on the module name.
+    $map_key = ($record['module'] == 'salesforce_donation') ? 'salesforce_webform_map' : 'webform_map';
+
+    $map->field_map[$map_key]['secure_prepop_autofilled'] = 'Autofilled__c';
+
+    salesforce_genmap_save_map($map, $record['map_handler']);
+
+    $sandbox['progress']++;
+    $sandbox['current_mid'] = $record['mid'];
+  }
+
+  $sandbox['#finished'] = empty($sandbox['max']) ? 1 : ($sandbox['progress'] / $sandbox['max']);
+
+  if ($sandbox['#finished'] >= 1) {
+    return t('Device info field mappings have been added to salesforce_genmap records.');
+  }
+}
+

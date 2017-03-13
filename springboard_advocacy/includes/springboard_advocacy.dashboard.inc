@@ -41,10 +41,53 @@ function springboard_advocacy_dashboard($path, $arg = NULL) {
     // Custom Target edit form page.
     case 'add-custom-targets':
     case 'edit-custom-targets':
+    case 'add-custom-groups':
+    case 'edit-custom-groups':
       $sections = springboard_advocacy_custom_targets_admin_form($path, $arg);
       break;
 
-    // Custom Targets landing page view.
+    // Target Center landing page view.
+    case 'target-center':
+      // Get the views.
+      $targets_view = springboard_advocacy_prepare_dashboard_view('sba_custom_targets', 'block_1');
+      $groups_view = springboard_advocacy_prepare_dashboard_view('sba_custom_targets', 'block_2'); // @TODO - create this view display and update this id if neccessary.
+      // The view is not found or the display is not found.
+      if (!$targets_view) {
+        $message = t('Target view or view display "block_1" not found.');
+        $sections = springboard_advocacy_dashboard_error('sba_targets', t('Target Center'), $message);
+        break;
+      }
+
+      if (!$groups_view) {
+        $message = t('Groups view or view display "block_2" not found.');
+        $sections = springboard_advocacy_dashboard_error('sba_targets', t('Target Center'), $message);
+        break;
+      }
+
+      $sections = array(
+        'sba_targets' => array(
+          'header' => t('Custom Targets'),
+          'content' => $targets_view->preview(),
+          'css' => drupal_get_path('module', 'springboard_advocacy') . '/css/sba.css',
+          'manage_link' => array('title' => t('View All Custom Targets'), 'href' => 'admin/springboard/advocacy/targets/custom-targets'),
+        ),
+        'sba_groups' => array(
+          'header' => t('Custom Groups'),
+          'content' => $groups_view->preview(),
+          'css' => drupal_get_path('module', 'springboard_advocacy') . '/css/sba.css',
+          'manage_link' => array('title' => t('View all Target Groups'), 'href' => 'admin/springboard/advocacy/targets/custom-groups'),
+        ),
+      );
+
+      if (module_exists('springboard_target') && springboard_target_target_access('create targets')) {
+        $sections['sba_targets']['create_link'] = array('title' => t('Create a new target'), 'href' => 'admin/springboard/advocacy/targets/custom-targets/add');
+      }
+      if (module_exists('springboard_target') && springboard_target_target_access('create groups')) {
+        $sections['sba_groups']['create_link'] = array('title' => t('Create a new group'), 'href' => 'admin/springboard/advocacy/targets/custom-groups/add');
+      }
+      break;
+
+    // Custom Targets listing page view.
     case 'custom-targets':
       // Get the view.
       $targets_view = springboard_advocacy_prepare_dashboard_view('sba_custom_targets', 'block_1');
@@ -62,8 +105,31 @@ function springboard_advocacy_dashboard($path, $arg = NULL) {
           'css' => drupal_get_path('module', 'springboard_advocacy') . '/css/sba.css',
         ),
       );
-      if (user_access('create targets')) {
+      if (module_exists('springboard_target') && springboard_target_target_access('create targets')) {
         $sections['sba_targets']['create_link'] = array('title' => t('Create a new target'), 'href' => 'admin/springboard/advocacy/targets/custom-targets/add');
+      };
+      break;
+
+    // Custom Groups listing page view.
+    case 'custom-groups':
+      // Get the view.
+      $groups_view = springboard_advocacy_prepare_dashboard_view('sba_custom_targets', 'block_2'); // @TODO - create this view display and update this id if neccessary.
+      // The view is not found or the display is not found.
+      if (!$groups_view) {
+        $message = t('Groups view or view display "block_2" not found.');
+        $sections = springboard_advocacy_dashboard_error('sba_targets', t('Custom Groups'), $message);
+        break;
+      }
+
+      $sections = array(
+        'sba_groups' => array(
+          'header' => t('Custom Groups'),
+          'content' => $groups_view->preview(),
+          'css' => drupal_get_path('module', 'springboard_advocacy') . '/css/sba.css',
+        ),
+      );
+      if (module_exists('springboard_target') && springboard_target_target_access('create groups')) {
+        $sections['sba_groups']['create_link'] = array('title' => t('Create a new group'), 'href' => 'admin/springboard/advocacy/targets/custom-groups/add');
       };
       break;
 
@@ -84,8 +150,8 @@ function springboard_advocacy_dashboard($path, $arg = NULL) {
             'css' => drupal_get_path('module', 'springboard_advocacy') . '/css/sba.css',
           ),
         );
-        if (module_exists('springboard_target') && springboard_target_user_can_access_targets()) {
-          $sections['sba_actions']['manage_link'] = array('title' => t('Manage Custom Targets'), 'href' => 'admin/springboard/advocacy/targets/custom-targets');
+        if (module_exists('springboard_target') && (springboard_target_user_can_access_targets() || springboard_target_user_can_access_groups())) {
+          $sections['sba_actions']['manage_link'] = array('title' => t('Manage Custom Targets'), 'href' => 'admin/springboard/advocacy/targets');
         }
       }
 
@@ -93,14 +159,20 @@ function springboard_advocacy_dashboard($path, $arg = NULL) {
       $social_actions_view = springboard_advocacy_prepare_dashboard_view('sba_actions', 'block_3', array('sba_social_action'));
       if ($social_actions_view && !empty($social_actions_view->result)) {
         $sections['sba_social_actions'] = array(
-            'header' => t('Social Actions'),
-            'content' => $social_actions_view->preview(),
-            'create_link' => array('title' => t('Create a new social action'), 'href' => 'node/add/sba-social-action'),
-            'viewmore_link' => array('title' => t('View All Social Actions'), 'href' => 'admin/springboard/advocacy/social-actions/all'),
-            'css' => drupal_get_path('module', 'springboard_advocacy') . '/css/sba.css',
+          'header' => t('Social Actions'),
+          'content' => $social_actions_view->preview(),
+          'create_link' => array(
+            'title' => t('Create a new social action'),
+            'href' => 'node/add/sba-social-action',
+          ),
+          'viewmore_link' => array(
+            'title' => t('View All Social Actions'),
+            'href' => 'admin/springboard/advocacy/social-actions/all',
+          ),
+          'css' => drupal_get_path('module', 'springboard_advocacy') . '/css/sba.css',
         );
-        if (module_exists('springboard_target') && springboard_target_user_can_access_targets()) {
-          $sections['sba_social_actions']['manage_link'] = array('title' => t('Manage Custom Targets'), 'href' => 'admin/springboard/advocacy/targets/custom-targets');
+        if (module_exists('springboard_target') && (springboard_target_user_can_access_targets() || springboard_target_user_can_access_groups())) {
+          $sections['sba_social_actions']['manage_link'] = array('title' => t('Manage Custom Targets'), 'href' => 'admin/springboard/advocacy/targets');
         }
       }
 
@@ -135,10 +207,9 @@ function springboard_advocacy_dashboard($path, $arg = NULL) {
       if (user_access('create sba_message_action content')) {
         $sections['sba_actions']['create_link'] = array('title' => t('Create a new message action'), 'href' => 'node/add/sba-message-action');
       }
-      if (springboard_target_user_can_access_targets()) {
-        $sections['sba_actions']['manage_link'] = array('title' => t('Manage Custom Targets'), 'href' => 'admin/springboard/advocacy/targets/custom-targets');
+      if (springboard_target_user_can_access_targets() || springboard_target_user_can_access_groups()) {
+        $sections['sba_actions']['manage_link'] = array('title' => t('Manage Custom Targets'), 'href' => 'admin/springboard/advocacy/targets');
       }
-
       break;
 
     case 'social-actions/all':
@@ -157,8 +228,8 @@ function springboard_advocacy_dashboard($path, $arg = NULL) {
       if (user_access('create sba_message_action content')) {
         $sections['sba_social_actions']['create_link'] = array('title' => t('Create a new social action'), 'href' => 'node/add/sba-social-action');
       }
-      if (springboard_target_user_can_access_targets()) {
-        $sections['sba_social_actions']['manage_link'] = array('title' => t('Manage Custom Targets'), 'href' => 'admin/springboard/advocacy/targets/custom-targets');
+      if (module_exists('springboard_target') && (springboard_target_user_can_access_targets() || springboard_target_user_can_access_groups())) {
+        $sections['sba_social_actions']['manage_link'] = array('title' => t('Manage Custom Targets'), 'href' => 'admin/springboard/advocacy/targets');
       }
 
       break;
@@ -261,7 +332,7 @@ function springboard_advocacy_dashboard($path, $arg = NULL) {
 }
 
 /**
- * Advocacy dashboard Custom Targets form page helper.
+ * Advocacy dashboard Custom Targets & Groups form page helper.
  *
  * @param string $path
  *   The drupal path.
@@ -280,27 +351,57 @@ function springboard_advocacy_custom_targets_admin_form($path, $arg = NULL) {
 
   drupal_add_css(drupal_get_path('module', 'springboard_target') . '/css/sba_target.css');
 
-  if ($path == 'edit-custom-targets') {
-    module_load_include('inc', 'springboard_target', 'includes/springboard_target.custom_targets_edit');
-    $form = drupal_get_form('springboard_target_edit_custom_targets_form', $arg);
-    $header = t('Edit Target');
-  }
-  else {
-    module_load_include('inc', 'springboard_target', 'includes/springboard_target.custom_targets_create');
-    $form = drupal_get_form('springboard_target_create_custom_targets_form');
-    $header = t('Create Target');
+  switch($path) {
+    case 'edit-custom-targets':
+      module_load_include('inc', 'springboard_target', 'includes/springboard_target.custom_targets_edit');
+      $form = drupal_get_form('springboard_target_edit_custom_targets_form', $arg);
+      $header = t('Edit Target');
+      $manage_link = array('title' => t('Return to targets list'), 'href' => 'admin/springboard/advocacy/targets/custom-targets');
+      break;
+
+    case 'edit-custom-groups':
+      module_load_include('inc', 'springboard_target', 'includes/springboard_target.custom_groups_edit');
+      $form = drupal_get_form('springboard_target_edit_custom_groups_form', $arg); //@TODO define this form
+      $header = t('Edit Group');
+      $manage_link = array('title' => t('Return to groups list'), 'href' => 'admin/springboard/advocacy/targets/custom-groups');
+      break;
+
+    case 'add-custom-groups':
+      module_load_include('inc', 'springboard_target', 'includes/springboard_target.custom_groups_create');
+      $form = drupal_get_form('springboard_target_create_custom_groups_form'); //@TODO define this form
+      $header = t('Create Group');
+      $manage_link = array('title' => t('Return to groups list'), 'href' => 'admin/springboard/advocacy/targets/custom-groups');
+      break;
+
+    default:
+      module_load_include('inc', 'springboard_target', 'includes/springboard_target.custom_targets_create');
+      $form = drupal_get_form('springboard_target_create_custom_targets_form');
+      $header = t('Create Target');
+      $manage_link = array('title' => t('Return to targets list'), 'href' => 'admin/springboard/advocacy/targets/custom-targets');
+      break;
   }
 
   $sections = array(
     'target_form' => array(
       'header' => $header,
       'content' => drupal_render($form),
-      'manage_link' => array('title' => t('Return to targets list'), 'href' => 'admin/springboard/advocacy/targets/custom-targets'),
+      'manage_link' => $manage_link,
       'css' => drupal_get_path('module', 'springboard_advocacy') . '/css/sba.css',
     ),
   );
-  if (user_access('create targets') && isset($arg)) {
-    $sections['target_form']['create_link'] = array('title' => t('Create a new target'), 'href' => 'admin/springboard/advocacy/targets/custom-targets/add');
+  if (springboard_target_target_access('create targets') && isset($arg)) {
+    if($path == 'edit-custom-targets') {
+      $sections['target_form']['create_link'] = array(
+        'title' => t('Create a new target'),
+        'href' => 'admin/springboard/advocacy/targets/custom-targets/add'
+      );
+    }
+    elseif ($path == 'edit-custom-groups') {
+      $sections['target_form']['create_link'] = array(
+        'title' => t('Create a new group'),
+        'href' => 'admin/springboard/advocacy/targets/custom-groups/add'
+      );
+    }
   };
 
   return $sections;

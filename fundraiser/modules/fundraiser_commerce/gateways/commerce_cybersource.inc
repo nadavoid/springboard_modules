@@ -201,6 +201,8 @@ function commerce_cybersource_fundraiser_commerce_update($donation, $card_data =
   }
 
   if ($action == 'update') {
+    $donation->old_card = clone $card_data;
+
     $card_data->card_number = $cardonfile_fields['card_number'];
     $card_data->card_exp_month = $cardonfile_fields['card_exp_month'];
     $card_data->card_exp_year = $cardonfile_fields['card_exp_year'];
@@ -234,7 +236,7 @@ function commerce_cybersource_fundraiser_commerce_update($donation, $card_data =
     $request->paySubscriptionCreateService = (object) array('run' => 'true');
     $card_type = commerce_payment_validate_credit_card_type($pane_values['credit_card']['number'], array_keys(commerce_payment_credit_card_types()));
     $request->card->cardType = commerce_cybersource_cc_type_code($card_type);
- 
+
     if ($response = commerce_cybersource_create_customer_profile_request($request, $payment_method, $order)) {
       // If the Customer Profile creation was a success, store the new card on
       // file data locally.

@@ -1,0 +1,163 @@
+<?php
+/**
+ * @file
+ * Install and update routines for Salesforce one-click donate module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function salesforce_ocd_install() {
+  salesforce_ocd_map_optin_date();
+  salesforce_ocd_map_optout_date();
+}
+
+function salesforce_ocd_uninstall() {
+  salesforce_ocd_unmap_field('field_ocd_opt_in');
+  salesforce_ocd_unmap_field('field_ocd_opt_out');
+}
+
+/**
+ * Implements hook_update_dependencies().
+ */
+function salesforce_ocd_update_dependencies() {
+  $dependencies['salesforce_ocd'][7000] = array(
+    'fundraiser_ocd' => 7002,
+  );
+  return $dependencies;
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Map the One-Click Donate Opt-Out date profile field.
+ */
+function salesforce_ocd_update_7000() {
+  salesforce_ocd_map_optout_date();
+}
+
+/**
+ * Maps the one-click donate opt-in date profile field.
+ */
+function salesforce_ocd_map_optin_date() {
+  $user_map = salesforce_mapping_load('user_to_contact');
+
+  if (!salesforce_ocd_field_is_mapped($user_map->field_mappings, 'field_ocd_opt_in')) {
+    $user_map->field_mappings[] = salesforce_ocd_mapped_date_field("field_ocd_opt_in", "One Click Donate Opt-In Date", "OCDonate_Opt_In_Date__c");
+  }
+
+  // Resave the map with the new fields.
+  $user_map->save();
+}
+
+/**
+ * Maps the one-click donate opt-out date profile field.
+ */
+function salesforce_ocd_map_optout_date() {
+  $user_map = salesforce_mapping_load('user_to_contact');
+
+  if (!salesforce_ocd_field_is_mapped($user_map->field_mappings, 'field_ocd_opt_out')) {
+    $user_map->field_mappings[] = salesforce_ocd_mapped_date_field("field_ocd_opt_out", "One Click Donate Opt-Out Date", "OCDonate_Opt_Out_Date__c");
+  }
+
+  // Resave the map with the new fields.
+  $user_map->save();
+}
+
+/**
+ * Unmaps the one-click donate opt-in field.
+ */
+function salesforce_ocd_unmap_field($field_name) {
+  $user_map = salesforce_mapping_load('user_to_contact');
+
+  $index = 0;
+  $field_is_mapped = FALSE;
+  foreach ($user_map->field_mappings as $mapped_field) {
+    if ($mapped_field['drupal_field']['fieldmap_value'] == $field_name) {
+      $field_is_mapped = TRUE;
+      break;
+    }
+    $index++;
+  }
+
+  if ($field_is_mapped) {
+    unset($user_map->field_mappings[$index]);
+    $user_map->save();
+  }
+}
+
+
+
+/**
+ * Helper function to determine if a field is already mapped.
+ */
+function salesforce_ocd_field_is_mapped($mapping, $field) {
+  foreach ($mapping as $mapped_field) {
+    if ($mapped_field['drupal_field']['fieldmap_value'] == $field) {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+/**
+ * Defines the one-click donate opt-in mapping record.
+ */
+function salesforce_ocd_mapped_date_field($fieldmap_value, $sf_label, $sf_name) {
+  return json_decode(' {
+      "drupal_field" : {
+        "fieldmap_type" : "property",
+        "fieldmap_value" : "'.$fieldmap_value.'"
+      },
+      "salesforce_field" : {
+        "autoNumber" : false,
+        "byteLength" : 0,
+        "calculated" : false,
+        "calculatedFormula" : null,
+        "cascadeDelete" : false,
+        "caseSensitive" : false,
+        "controllerName" : null,
+        "createable" : true,
+        "custom" : true,
+        "defaultValue" : null,
+        "defaultValueFormula" : null,
+        "defaultedOnCreate" : false,
+        "dependentPicklist" : false,
+        "deprecatedAndHidden" : false,
+        "digits" : 0,
+        "displayLocationInDecimal" : false,
+        "externalId" : false,
+        "filterable" : true,
+        "groupable" : true,
+        "htmlFormatted" : false,
+        "idLookup" : false,
+        "inlineHelpText" : null,
+        "label" : "'.$sf_label.'",
+        "length" : 0,
+        "name" : "'.$sf_name.'",
+        "nameField" : false,
+        "namePointing" : false,
+        "nillable" : true,
+        "permissionable" : true,
+        "picklistValues" : [],
+        "precision" : 0,
+        "referenceTo" : [],
+        "relationshipName" : null,
+        "relationshipOrder" : null,
+        "restrictedDelete" : false,
+        "restrictedPicklist" : false,
+        "scale" : 0,
+        "soapType" : "xsd:date",
+        "sortable" : true,
+        "type" : "date",
+        "unique" : false,
+        "updateable" : true,
+        "writeRequiresMasterRead" : false
+      },
+      "key" : false,
+      "direction" : "drupal_sf",
+      "drupal_sf" : "blank",
+      "sf_drupal" : "never"
+    }', TRUE);
+}
