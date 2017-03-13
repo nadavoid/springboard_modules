@@ -39,14 +39,14 @@ function hook_braintree_vault_customer_saved($result, &$context) {
       $return_customer_id = $result->customer->id;
 
       if ($user->uid > 0) {
-        $customer_id = braintree_customer_id($user);
+        $customer_id = braintree_vault_customer_id($user);
 
         if (empty($customer_id) && $return_customer_id) {
-          braintree_customer_id_save($user, $return_customer_id);
+          braintree_vault_customer_id_save($user, $return_customer_id);
         }
       }
       else {
-        $_SESSION['braintree_customer_id'] = $return_customer_id;
+        $_SESSION['braintree_vault_customer_id'] = $return_customer_id;
       }
     }
   }

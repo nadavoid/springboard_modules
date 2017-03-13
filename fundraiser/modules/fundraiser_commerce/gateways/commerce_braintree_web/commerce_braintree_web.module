@@ -102,11 +102,12 @@ function commerce_braintree_web_cardonfile_update($form, &$form_state, $payment_
     );
 
     list($success, $result) = braintree_update_card($card_data->remote_id, $params, $payment_method['settings']);
+
     if (!$success) {
       watchdog('commerce_braintree_web', 'Error updating cardonfile id: %card_id (Braintree payment_method id: %remote_id) with Braintree error message: %error_message', array(
         '%card_id' => $card_data->card_id,
         '%remote_id' => $card_data->remote_id,
-        '%error_message' => $result,
+        '%error_message' => $result['error'],
       ), WATCHDOG_ERROR);
       return FALSE;
     }
@@ -119,17 +120,18 @@ function commerce_braintree_web_cardonfile_update($form, &$form_state, $payment_
  * Card on file callback: deletes the payment_method at Braintree.
  */
 function commerce_braintree_web_cardonfile_delete($form, &$form_state, $payment_method, $card_data) {
-  list($success, $result) = braintree_card_delete($card_data->remote_id, $payment_method['settings']);
+  list($success, $result) = braintree_delete_card($card_data->remote_id, $payment_method['settings']);
+
   if (!$success) {
     watchdog('commerce_braintree_web', 'Error deleting cardonfile id: %card_id (Braintree payment_method id: %remote_id) with Braintree error message: %error_message', array(
       '%card_id' => $card_data->card_id,
       '%remote_id' => $card_data->remote_id,
-      '%error_message' => $result,
+      '%error_message' => $result['error'],
     ), WATCHDOG_ERROR);
     return FALSE;
   }
 
-  if (!$result->success) {
+  if (!$result['result']->success) {
     drupal_set_message(braintree_report_result($result), 'error');
     return FALSE;
   }
@@ -138,42 +140,45 @@ function commerce_braintree_web_cardonfile_delete($form, &$form_state, $payment_
 }
 
 /**
- * Implements hook_form_alter().
+ * Implements hook_form_FORM_ID_alter().
  */
 function commerce_braintree_web_form_alter(&$form, &$form_state, $form_id) {
-  global $user;
+  if ($form_id == 'fundraiser_update_billing_form' || (!empty($form['#node']->type) && fundraiser_is_donation_type($form['#node']->type))) {
+    global $user;
 
-  $is_credit = isset($form['#node']->gateways['credit']['id']) && strstr($form['#node']->gateways['credit']['id'], 'braintree_hostedfields');
-  $is_paypal = isset($form['#node']->gateways['paypal']['id']) && strstr($form['#node']->gateways['paypal']['id'], 'braintree_paypal');
-  $is_applepay = isset($form['#node']->gateways['applepay']['id']) && strstr($form['#node']->gateways['applepay']['id'], 'braintree_applepay');
-  $gateway_is_braintree = isset($form['#donation']->gateway['gateway_details']['module']) && $form['#donation']->gateway['gateway_details']['module'] == 'commerce_braintree_web';
+    $is_credit = isset($form['#node']->gateways['credit']['id']) && strstr($form['#node']->gateways['credit']['id'], 'braintree_hostedfields');
+    $is_paypal = isset($form['#node']->gateways['paypal']['id']) && strstr($form['#node']->gateways['paypal']['id'], 'braintree_paypal');
+    $is_applepay = isset($form['#node']->gateways['applepay']['id']) && strstr($form['#node']->gateways['applepay']['id'], 'braintree_applepay');
+    $gateway_is_braintree = isset($form['#donation']->gateway['gateway_details']['module']) && $form['#donation']->gateway['gateway_details']['module'] == 'commerce_braintree_web';
 
-  // Use form alter to make sure the external javsacript is always loaded.
-  // Attaching in the payment method submit form isn't consistent.
-  // Only continue when we're using braintree_hostedfields, braintree_paypal, or
-  // when we're on the "Edit Donation Set" tab and Braintree is the gateway.
-  if (!$is_credit && !$is_paypal && !$is_applepay && !$gateway_is_braintree) {
-    return;
-  }
+    // Use form alter to make sure the external javsacript is always loaded.
+    // Attaching in the payment method submit form isn't consistent.
+    // Only continue when we're using braintree_hostedfields, braintree_paypal,
+    // or when we're on the "Edit Donation Set" tab and Braintree is the
+    // gateway.
+    if (!$is_credit && !$is_paypal && !$is_applepay && !$gateway_is_braintree) {
+      return;
+    }
 
-  // Add an anchor to jump to payment section when reload page.
-  $form['commerce_payment']['payment_anchor'] = array(
-    '#markup' => '<a name="payment-section"></a>',
-    '#weight' => -10,
-  );
+    // Add an anchor to jump to payment section when reload page.
+    $form['commerce_payment']['payment_anchor'] = array(
+      '#markup' => '<a name="payment-section"></a>',
+      '#weight' => -10,
+    );
 
-  // Add form ID here for payment method change event.
-  $js_settings = array();
-  $js_settings['formId'] = str_replace('_', '-', $form_id);
+    // Add form ID here for payment method change event.
+    $js_settings = array();
+    $js_settings['formId'] = str_replace('_', '-', $form_id);
 
-  $form['#attached']['js'][] = array(
-    'data' => array('braintree' => $js_settings),
-    'type' => 'setting',
-  );
+    $form['#attached']['js'][] = array(
+      'data' => array('braintree' => $js_settings),
+      'type' => 'setting',
+    );
 
-  // Set anchor for page reload.
-  if (isset($form_state['triggering_element']) && $form_state['triggering_element']['#value'] == 'Reload') {
-    $form['#action'] = url(current_path(), array('fragment' => 'payment-section'));
+    // Set anchor for page reload.
+    if (isset($form_state['triggering_element']) && $form_state['triggering_element']['#value'] == 'Reload') {
+      $form['#action'] = url(current_path(), array('fragment' => 'payment-section'));
+    }
   }
 }
 
@@ -462,7 +467,6 @@ function commerce_braintree_web_submit_form_validate($payment_method, $pane_form
  */
 function commerce_braintree_web_submit_form_submit($payment_method, $pane_form, $pane_values, $order, $form_parents = array()) {
   braintree_initialize($payment_method['settings']);
-  global $user;
 
   list($amount, $customer_name, $first_name, $last_name, $country, $thoroughfare, $locality, $postal_code, $administrative_area, $customer_mail) = _commerce_braintree_web_get_transaction_informations($order);
 
@@ -493,6 +497,13 @@ function commerce_braintree_web_submit_form_submit($payment_method, $pane_form, 
   );
   drupal_alter('commerce_braintree_web_submit_form_customer', $customer);
 
+  if (!empty($customer['customer'])) {
+    $user = $customer;
+  }
+  else {
+    global $user;
+  }
+
   $token = NULL;
   $default_token = NULL;
   $nonce = NULL;
@@ -503,37 +514,10 @@ function commerce_braintree_web_submit_form_submit($payment_method, $pane_form, 
     $default_token = $pane_values['braintree']['default_method_token'];
   }
   else {
-    $nonce = braintree_get_nonce();
-  }
-
-  if ($customer['id'] && $pane_values['cardonfile'] == 'new' && !empty($nonce) && module_exists('braintree_vault')) {
-    // Let other modules try to create a new payment method.
-    $new_payment_method = array(
-      'customerId' => $customer['id'],
-      'paymentMethodNonce' => $nonce,
-      'billingAddress' => array(
-        'countryCodeAlpha2' => $country,
-        'streetAddress' => $thoroughfare,
-        'firstName' => $customer['first_name'],
-        'lastName' => $customer['last_name'],
-        'locality' => $locality,
-        'postalCode' => $postal_code,
-        'region' => $administrative_area,
-      ),
-    );
-    $new_payment_method_context = array('op' => 'add');
-
-    list($success, $result) = braintree_vault_payment_method_save($new_payment_method, $new_payment_method_context);
-
-    if ($success === FALSE) {
-      form_set_error('braintree', $result);
-      watchdog('commerce_braintree_web', '@error_message', array('@error_message' => $result), WATCHDOG_ERROR, NULL);
-      return FALSE;
+    drupal_alter('commerce_braintree_web_submit_form_existing_payment_method_token', $token, $customer, $pane_values);
+    if (empty($token)) {
+      $nonce = braintree_get_nonce();
     }
-
-    $flag_update_default_method = TRUE;
-    $braintree_payment_method = $result->paymentMethod;
-    $token = $braintree_payment_method->token;
   }
 
   $context = array(
@@ -548,45 +532,73 @@ function commerce_braintree_web_submit_form_submit($payment_method, $pane_form, 
     'merchantAccountId' => $merchant_account_id,
     'options' => array(
       'submitForSettlement' => TRUE,
-      'storeInVaultOnSuccess' => TRUE,
       'addBillingAddressToPaymentMethod' => TRUE,
+    ),
+    'customer' => array(
+      'firstName' => $first_name,
+      'lastName' => $last_name,
+      'email' => $customer_mail,
+    ),
+    'billing' => array(
+      'countryCodeAlpha2' => $country,
+      'streetAddress' => $thoroughfare,
+      'firstName' => $first_name,
+      'lastName' => $last_name,
+      'locality' => $locality,
+      'postalCode' => $postal_code,
+      'region' => $administrative_area,
     ),
   );
 
   if ($customer['id']) {
-    // @todo update billing address.
     $sale_data += array(
       'customerId' => $customer['id'],
     );
   }
-  else {
-    $sale_data += array(
-      'customer' => array(
-        'firstName' => $first_name,
-        'lastName' => $last_name,
-        'email' => $customer_mail,
-      ),
-      'billing' => array(
-        'countryCodeAlpha2' => $country,
-        'streetAddress' => $thoroughfare,
-        'firstName' => $first_name,
-        'lastName' => $last_name,
-        'locality' => $locality,
-        'postalCode' => $postal_code,
-        'region' => $administrative_area,
-      ),
-    );
+
+  drupal_alter('commerce_braintree_web_submit_customer', $sale_data);
+
+  $new_payment_method = array(
+    'customerId' => $customer['id'],
+    'paymentMethodNonce' => $nonce,
+  );
+
+  if (!empty($sale_data['billingAddressId'])) {
+    $new_payment_method['billingAddressId'] = $sale_data['billingAddressId'];
   }
+  elseif (!empty($sale_data['billing'])) {
+    $new_payment_method['billingAddress'] = $sale_data['billing'];
+  }
+
+  if ($customer['id'] && !empty($nonce)) {
+    // Let other modules try to create a new payment method.
+    $hook_name = 'commerce_braintree_web_submit_payment_method';
+    foreach (module_implements($hook_name) as $module) {
+      $function = $module . '_' . $hook_name;
+      list($success, $result) = $function($customer, $new_payment_method);
+      if (!$success) {
+        form_set_error('braintree', $result['result']);
+        watchdog('commerce_braintree_web', '@error_message', array('@error_message' => $result['result']), WATCHDOG_ERROR, NULL);
+        return FALSE;
+      }
+    }
+
+    $flag_update_default_method = TRUE;
+    $braintree_payment_method = $result['result']->paymentMethod;
+    $token = $braintree_payment_method->token;
+  }
+
+  $card = new stdClass();
 
   $order_data = unserialize(decrypt($order->data['fundraiser_commerce']));
   if (isset($order_data['cardonfile'])) {
-    $cardonfile = commerce_cardonfile_load($order_data['cardonfile']);
+    $card = commerce_cardonfile_load($order_data['cardonfile']);
     // Fail now if it is no longer available or the card is inactive.
-    if (empty($cardonfile) || $cardonfile->status == 0) {
+    if (empty($card) || $card->status == 0) {
       drupal_set_message(t('The requested card on file is no longer valid.'), 'error');
       return FALSE;
     }
-    $token = $cardonfile->remote_id;
+    $token = $card->remote_id;
   }
 
   if (!empty($token)) {
@@ -597,23 +609,20 @@ function commerce_braintree_web_submit_form_submit($payment_method, $pane_form, 
   }
   else {
     form_set_error('braintree', t('An unknown error occurred. Please try again or contact us for help.'));
-    watchdog('commerce_braintree_web', 'Niether paymentMethodToken nor paymentMethodNonce available when trying to process order:<br/> <pre>@print_r</pre>', array('@print_r' => var_export($order, TRUE)), WATCHDOG_ERROR, NULL);
+    watchdog('commerce_braintree_web', 'Neither paymentMethodToken nor paymentMethodNonce available when trying to process order:<br/> <pre>@print_r</pre>', array('@print_r' => var_export($order, TRUE)), WATCHDOG_ERROR, NULL);
     return FALSE;
   }
+
   $active_settings = braintree_settings($payment_method['settings']);
   $sale_data['channel'] = $active_settings['channel'];
 
   list($success, $braintree_result) = braintree_transaction_sale($sale_data, $context);
+  $braintree_result = $braintree_result['result'];
 
   if ($success) {
-    // Save returned braintree customer id, if it has not been previously saved.
-    $return_customer_id = $braintree_result->transaction->customerDetails->id;
-    if (empty($customer['id']) && $return_customer_id && module_exists('braintree_vault')) {
-      braintree_customer_id_save($customer, $return_customer_id);
-    }
-
     // If cardonfile is enabled and this appears to be a new card.
-    if (module_exists('commerce_cardonfile') && empty(commerce_cardonfile_load_multiple(array(), array('remote_id' => $braintree_result->transaction->creditCardDetails->token)))) {
+    $existing_cards = commerce_cardonfile_load_multiple(array(), array('remote_id' => $braintree_result->transaction->creditCardDetails->token));
+    if (module_exists('commerce_cardonfile') && empty($existing_cards)) {
       // Store the token with cardonfile.
       $card = commerce_cardonfile_new();
       $card->uid = $order->uid;
@@ -652,10 +661,14 @@ function commerce_braintree_web_submit_form_submit($payment_method, $pane_form, 
 
     if ($flag_update_default_method) {
       $context = array();
-      $vault_result = braintree_vault_payment_method_make_default($braintree_payment_method, $context, $error_message);
+      $vault_result = braintree_vault_payment_method_make_default($braintree_payment_method, $context);
       if ($vault_result === FALSE) {
         watchdog('commerce_braintree_web', 'Failed to update default payment method @token of user @uid', array('@token' => $token, '@uid' => $user->uid));
       }
+    }
+
+    if (!empty($braintree_result) && !empty($card)) {
+      module_invoke_all('commerce_braintree_web_submit_transaction_sale_success', $braintree_result, $card);
     }
   }
 
@@ -772,7 +785,9 @@ function commerce_braintree_web_process_transaction($order, $payment_method, $ch
   }
 
   if ($transaction->status == COMMERCE_PAYMENT_STATUS_FAILURE) {
-    $transaction->message = commerce_braintree_error_message($response->errors->deepAll()) . "\n";
+    if (!empty($response->message)) {
+      $transaction->message = $response->message . "\n";
+    }
   }
   else {
     $transaction->message = !empty($response->message) ? $response->message : NULL;
@@ -866,7 +881,7 @@ function _commerce_braintree_web_get_transaction_informations($order) {
     $locality,
     $postal_code,
     $administrative_area,
-    $customer_mail
+    $customer_mail,
   );
 }
 

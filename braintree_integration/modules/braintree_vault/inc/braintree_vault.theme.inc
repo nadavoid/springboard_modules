@@ -16,8 +16,8 @@ function template_preprocess_braintree_payment_methods(&$variables) {
   $variables['default_method'] = '';
   $variables['other_methods'] = array();
 
-  foreach (braintree_payment_methods_sorted($customer->paymentMethods) as $delta => $payment_method) {
-    if (braintree_payment_method_is_default($payment_method)) {
+  foreach (braintree_vault_payment_methods_sorted($customer->paymentMethods) as $delta => $payment_method) {
+    if (braintree_vault_payment_method_is_default($payment_method)) {
       $variables['default_method'] = theme('braintree_payment_method', array(
         'payment_method' => $payment_method,
         'is_default' => TRUE,
@@ -34,7 +34,7 @@ function template_preprocess_braintree_payment_methods(&$variables) {
     }
   }
 
-  $variables['add_url'] = url(braintree_payment_method_url('add'));
+  $variables['add_url'] = url(braintree_vault_payment_method_url('add'));
 
 }
 
@@ -76,13 +76,13 @@ function template_preprocess_braintree_payment_method(&$variables) {
   else {
     $links = array();
     $links['make-default'] = array(
-      'href' => url(braintree_payment_method_url('make_default', $delta)),
+      'href' => url(braintree_vault_payment_method_url('make_default', $delta)),
       'title' => t('Make primary payment'),
       'weight' => 0,
     );
 
     $links['remove'] = array(
-      'href' => url(braintree_payment_method_url('remove', $delta)),
+      'href' => url(braintree_vault_payment_method_url('remove', $delta)),
       'title' => t('Remove'),
       'weight' => 20,
     );
@@ -90,7 +90,7 @@ function template_preprocess_braintree_payment_method(&$variables) {
 
   if (braintree_payment_method_is_credit_card($payment_method)) {
     $links['edit'] = array(
-      'href' => url(braintree_payment_method_url('edit', $delta)),
+      'href' => url(braintree_vault_payment_method_url('edit', $delta)),
       'title' => t('Edit'),
       'weight' => 10,
     );

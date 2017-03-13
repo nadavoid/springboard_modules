@@ -152,6 +152,43 @@ function springboard_advocacy_views_data() {
     ),
   );
 
+  $data['advocacy']['created_at'] = array(
+    'title' => t('Created'),
+    'help' => t('Creation date'),
+    'field' => array(
+      'click sortable' => TRUE,
+      'handler' => 'springboard_advocacy_views_handler_field',
+    ),
+  );
+
+  $data['advocacy']['updated_at'] = array(
+    'title' => t('Updated Date'),
+    'help' => t('Last Update'),
+    'field' => array(
+      'click sortable' => TRUE,
+      'handler' => 'springboard_advocacy_views_handler_field',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort_date',
+    ),
+  );
+
+  $data['advocacy']['matching_targets'] = array(
+    'title' => t('Matching targets'),
+    'help' => t('Display matching targets in a group keyword search.'),
+    'field' => array(
+      'handler' => 'springboard_advocacy_views_handler_field',
+    ),
+  );
+
+  $data['advocacy']['child_groups'] = array(
+    'title' => t('Child Groups'),
+    'help' => t('Display child groups of a group.'),
+    'field' => array(
+      'handler' => 'springboard_advocacy_views_handler_field',
+    ),
+  );
+
   // Organization title returned by the API request.
   $data['advocacy']['title'] = array(
     'title' => t('Organization title'),
@@ -298,6 +335,18 @@ function springboard_advocacy_views_data() {
     ),
   );
 
+  // Custom group name field.
+  $data['advocacy']['group_name'] = array(
+    'title' => t('Group Name'),
+    'help' => t('Custom group name'),
+    'field' => array(
+      'handler' => 'springboard_advocacy_views_handler_field',
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'springboard_advocacy_views_handler_filter_string',
+    ),
+  );
 
   $data['springboard_action_opt_in']['table'] = array(
     'group' => t('Springboard Advocacy'),
@@ -472,7 +521,7 @@ function springboard_advocacy_target_type() {
   $value_options = array(
     'Target' => t('Custom Target'),
     'Legislator' => t('Legislator'),
-    'group' => t('Group'),
+    'Group' => t('Group'),
   );
   return $value_options;
 }
@@ -675,28 +724,26 @@ function springboard_advocacy_views_pre_render(&$view) {
 function theme_springboard_advocacy_views_attachment_before($vars) {
   $output = '';
   if (!empty($vars['query'])) {
-    if (!empty($vars['view']->build_info['target_ids'])) {
 
-      $ids_required = array(
-        'fields',
-        'gender',
-        'district_name',
-        'gender', 'social',
-        'search_committee',
-      );
-      $ids_required = array_intersect(array_keys($vars['query']), $ids_required);
-
-      if (!empty($ids_required)) {
-        $vars['query']['ids'] = implode('|', $vars['view']->build_info['target_ids']);
+    if (isset($vars['query']['search_committee'])) {
+      $matches = array();
+      preg_match('|id:[0-9]*|', $vars['query']['search_committee'], $matches);
+      foreach ($matches as $key => $str) {
+        $matches[$key] = str_replace('id:', '', $str);
       }
-    }
+      $vars['query']['committee_id'] = $matches[0];
+      $vars['query']['search_committee'] = preg_replace('|\(id:[0-9]*\)|', '', $vars['query']['search_committee']);
 
+    }
+    if (isset($vars['query']['class_name']) && !empty($vars['query']['district_name'])) {
+      unset($vars['query']['class_name']);
+    }
     if (!empty($vars['total_rows'])) {
       $plural = $vars['total_rows'] > 1 ? 'matches found' : 'match found';
       $output = '<div id ="advocacy-attachment-before-rows"><span class = "target-results">Search Results </span><span class = "target-count">' . $vars['total_rows'] . ' ' . $plural . '</span></div>';
-      if (user_access('add target to action')) {
+      if (module_exists('springboard_target') && springboard_target_target_access('add target to action') && isset($vars['query']['class_name']) && $vars['query']['class_name'] != 'Group') {
         $output .= '<div id ="advocacy-attachment-before-add-all">';
-        $output .= l(
+        $link = l(
           t('Add All Targets'),
           "add-all",
           array(
@@ -707,6 +754,7 @@ function theme_springboard_advocacy_views_attachment_before($vars) {
             'external' => TRUE,
           )
         );
+        $output .= urldecode($link);
         $output .= '</div>';
       }
     }
@@ -783,7 +831,7 @@ function springboard_advocacy_preprocess_views_view_table(&$vars)
  * Implements hook_preprocess_hook().
  */
 function springboard_advocacy_preprocess_pager(&$variables, $hook) {
-  if (isset($variables['parameters']['search_state'])) {
+  if (isset($variables['parameters']['search_state']) || isset($variables['parameters']['group_name'])) {
     $variables['tags'][0] = '<<';
     $variables['tags'][1] = '<';
     $variables['tags'][3] = '>';
@@ -801,14 +849,16 @@ function springboard_advocacy_form_views_exposed_form_alter(&$form, &$form_state
   if ($form_id == 'views_exposed_form' && $form_state['view']->name == 'targets' && $form_state['view']->base_table ='advocacy') {
 
     // Committee autocomplete.
-    $form['search_committee']['#autocomplete_path'] = 'message-action/committee/autocomplete';
+    if(module_exists('sba_target_search')) {
+      $form['search_committee']['#autocomplete_path'] = 'target-search/committee/autocomplete';
 
-    // Override stock Drupal autocomplete js
-    // needed to add values from chamber and state fields
-    // to the ajax request path.
-    $form['#attached']['js'] = array(
-      drupal_get_path('module', 'sba_message') . '/js/autocomplete_override.js',
-    );
+      // Override stock Drupal autocomplete js
+      // needed to add values from chamber and state fields
+      // to the ajax request path.
+      $form['#attached']['js'] = array(
+        drupal_get_path('module', 'sba_target_search') . '/js/autocomplete_override.js',
+      );
+    }
 
     // Convert select fields to checkboxes.
     if (isset($form['search_role_1'])) {

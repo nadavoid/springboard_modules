@@ -37,12 +37,12 @@ function fundraiser_ocd_admin_settings($form, $form_state) {
   $gateway_keys = array_keys($gateways);
   foreach ($gateway_keys as $gateway_key) {
     $default = '';
-    $data = variable_get(FUNDRAISER_ocd_DEFAULT_FORM_PREFIX . $gateway_key, array());
+    $data = variable_get(FUNDRAISER_OCD_DEFAULT_FORM_PREFIX . $gateway_key, array());
     if (!empty($data)) {
       $data = unserialize($data);
       $default = $data['title'];
     }
-    $form['default_forms'][FUNDRAISER_ocd_DEFAULT_FORM_PREFIX . $gateway_key] = array(
+    $form['default_forms'][FUNDRAISER_OCD_DEFAULT_FORM_PREFIX . $gateway_key] = array(
       '#type' => 'textfield',
       '#title' => t('Default node ID for @gateway', array(
         '@gateway' => isset($gateways[$gateway_key]['title']) ? $gateways[$gateway_key]['title'] : $gateway_key,
@@ -53,12 +53,12 @@ function fundraiser_ocd_admin_settings($form, $form_state) {
     );
   }
 
-  $data = variable_get(FUNDRAISER_ocd_DEFAULT_FORM_PREFIX . 'default', array());
+  $data = variable_get(FUNDRAISER_OCD_DEFAULT_FORM_PREFIX . 'default', array());
   if (!empty($data)) {
     $data = unserialize($data);
     $default = $data['title'];
   }
-  $form['default_forms'][FUNDRAISER_ocd_DEFAULT_FORM_PREFIX . 'default'] = array(
+  $form['default_forms'][FUNDRAISER_OCD_DEFAULT_FORM_PREFIX . 'default'] = array(
     '#type' => 'textfield',
     '#title' => t('Default node ID for all gateways'),
     '#description' => t('The node ID of the form you want to be used as default.'),
@@ -168,7 +168,7 @@ function fundraiser_ocd_admin_settings_autocomplete_callback($gateway_key = 'all
  */
 function fundraiser_ocd_admin_settings_submit($form, &$form_state) {
   foreach ($form_state['values'] as $key => $value) {
-    if (strpos($key, FUNDRAISER_ocd_DEFAULT_FORM_PREFIX) === FALSE || empty($value)) {
+    if (strpos($key, FUNDRAISER_OCD_DEFAULT_FORM_PREFIX) === FALSE || empty($value)) {
       continue;
     }
     $match = preg_match('/.*\[([0-9]+)\].*/', $value, $matches);

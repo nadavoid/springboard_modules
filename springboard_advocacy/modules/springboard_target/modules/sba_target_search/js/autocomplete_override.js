@@ -19,7 +19,8 @@
                 this.selectUp();
                 return false;
             case 13: // enter
-                if(this.db.uri.indexOf('message-action') != -1) {
+              console.log(this);
+                if(this.db.uri.indexOf('target-search') != -1) {
                     return false;
                 }
                 return true;
@@ -39,7 +40,7 @@
         // Prepare matches.
         var ul = $('<ul></ul>');
         var ac = this;
-        if(this.db.uri.indexOf('message-action') != -1) {
+        if(this.db.uri.indexOf('target-search') != -1) {
 
             var message = matches[Object.keys(matches)[Object.keys(matches).length - 1]];
             delete matches[Object.keys(matches)[Object.keys(matches).length - 1]]
@@ -56,7 +57,7 @@
                 .appendTo(ul);
         }
 
-        if(this.db.uri.indexOf('message-action') != -1 && Object.keys(matches).length > 0) {
+        if(this.db.uri.indexOf('target-search') != -1 && Object.keys(matches).length > 0) {
             $('<li></li>')
                 .html($('<strong></strong>').html(message))
                 .appendTo(ul);
@@ -81,7 +82,7 @@
         this.searchString = searchString;
 
         //this is the extent of the change
-        if(db.uri.indexOf('message-action') != -1) {
+        if(db.uri.indexOf('target-search') != -1) {
             var chamber = $('select', '#edit-search-committee-chamber-wrapper').val();
             var state = $("#edit-search-state").val();
             searchString = searchString + "/" +  state + "/" + chamber;
@@ -101,9 +102,15 @@
         }
         this.timer = setTimeout(function () {
             db.owner.setStatus('begin');
+            var affiliate = '';
+            if (typeof(Drupal.settings.sbaSubscriptionLevel) !== "undefined") {
+                if (typeof(Drupal.settings.sbaAllowedStates) !== "undefined") {
+                    affiliate = '/' + Drupal.settings.sbaSubscriptionLevel + '/' + Drupal.settings.sbaAllowedStates;
+                }
+            }
             $.ajax({
                 type: 'GET',
-                url: db.uri + '/' + Drupal.encodePath(searchString),
+                url: db.uri + '/' + Drupal.encodePath(searchString) + affiliate,
                 dataType: 'json',
                 success: function (matches) {
                     if (typeof matches.status == 'undefined' || matches.status != 0) {
