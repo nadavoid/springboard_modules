@@ -144,3 +144,40 @@ function fundraiser_webform_update_7002() {
   );
   db_add_field($table, $field, $schema);
 }
+
+/**
+ * Update webforms countries field to use full list of countries.
+ * @todo  Consider removing this if no one wants it.
+ */
+/*function fundraiser_webform_update_7003() {
+  if (!module_exists('countries')) {
+    $enable_modules = array('countries');
+    module_enable($enable_modules);
+  }
+
+  if (!function_exists('country_get_list')) {
+    include_once DRUPAL_ROOT . '/includes/locale.inc';
+  }
+
+  $countries = country_get_list();
+  $countries = implode("\n", $countries);
+
+  $new_value = array(
+    'items' => $countries,
+    'options_source' => 'countries',
+    'multiple' => FALSE,
+    'title_display' => 'before',
+    'private' => FALSE,
+    'aslist' => TRUE,
+    'optrand' => FALSE,
+    'conditional_operator' => '=',
+  );
+  $new_value = serialize($new_value);
+
+  db_update('webform_component')
+    ->fields(array(
+      'extra' => $new_value,
+    ))
+    ->condition('form_key', 'country')
+    ->execute();
+}*/

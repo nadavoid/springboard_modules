@@ -16,14 +16,7 @@ function sba_message_menu() {
     'access arguments' => array('manage-messages'),
     'type' => MENU_LOCAL_TASK,
   ) + springboard_advocacy_menu_common(TRUE, TRUE);
-
-  // Committee Search Selector autocomplete path.
-  $items['message-action/committee/autocomplete'] = array(
-    'page callback' => '_sba_message_committee_autocomplete',
-    'access arguments' => array('add target to action'),
-    'type' => MENU_CALLBACK,
-  );
-
+  
   return $items;
 }
 
@@ -246,59 +239,6 @@ function sba_message_node_delete($node) {
     }
   }
 }
-
-
-/**
- * Autocomplete callback to populate committee list dropdown.
- *
- * @param string $name
- *   The value of the autocomplete textfield.
- * @param string $state
- *   The value of the state field.
- * @param string $chamber
- *   The value of the chamber field.
- */
-function _sba_message_committee_autocomplete($name, $state, $chamber) {
-  $matches = array();
-
-  // Retrieve committee list from cache or via API call if not cached.
-  $api_call = springboard_advocacy_api_call();
-  $committee_list = $api_call->getCommittees();
-
-  // Grep the results using patterns based on form input.
-  $name_pattern = '/' . $name . '/i';
-  $state_pattern = '/\(' . $state . '\)/i';
-  $chamber_pattern = '/\(' . $chamber . '\)/i';
-
-  if (!empty($committee_list)) {
-    $results = preg_grep($name_pattern, $committee_list);
-    if ($state != 'All') {
-      $results = preg_grep($state_pattern, $results);
-    }
-    if ($chamber != 'All') {
-      $results = preg_grep($chamber_pattern, $results);
-    }
-    if (is_array($results)) {
-      $num = count($results);
-      // Limit the displayed results (there are 7,000+ committees)
-      // and create a tally message.
-      $results = array_slice($results, 0, 5);
-      $rest = $num - 5;
-      if ($rest > 0) {
-        $results['message'] = 'Plus ' . $rest . ' more. Try narrowing your search with more letters, words or filters';
-      }
-      else {
-        // Prevent the autocompelte js from bolding the last suggestion.
-        $results['message'] = '';
-      }
-      foreach ($results as $key => $row) {
-        $matches[$row] = $row;
-      }
-    }
-  }
-  drupal_json_output($matches);
-}
-
 
 /**
  * Implements hook_entity_info().
@@ -540,35 +480,6 @@ function sba_message_views_api() {
     'path' => drupal_get_path('module', 'sba_message') . '/views',
   );
 }
-
-/**
- * Implements hook_theme().
- */
-function sba_message_theme() {
-  return array(
-    'views_exposed_form' => array(
-      'template' => 'templates/views-exposed-form--targets-block-3',
-      'render element' => 'form',
-    ),
-    'views_view' => array(
-      'template' => 'templates/views-view--targets-block-3',
-      'render element' => 'form',
-    ),
-  );
-}
-
-/**
- * Implements hook_preprocess_hook().
- *
- * Override springboard theme's conversion of button text.
- */
-function sba_message_preprocess_views_exposed_form(&$vars, $hook) {
-  if (isset($vars['theme_hook_suggestion']) &&  $vars['theme_hook_suggestion'] == 'views_exposed_form__targets__block_3') {
-    unset($vars['form']['submit']['#printed']);
-    $vars['target_button'] = drupal_render($vars['form']['submit']);
-  }
-}
-
 
 /**
  * The class used for sba_message entities.
