@@ -5,6 +5,8 @@
  * hooks implementations.
  */
 
+const BRAINTREE_ADMIN_PATH = 'admin/config/services/braintree';
+
 require_once 'inc/braintree.inc';
 require_once 'inc/braintree.braintree_php.inc';
 
