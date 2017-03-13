@@ -43,14 +43,14 @@ function hook_braintree_transaction_sale_complete($result, &$context) {
       $return_customer_id = $result->transaction->customerDetails->id;
 
       if ($user->uid > 0) {
-        $customer_id = braintree_customer_id($user);
+        $customer_id = braintree_vault_customer_id($user);
 
         if (empty($customer_id) && $return_customer_id) {
-          braintree_customer_id_save($user, $return_customer_id);
+          braintree_vault_customer_id_save($user, $return_customer_id);
         }
       }
       else {
-        $_SESSION['braintree_customer_id'] = $return_customer_id;
+        $_SESSION['braintree_vault_customer_id'] = $return_customer_id;
       }
     }
   }
@@ -60,6 +60,6 @@ function hook_braintree_transaction_sale_complete($result, &$context) {
  * @param $customer_id
  * @param $account
  */
-function hook_braintree_customer_id_alter(&$customer_id, $account) {
+function hook_braintree_vault_customer_id_alter(&$customer_id, $account) {
 
 }
