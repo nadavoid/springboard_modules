@@ -809,6 +809,7 @@ function _fundraiser_commerce_zone_field_display($form, $form_state, $field) {
   // Get countries.
   $countries = fundraiser_commerce_get_countries();
 
+  // Copying the form values into a 'submitted' array to work with the zone field display.
   if (empty($form_state['values']['submitted']) && !empty($form_state['values'])) {
     $form_state['values']['submitted'] = $form_state['values'];
   }
