@@ -1836,9 +1836,12 @@ function fundraiser_commerce_fundraiser_donation_update($donation) {
     }
   }
 
-  // Update the payment information
-  if (!empty($donation->update_payment)) {
-    // Allow the gateways to clean the data before going to the update function
+  // Update the payment information.
+  $payment_method = $donation->data['payment_method'];
+  $bank_payment_method_valid = $payment_method == 'bank account' && !empty($donation->donation['payment_fields'][$payment_method]['routing_number']) && !empty($donation->donation['payment_fields'][$payment_method]['account_number']);
+  $credit_payment_method_valid = $payment_method == 'credit' && !empty($donation->donation['payment_fields'][$payment_method]['card_number']) && !empty($donation->donation['payment_fields'][$payment_method]['card_cvv']);
+  if (!empty($donation->update_payment) && ($bank_payment_method_valid || $credit_payment_method_valid)) {
+    // Allow the gateways to clean the data before going to the update function.
     if (isset($donation->gateway['cleanup callback']) && function_exists($donation->gateway['cleanup callback'])) {
       $cleaned = $donation->gateway['cleanup callback']($donation->donation, $donation->donation['payment_method']);
       $donation->donation['payment_fields'] = $cleaned['payment_fields'];
@@ -1858,7 +1861,6 @@ function fundraiser_commerce_fundraiser_donation_update($donation) {
         $old_card = clone $card_data;
         $card_data = $update_callback($donation, $card_data);
         drupal_alter('fundraiser_commerce_donation_update_card_update', $donation, $card_data);
-
         // Determine if the card id has changed.
         $card_id_changed = $old_card->card_id != $card_data->card_id;
 
@@ -1868,7 +1870,6 @@ function fundraiser_commerce_fundraiser_donation_update($donation) {
         // Determine if the expiration date has changed.
         $exp_month_changed = FALSE;
         $exp_year_changed = FALSE;
-        $payment_method = $donation->data['payment_method'];
         if ($payment_method == 'credit') {
           $exp_month_changed = !empty($donation->data['payment_fields'][$payment_method]) && !empty($donation->donation['payment_fields'][$payment_method]) && $donation->data['payment_fields']['credit']['card_expiration_month'] != $donation->donation['payment_fields']['credit']['card_expiration_month'];
           $exp_year_changed = !empty($donation->data['payment_fields'][$payment_method]) && !empty($donation->donation['payment_fields'][$payment_method]) && $donation->data['payment_fields']['credit']['card_expiration_year'] != $donation->donation['payment_fields']['credit']['card_expiration_year'];

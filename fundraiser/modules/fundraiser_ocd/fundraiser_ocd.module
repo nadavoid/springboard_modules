@@ -481,7 +481,7 @@ function _fundraiser_ocd_set_new_ocd_cof(&$form, &$form_state) {
 
   // If the card number is different, don't do anything, and let the other
   // submission handler handle this.
-  if (empty($values['cardonfile']['old_card']) || $values['cardonfile']['old_card']->card_number != $card->card_number) {
+  if (!empty($values['cardonfile']['old_card']) && $values['cardonfile']['old_card']->card_number != $card->card_number) {
     return;
   }
 
@@ -505,7 +505,7 @@ function _fundraiser_ocd_set_new_ocd_cof(&$form, &$form_state) {
 
   // If one-click donate is not true the user may be opting this card out.
   if ($disabling_ocd) {
-    fundraiser_ocd_opt_out_card($values['uid'], $donation, $card->card_id);
+    fundraiser_ocd_opt_out_card($values['uid'], $card->card_id);
     db_query('UPDATE {fundraiser_ocd_cardonfile} SET status = 0 WHERE card_id = :card_id', array(
       ':card_id' => $card->card_id,
     ));
@@ -601,7 +601,7 @@ function fundraiser_ocd_get_default_card($uid) {
  *
  * @param int $uid
  *   The user's uid.
- * @param object|int $card_id
+ * @param object|int $card
  *   The card object or the card's id.
  *
  * @throws \Exception
