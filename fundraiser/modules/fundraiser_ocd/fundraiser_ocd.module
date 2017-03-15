@@ -241,10 +241,10 @@ function fundraiser_ocd_payment_method_fields_alter(&$element, &$payment_method,
  * @param array $keys
  *   A multi-dimensional array specifying the keys of the element children to
  *   copy the states for.
- * @param array $element
+ * @param array|null $element
  *   The form element array.
  */
-function _fundraiser_ocd_payment_method_fields_alter_states($states, $keys, &$element) {
+function _fundraiser_ocd_payment_method_fields_alter_states(array $states, array $keys, &$element) {
   foreach ($keys as $key => $value) {
     if (count($value)) {
       _fundraiser_ocd_payment_method_fields_alter_states($states, $value, $element[$key]);
@@ -292,7 +292,7 @@ function fundraiser_ocd_webform_user_save_profile_map_alter(&$account, $form, $f
  * fundraiser_ocd_fundraiser_field_info_alter().
  */
 function fundraiser_ocd_webform_user_profile_fields_alter(&$fields, $node) {
-  $fields = array_filter($fields, function($value) {
+  $fields = array_filter($fields, function ($value) {
     return ($value['name'] != 'field_ocd_opt_in' && $value['name'] != 'field_ocd_opt_out');
   });
 }
@@ -433,6 +433,28 @@ function fundraiser_ocd_fundraiser_update_billing_form__fundraiser_commerce_card
     return;
   }
 
+  // Ensure the gateway is being used by at least one donation form.
+  $method_type = reset($form['#donation']->gateway['payment_method']);
+  $method = array(
+    'status' => 1,
+    'method' => $method_type,
+    'id' => $form['#donation']->gateway['id'],
+  );
+  $serialized_method = serialize($method);
+  if (preg_match('/a:3:\{([^\}]*)\}/', $serialized_method, $matches)) {
+    $serialized_method = $matches[1];
+  }
+  else {
+    return;
+  }
+
+  $fundraiser_count = db_query('SELECT COUNT(fd.nid) FROM {fundraiser} fd JOIN {fundraiser_ocd} fdocd ON fd.nid = fdocd.fundraiser_nid WHERE fd.gateways LIKE :gateways', array(
+    ':gateways' => '%' . db_like($serialized_method) . '%',
+  ))->fetchField();
+  if (empty($fundraiser_count)) {
+    return;
+  }
+
   // Make sure a donation is using this gateway before allowing it to be
   // OCD-able.
   $donations = db_query('SELECT COUNT(did) FROM {fundraiser_donation} WHERE gateway = :gateway', array(
@@ -505,7 +527,7 @@ function _fundraiser_ocd_set_new_ocd_cof(&$form, &$form_state) {
 
   // If one-click donate is not true the user may be opting this card out.
   if ($disabling_ocd) {
-    fundraiser_ocd_opt_out_card($values['uid'], $card->card_id);
+    fundraiser_ocd_opt_out_card($values['uid'], $donation, $card->card_id);
     db_query('UPDATE {fundraiser_ocd_cardonfile} SET status = 0 WHERE card_id = :card_id', array(
       ':card_id' => $card->card_id,
     ));
@@ -606,7 +628,7 @@ function fundraiser_ocd_get_default_card($uid) {
  *
  * @throws \Exception
  */
-function fundraiser_ocd_opt_out_card($uid, $card) {
+function fundraiser_ocd_opt_out_card($uid, $donation, $card) {
   // See if the user currently has a default card.
   $default_card = fundraiser_ocd_get_default_card($uid);
   if (is_numeric($card)) {
@@ -629,7 +651,7 @@ function fundraiser_ocd_opt_out_card($uid, $card) {
 
     user_save($account);
     // Invoke one-click donate opt-out hook.
-    module_invoke_all('fundraiser_ocd_optout', $card, $uid);
+    module_invoke_all('fundraiser_ocd_optout', $uid, $donation, $card);
   }
 }
 
