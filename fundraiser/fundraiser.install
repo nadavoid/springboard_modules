@@ -170,6 +170,7 @@ function fundraiser_schema() {
       'card_id' => array(
         'description' => 'The cardonfile card ID used to process this donation',
         'type' => 'int',
+        'unsigned' => TRUE,
       ),
       // @todo Add transaction information here with the gateway.
     ),
@@ -568,7 +569,7 @@ function fundraiser_update_7010() {
     to run in a site with a lot of donations. We'll
     examine a real-time approach in the next release.
 function fundraiser_update_7011(&$sandbox) {
-  // No action necessary if cardonfile isn't enabled 
+  // No action necessary if cardonfile isn't enabled
   if (!module_exists('commerce_cardonfile')) {
     return;
   }

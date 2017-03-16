@@ -104,7 +104,7 @@ function secure_prepopulate_update_7002(&$sandbox) {
 
     $cid = db_query('select wc.cid from {webform_component} wc
       WHERE wc.nid = :nid AND wc.form_key = :key',
-      array(':nid' => $node->nid, ':key' => 'sba_action_is_multistep')
+      array(':nid' => $node->nid, ':key' => 'secure_prepop_autofilled')
     )->fetchAssoc();
 
     if (!$cid) {

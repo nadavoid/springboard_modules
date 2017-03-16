@@ -42,8 +42,14 @@ function braintree_payment_library() {
  * @param array $config
  *   The payment method configuration.
  */
-function braintree_form_elements($payment_type, $config) {
+
+function braintree_form_elements($payment_type, $config, $billing_update = FALSE) {
+  global $user;
   $js_settings = array();
+  if ($billing_update) {
+    $js_settings['billing_update_type'] = $payment_type;
+  }
+
   $form = array();
   $form_processed = &drupal_static(__FUNCTION__);
 
