@@ -555,7 +555,7 @@ function _fundraiser_ocd_set_new_ocd_cof(&$form, &$form_state) {
       // If the user isn't currently opted into any one-click donation forms,
       // select one from {fundraiser_ocd}.
       if (empty($nid)) {
-        $nid = db_query('SELECT fundraiser_nid FROM {fundraiser_quick_donate} fqd WHERE fundraiser_nid IN (SELECT nid FROM {fundraiser_donation} fd WHERE fd.uid = :uid) LIMIT 1', array(':uid' => $values['uid']))->fetchField();
+        $nid = db_query('SELECT fundraiser_nid FROM {fundraiser_ocd} focd WHERE fundraiser_nid IN (SELECT nid FROM {fundraiser_donation} fd WHERE fd.uid = :uid) LIMIT 1', array(':uid' => $values['uid']))->fetchField();
       }
 
       // If no one-click donation forms exist, we'll need to exit prematurely.
