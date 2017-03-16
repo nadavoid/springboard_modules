@@ -42,6 +42,7 @@ function fundraiser_admin_settings($form, &$form_state) {
     '#title' => t('Maximum "other amount" value'),
     '#default_value' => variable_get('fundraiser_maximum_other_amount', 999999.99),
     '#description' => t('Enter the maximum donation amount that donors can enter in the "other amount" field. Do not use commas.'),
+    '#element_validate' => array('fundraiser_maximum_other_amount_validate'),
   );
 
   $form['fundraiser']['fundraiser_default_amounts'] = array(
@@ -102,6 +103,12 @@ function fundraiser_admin_settings($form, &$form_state) {
     $form['#validate'][] = '_fundraiser_form_payment_method_settings_validate';
   }
   return system_settings_form($form);
+}
+
+function fundraiser_maximum_other_amount_validate($element, $form_state) {
+  if (!is_numeric($form_state['values']['fundraiser_maximum_other_amount'])) {
+    form_set_error('fundraiser_maximum_other_amount', t('Maximum "other amount" must be numeric, with no commas'));
+  }
 }
 
 /**
