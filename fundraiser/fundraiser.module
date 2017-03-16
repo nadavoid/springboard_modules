@@ -3894,7 +3894,10 @@ function fundraiser_update_billing_form($form, &$form_state, $data) {
     if (isset($data['donation']->gateway['form callback'])) {
       $form_func = $data['donation']->gateway['form callback'];
       if (function_exists($form_func)) {
-        $form['payment_fields'][$data['donation']->donation['payment_method']] += $form_func($data['donation']->donation['payment_method']);
+        $payment_method_fields = $form_func($data['donation']->donation['payment_method']);
+        if (is_array($payment_method_fields)) {
+          $form['payment_fields'][$data['donation']->donation['payment_method']] += $payment_method_fields;
+        }
       }
     }
   }
