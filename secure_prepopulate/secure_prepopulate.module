@@ -326,6 +326,11 @@ function secure_prepopulate_form_webform_client_form_alter(&$form, $form_state) 
       }
     }
   }
+
+  $autofill_field = &_secure_prepopulate_find_field($form, $component_hierarchy['secure_prepop_autofilled']);
+  if ($autofill_field) {
+    $autofill_field['#value'] = "1";
+  }
 }
 
 /**
@@ -605,4 +610,19 @@ function pkcs5_unpad($text) {
     return FALSE;
   }
   return drupal_substr($text, 0, -1 * $pad);
+}
+
+
+/**
+ * Implements hook_node_insert().
+ *
+ * Add the autofill flag to forms.
+ */
+function secure_prepopulate_node_insert($node) {
+  $webform_node_types = variable_get('webform_node_types', array('webform'));
+  if (in_array($node->type, $webform_node_types)) {
+    // Adds some custom fields to new webforms.
+    module_load_include('inc', 'secure_prepopulate', 'secure_prepopulate.components');
+    secure_prepopulate_insert_components($node);
+  }
 }

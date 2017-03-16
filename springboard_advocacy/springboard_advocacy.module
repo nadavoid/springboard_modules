@@ -168,7 +168,7 @@ function springboard_advocacy_taxonomy_access() {
  * Add the advocacy links to springboard admin.
  */
 function springboard_advocacy_springboard_admin_admin_menu_items_alter(&$items) {
-  if (module_exists('springboard_advocacy')) {
+
     // Top Level: Springboard Advocacy.
     $items['admin/springboard/advocacy/actions'] = array(
       'link_path' => 'admin/springboard/advocacy/actions',
@@ -188,7 +188,7 @@ function springboard_advocacy_springboard_admin_admin_menu_items_alter(&$items) 
       'customized' => 1,
       'weight' => -2,
     );
-  }
+
 
   $types = node_type_get_types();
 
@@ -219,9 +219,29 @@ function springboard_advocacy_springboard_admin_admin_menu_items_alter(&$items) 
   if (module_exists('springboard_target')) {
 
     // Springboard Advocacy > Custom Targets.
-    $items['admin/springboard/advocacy/actions']['_children']['admin/springboard/advocacy/targets/custom-targets'] = array(
+    $items['admin/springboard/advocacy/actions']['_children']['admin/springboard/advocacy/targets'] = array(
+      'link_path' => 'admin/springboard/advocacy/targets',
+      'link_title' => 'Custom Targets & Groups',
+      'menu_name' => 'springboard_admin_menu',
+      'expanded' => 1,
+      'customized' => 1,
+      'weight' => 2,
+    );
+
+    // Springboard Advocacy > Custom Individual Targets.
+    $items['admin/springboard/advocacy/actions']['_children']['admin/springboard/advocacy/targets']['_children']['admin/springboard/advocacy/targets/custom-targets'] = array(
       'link_path' => 'admin/springboard/advocacy/targets/custom-targets',
-      'link_title' => 'Custom Targets',
+      'link_title' => 'Custom Individual Targets',
+      'menu_name' => 'springboard_admin_menu',
+      'expanded' => 1,
+      'customized' => 1,
+      'weight' => 1,
+    );
+
+    // Springboard Advocacy > Custom Group Targets.
+    $items['admin/springboard/advocacy/actions']['_children']['admin/springboard/advocacy/targets']['_children']['admin/springboard/advocacy/targets/custom-groups'] = array(
+      'link_path' => 'admin/springboard/advocacy/targets/custom-groups',
+      'link_title' => 'Custom Groups',
       'menu_name' => 'springboard_admin_menu',
       'expanded' => 1,
       'customized' => 1,
@@ -299,51 +319,72 @@ function springboard_advocacy_views_api() {
  *
  *   Saves a UUID for action nodes.
  */
- function springboard_advocacy_node_insert($node) {
+function springboard_advocacy_node_insert($node) {
 
-   $types = variable_get('sba_action_types', array());
-   if (in_array($node->type, $types)) {
-     $uuid = array(
-       'nid' => $node->nid,
-       'advocacy_id' => str_replace(' ', '-', uniqid(substr(variable_get('site_name', ''), 0, 10) . '-' . substr($node->title, 0, 10) . '-')),
-     );
-     drupal_write_record('sba_form_id', $uuid);
+  $types = variable_get('sba_action_types', array());
+  if (in_array($node->type, $types)) {
+    $uuid = array(
+      'nid' => $node->nid,
+      'advocacy_id' => str_replace(' ', '-', uniqid(substr(variable_get('site_name', ''), 0, 10) . '-' . substr($node->title, 0, 10) . '-')),
+    );
+    drupal_write_record('sba_form_id', $uuid);
 
-     // Clone messages if this is a clone.
-     if (!empty($node->clone_from_original_nid) && !empty($node->messages) && module_exists('sba_message')) {
-       foreach ($node->messages as $id => $message) {
+    // Clone messages if this is a clone.
+    if (!empty($node->clone_from_original_nid) && !empty($node->messages) && module_exists('sba_message')) {
+      foreach ($node->messages as $id => $message) {
 
-         // The node object still has the original node's message entities loaded
-         // but not saved. Recast them as new, unset some API values
-         // replace the entity reference ID with our new node ID
-         // and save them as new messages.
-         $message->sba_message_id = NULL;
-         if (isset($message->data['group_id'])) {
-           unset($message->data['group_id']);
-         }
-         $message->is_new = TRUE;
-         $message->data['message_id'] = str_replace(' ', '-', uniqid(substr(variable_get('site_name', ''), 0, 10) . '-' . substr($message->name, 0, 10) . '-'));
-         $message->field_sba_action_id[LANGUAGE_NONE][0]['target_id'] = $node->nid;
-         $created = time();
-         $message->created = $created;
-         $message->changed = $created;
-         $message->save();
+        // The node object still has the original node's message entities loaded
+        // but not saved. Recast them as new, unset some API values
+        // replace the entity reference ID with our new node ID
+        // and save them as new messages.
+        $message->sba_message_id = NULL;
+        if (isset($message->data['group_id'])) {
+          unset($message->data['group_id']);
+        }
+        $message->is_new = TRUE;
+        $message->data['message_id'] = str_replace(' ', '-', uniqid(substr(variable_get('site_name', ''), 0, 10) . '-' . substr($message->name, 0, 10) . '-'));
+        $message->field_sba_action_id[LANGUAGE_NONE][0]['target_id'] = $node->nid;
+        $created = time();
+        $message->created = $created;
+        $message->changed = $created;
+        $message->save();
 
-         // Save the draggable views record
-         $arg = json_encode(array($node->nid));
-         sba_message_draggable_save($arg, $message->sba_message_id, $message->data['weight']);
+        // Save the draggable views record.
+        $arg = json_encode(array($node->nid));
+        sba_message_draggable_save($arg, $message->sba_message_id, $message->data['weight']);
 
-         // Create a record on the API server
-         $pseudo_form_state = array();
-         $pseudo_form_state['values']['data']['recipients'] = $message->data['recipients'];
-         $pseudo_form_state['values']['data']['message_id'] = $message->data['message_id'];
-         $pseudo_form_state['values']['advocacy_id'] = $uuid['advocacy_id'];
-         module_load_include('inc', 'sba_message', 'sba_message.api_calls');
-         _sba_message_api_save($message, TRUE, $pseudo_form_state);
-       }
-     }
-   }
- }
+        // Create a record on the API server.
+        if (isset($message->data['recipients'])) {
+          module_load_include('inc', 'springboard_target', 'includes/springboard_target.api_calls');
+          // Build a group object for saving.
+          $group = array(
+            'group_id' => '',
+            'recipients' => $message->data['recipients'],
+            'name' => $message->data['message_id'],
+            'is_template' => 0,
+            'message' => array(
+              'group_id' => '',
+              'message_id' => $message->data['message_id'],
+              'form_id' => $uuid['advocacy_id'],
+            ),
+          );
+          $group_id = springboard_target_api_save_target_group($group, TRUE);
+          if ($group_id) {
+            $message->data['group_id'] = $group_id;
+            $message->changed = time();
+            $message->save();
+          }
+          else {
+            $message->data['group_id'] = 'no_response';
+            drupal_set_message('There was a problem saving the message targets to the advocacy server.', 'warning');
+            $message->changed = time();
+            $message->save();
+          }
+        }
+      }
+    }
+  }
+}
 
 
 
@@ -509,21 +550,23 @@ function springboard_advocacy_springboard_admin_views_alter(&$names) {
  *   An array of config settings.
  */
 function springboard_advocacy_api_unconfigured($type = 'All') {
+  $unconfigured = &drupal_static(__FUNCTION__);
+  if (!isset($unconfigured)) {
+    if ($type == 'springboard') {
+      $settings = springboard_advocacy_api_vars();
+    }
+    elseif ($type == 'smarty') {
+      $settings = springboard_advocacy_smarty_vars();
+    }
+    else {
+      $settings = springboard_advocacy_api_vars() + springboard_advocacy_smarty_vars();
+    }
 
-  if ($type == 'springboard') {
-    $settings = springboard_advocacy_api_vars();
-  }
-  elseif ($type == 'smarty') {
-    $settings = springboard_advocacy_smarty_vars();
-  }
-  else {
-    $settings = springboard_advocacy_api_vars() + springboard_advocacy_smarty_vars();
-  }
-
-  $unconfigured  = array();
-  foreach ($settings as $key => $setting) {
-    if ($setting == '') {
-      $unconfigured[] = $key;
+    $unconfigured = array();
+    foreach ($settings as $key => $setting) {
+      if ($setting == '') {
+        $unconfigured[] = $key;
+      }
     }
   }
 
@@ -979,20 +1022,18 @@ function springboard_advocacy_success($node, $contact, $data, $sid) {
 
 
 function springboard_advocacy_node_form_post_save($node) {
-  if (!empty($node->show_my_name)) {
-    $data = array(
-      'nid' => $node->nid,
-      'visibility' => $node->show_my_name,
-    );
+  $data = array(
+    'nid' => $node->nid,
+    'visibility' => (isset($node->show_my_name) && $node->show_my_name == 1) ? 1 : 0,
+  );
 
-    $visibility = db_query('select visibility from {springboard_action_opt_in_block} WHERE nid=:nid', array(':nid' => $node->nid))->fetchCol();
+  $visibility = db_query('select visibility from {springboard_action_opt_in_block} WHERE nid=:nid', array(':nid' => $node->nid))->fetchCol();
 
-    if (empty($visibility)) {
-      drupal_write_record('springboard_action_opt_in_block', $data);
-    }
-    else {
-      drupal_write_record('springboard_action_opt_in_block', $data, 'nid');
-    }
+  if (empty($visibility)) {
+    drupal_write_record('springboard_action_opt_in_block', $data);
+  }
+  else {
+    drupal_write_record('springboard_action_opt_in_block', $data, 'nid');
   }
 
   if (!empty($node->action_submit_button_text) || !empty($node->social_submit_button_text)) {

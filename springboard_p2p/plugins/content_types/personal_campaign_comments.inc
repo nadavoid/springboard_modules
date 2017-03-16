@@ -67,7 +67,7 @@ function springboard_p2p_personal_campaign_comments_render($subtype, $conf, $pan
 
     if ($comment['show_name'] && !empty($comment['donor_name'])) {
       $output[] = '<h3 class="p2p-comment-name">';
-      $output[] = $comment['donor_name'];
+      $output[] = check_plain($comment['donor_name']);
       $output[] = '</h3>';
     }
     else {

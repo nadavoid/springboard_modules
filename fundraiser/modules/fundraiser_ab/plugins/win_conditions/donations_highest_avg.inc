@@ -36,7 +36,7 @@ function fundraiser_ab_donations_highest_avg_current_value($webform_nid, $webfor
 
   foreach ($node->included_webforms as $nid => $details) {
     $this_avg_donation = _fundraiser_ab_donations_highest_avg_get_average_donation($nid);
-    if ($this_avg_donation > $target_average_donation) {
+    if ($this_avg_donation > $target_average_donation || ($this_avg_donation === 0 && $target_average_donation === 0)) {
       return 0;
     }
   }

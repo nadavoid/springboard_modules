@@ -139,6 +139,15 @@ function springboard_hmac_verify($payload, $hmac) {
   // unaltered and we can continue.
   if ($hmac != $verification_hmac) {
     $reason = t('Authentication failed. Tokens do not match.');
+    // Assume nefarious activies. Log the user out if they're logged in.
+    if (user_is_logged_in()) {
+      // Copy of `user_logout_current_user` which is only available for 7.50+.
+      global $user;
+      watchdog('user', 'Session closed for %name.', array('%name' => $user->name));
+      module_invoke_all('user_logout', $user);
+      // Destroy the current session, and reset $user to the anonymous user.
+      session_destroy();
+    }
     //springboard_hmac_save($hmac);
     return springboard_hmac_failure($reason, $parsed_payload);
   }
@@ -188,6 +197,13 @@ function springboard_hmac_verify_payload($parsed_payload) {
   // does the user id not match the payload ID?
   global $user;
   if (!user_access('administer springboard hmac') && ($user->uid > 0 && $user->uid != $parsed_payload['uid'])) {
+    // The user shouldn't have access to this token, so log them out.
+    // Copy of `user_logout_current_user` which is only available for 7.50+.
+    global $user;
+    watchdog('user', 'Session closed for %name.', array('%name' => $user->name));
+    module_invoke_all('user_logout', $user);
+    // Destroy the current session, and reset $user to the anonymous user.
+    session_destroy();
     return t('Payload User ID does not match User ID.');
   }
 
@@ -200,14 +216,19 @@ function springboard_hmac_verify_payload($parsed_payload) {
     }
   }
 
-  // Is there a springboard cookie and
-  // does the cookie user id not match the payload ID?
-//      if (module_exists('springboard_cookie')) {
-//        $cookie = springboard_cookie_get_cookie();
-//        if (!user_access('administer springboard hmac') && isset($cookie['uid']) && $parsed_payload['uid'] != $cookie['uid']) {
-//          return t('Payload User ID does not match Springboard Cookie User ID.');
-//        }
-//      }
+  return NULL;
+}
+
+/**
+ * Confirm the HMAC payload's user ID matches the Springboard cookie.
+ */
+function springboard_hmac_verify_user_cookie($payload) {
+  if (!user_is_logged_in()) {  // If the user is logged in, don't worry about the cookie.
+    $cookie = springboard_cookie_get_cookie();
+    if (!user_access('administer springboard hmac') && (empty($cookie['uid']) || $payload['uid'] != $cookie['uid'])) {
+      return t('Payload User ID does not match Springboard Cookie User ID.');
+    }
+  }
   return NULL;
 }
 
@@ -465,6 +486,19 @@ function springboard_hmac_springboard_hmac_success($payload) {
       }
       break;
   }
+}
+
+/**
+ * Implements hook_springboard_hmac_verify_payload().
+ */
+function springboard_hmac_springboard_hmac_verify_payload($payload) {
+  // Built-in actions.
+  switch ($payload['action']) {
+    case 'lr':  // Log in and redirect.
+      // Require a non-logged-in user to match the Springboard cookie.
+      return springboard_hmac_verify_user_cookie($payload);
+  }
+  return NULL;
 }
 
 /**

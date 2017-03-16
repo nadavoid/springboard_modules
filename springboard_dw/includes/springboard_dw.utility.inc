@@ -101,3 +101,25 @@ function springboard_dw_convert_sf_type($module, $delta, $object_type) {
   // If it's not one of the above types we're not going to deal with it.
   return FALSE;
 }
+
+
+/**
+ * Load the timestamp of a submission record from {webform_submissions}.
+ *
+ * @param int $sid
+ *   Webform submission id.
+ *
+ * @return int
+ *   Returns submitted timestamp for a given webform submission.
+ */
+function springboard_dw_get_submission_timestamp($sid) {
+  $result = db_query('
+    SELECT
+      submitted
+    FROM {webform_submissions}
+    WHERE
+      sid = :sid
+    LIMIT 1
+  ', array(':sid' => $sid));
+  return $result->fetchField();
+}

@@ -23,7 +23,7 @@ function salesforce_donation_history_page($user) {
   }
   // Check to see if there are pending donations in the salesforce sync queue.
   if ($pending_count = salesforce_donation_history_count_pending_donations($user->uid)) {
-    drupal_set_message(t('You have :count donation(s) in-process. Donations and refunds may take up to 30 minutes to appear here.', array(':count' => $pending_count)));
+    drupal_set_message(t('You have donation(s) in-process. Donations and refunds may take up to 30 minutes to appear here.'));
   }
   if (count($results) > 0) {
     // @TODO what happens when we default to displaying the current year but

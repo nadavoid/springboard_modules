@@ -101,6 +101,7 @@ function fundraiser_offline_form_alter(&$form, $form_state, $form_id) {
           '#type' => 'value',
           '#value' => TRUE,
         );
+        $form['#attributes']['class'][] = 'offline';
         $form['#node']->fundraiser_offline = TRUE;
         // Make MS fields visible.
         if (module_exists('market_source')) {
@@ -127,13 +128,15 @@ function fundraiser_offline_form_alter(&$form, $form_state, $form_id) {
         // Back out webform user's validation callback as it checks email.
         $form['#validate'] = array_diff($form['#validate'], array('webform_user_webform_validate'));
         // Alter field required states on CC payment fields.
-        if (isset($form['submitted']['payment_information']['payment_fields']['credit'])) {
+        if (!empty($form['submitted']['payment_information']['payment_fields']['credit'])) {
           unset($form['submitted']['payment_information']['payment_fields']['credit']['#states']['required']);
           unset($form['submitted']['payment_information']['payment_fields']['credit']['#states']['optional']);
           // Re-add required field flags for cc# and exp date
           //$form['submitted']['payment_information']['payment_fields']['credit']['card_number']['#required'] = TRUE;
-          foreach (element_children($form['submitted']['payment_information']['payment_fields']['credit']['expiration_date']) as $field) {
-            $form['submitted']['payment_information']['payment_fields']['credit']['expiration_date'][$field]['#required'] = TRUE;
+          if (!empty($form['submitted']['payment_information']['payment_fields']['credit']['expiration_date'])) {
+            foreach (element_children($form['submitted']['payment_information']['payment_fields']['credit']['expiration_date']) as $field) {
+              $form['submitted']['payment_information']['payment_fields']['credit']['expiration_date'][$field]['#required'] = TRUE;
+            }
           }
         }
       }
@@ -248,6 +251,19 @@ function fundraiser_offline_commerce_authnet_aim_request_alter(&$nvp) {
     $donation = fundraiser_donation_get_donation($nvp['x_invoice_num']);
     if (!empty($donation->submission_data['mail'])) {
       $nvp['x_email'] = $donation->submission_data['mail'];
+    }
+  }
+}
+
+/**
+ * Implements hook_commerce_authnet_cim_request_alter().
+ */
+function fundraiser_offline_commerce_authnet_cim_request_alter(&$api_request_element) {
+  // Use email from user instead of order if offline.
+  if (!empty($_GET['offline'])) {
+    $user = user_load((string) $api_request_element->profile->merchantCustomerId);
+    if (!empty($user->mail)) {
+      $api_request_element->profile->email = $user->mail;
     }
   }
 }

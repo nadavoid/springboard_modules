@@ -649,3 +649,12 @@ function sb_social_update_7010() {
 function sb_social_update_7011() {
   sb_social_add_maxlength_to_originating_share();
 }
+
+/**
+ * Set legacy installs to use addthis.
+ */
+function sb_social_update_7012() {
+  if (!empty(variable_get('springboard_social_addthis_profile_id', ''))) {
+    variable_set('springboard_social_use_addthis', 1);
+  }
+}

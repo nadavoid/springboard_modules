@@ -290,6 +290,8 @@ function sba_quicksign_form_validate(&$form, &$form_state) {
       $form_state['node'] = $node;
       $_SESSION['sba_quicksign'] = TRUE;
       _sba_quicksign_build_values($form, $form_state, $node, $profile);
+      // Remove the quicksign field from form_state[values] after processing.
+      form_set_value($quicksign_field, '', $form_state);
       if (!empty($quicksign_flag)) {
         form_set_value($quicksign_flag, 1, $form_state);
       }
@@ -550,7 +552,6 @@ function sba_quicksign_save($node, $op) {
   if ($op == 'update') {
     sba_quicksign_delete($node->nid);
   }
-
   $record = array(
     'nid' => $node->nid,
     'quicksign_enabled' => $node->quicksign_enabled,

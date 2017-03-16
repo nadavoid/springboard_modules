@@ -50,7 +50,7 @@ function fundraiser_fund_group_dashboard($node, $arg = NULL) {
     'fundraiser_fund_group_node' => array(
       'header' => t('Designation Groups'),
       'content' => $groups_view->preview(),
-      'css' => drupal_get_path('module', 'fundraiser_fund_groups') . '/css/fund-groups.css',
+      'css' => drupal_get_path('module', 'fundraiser_fund_group') . '/css/fund-groups.css',
     ),
   );
 

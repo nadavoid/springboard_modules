@@ -475,9 +475,7 @@ function sba_message_action_form_submit_success($form, &$form_state) {
   // confirmation in the method sba_message_action_preview_form_submit() in
   // the file: springboard/springboard_advocacy/modules/sba_message_action
   ///includes/sba_message_action.preview.inc
-  if (!empty($_SESSION['springboard_advocacy_action_webform_data
-  ']['is_multiflow_action']) &&
-  $_SESSION['springboard_advocacy_action_webform_data']['is_multiflow_action'] == FALSE) {
+  if (isset($_SESSION['springboard_advocacy_action_webform_data']['is_multiflow_action']) && $_SESSION['springboard_advocacy_action_webform_data']['is_multiflow_action'] == FALSE) {
     springboard_advocacy_success($_SESSION['springboard_advocacy_action_webform_data']['node_data'], $_SESSION['springboard_advocacy_action_webform_data']['contact_data'], $_SESSION['springboard_advocacy_action_webform_data']['response_data'], $sid);
   }
 

@@ -1,5 +1,5 @@
 name = Braintree Payment
-description = Provide Braintree payment form.
+description = Provides a Braintree payment form and integration with Braintree's Javascript API.
 package = Braintree
 core = 7.x
 dependencies[] = braintree

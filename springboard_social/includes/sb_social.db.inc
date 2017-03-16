@@ -69,24 +69,28 @@ function sb_social_share_save($record, $settings = FALSE, $url_path = FALSE) {
     $url = sb_social_share_tracker_url($share_id, $settings, $url_path);
     // URL context is set in $_SESSION so any data set during a form submission
     // is still available after Webform redirects to a confirmation page.
-    // This lets 3rd party modules set url context info during the form submission
-    // and then check for their data when the URL alter hook is executed.
+    // This lets 3rd party modules set url context info during the form
+    // submission and then check for their data when the URL
+    // alter hook is executed.
     $url_context = isset($_SESSION['sb_social_url_context']) ? $_SESSION['sb_social_url_context'] : FALSE;
     $node = node_load($record['nid']);
     drupal_alter('sb_social_share_url', $url, $node, $url_context);
     $record['url'] = $url;
     db_query('UPDATE {sb_social_shares} set url = :url WHERE share_id = :share_id', array(':url' => $url, ':share_id' => $share_id));
   }
-  
-  watchdog('sb_social', 'share id:' . $share_id);  //@TODO: Is this test code that should be removed?
+
+  if (variable_get('springboard_social_debug_mode', 0)) {
+    watchdog('sb_social', 'share id: %id | share url: %url', array('%id' => $share_id, '%url => $url'));
+  }
 
   // Behold, a new entity!
   if ($share_id) {
     $record['share_id'] = $share_id;
-    module_invoke_all('entity_insert', (object)$record, 'sb_social_share');
+    module_invoke_all('entity_insert', (object) $record, 'sb_social_share');
   }
   
-  // Let modules react to the share event. This is a legacy hook for the benefit of old implementations.
+  // Let modules react to the share event.
+  // This is a legacy hook for the benefit of old implementations.
   module_invoke_all('sb_social_share_event_save', $record);
 
   return $record['url'];
@@ -101,20 +105,28 @@ function sb_social_share_entity_get_properties($data, array $options, $name, $ty
       // Give a unique share name with the page name and date/time.
       return t(
         'Social Share - !page_name (!date)',
-        array('!page_name' => $data->page_name, '!date' => date('Y-m-d H:i:s', $data->created))
+        array(
+          '!page_name' => $data->page_name,
+          '!date' => date('Y-m-d H:i:s', $data->created),
+        )
       );
+
     case 'user':
       // Load and return the sharing user's account object.
       return $data->uid ? user_load($data->uid) : NULL;
+
     case 'submission':
       // Load and return the originating Webform submission, if any.
       module_load_include('inc', 'webform', 'includes/webform.submissions');
       return $data->sid ? webform_get_submission($data->nid, $data->sid) : NULL;
+
     case 'donation':
       // Load and return the originating Fundraiser donation object, if any.
       return $data->did ? fundraiser_donation_get_donation($data->did) : NULL;
+
     case 'share_date':
-      // The "date" type is represented by a UNIX timestamp (per https://www.drupal.org/node/905580).
+      // The "date" type is represented by a UNIX timestamp
+      // (per https://www.drupal.org/node/905580).
       return $data->created;
   }
   return NULL;
@@ -124,7 +136,8 @@ function sb_social_share_entity_get_properties($data, array $options, $name, $ty
  * Setter for social share event entity properties.
  */
 function sb_social_share_entity_set_properties($data, $name, $value) {
-  // @TODO: Logic along the lines of sb_social_share_entity_get_properties() would need to be written here
+  // @TODO: Logic along the lines of sb_social_share_entity_get_properties()
+  // would need to be written here
   // if social shares were ever to be imported via Salesforce Pull.
   return entity_property_verbatim_set($data, $name, $value);
 }
@@ -201,7 +214,7 @@ function sb_social_settings_load($sid, $cache = TRUE) {
       }
       if (isset($node->nid)) {
         $enabled_content_types = variable_get('springboard_social_enabled_content_types', array());
-        // If this node is not a supported node type return FALSE
+        // If this node is not a supported node type return FALSE.
         if (empty($enabled_content_types[$node->type])) {
           return $settings[$sid] = FALSE;
         }
@@ -240,7 +253,7 @@ function sb_social_webform_settings_delete($nid, $type = 'node') {
  * Lookup ID associated with the share settings ID provided.
  *
  * @param int $sid
- *   Share settings ID
+ *   Share settings ID.
  *
  * @return mixed
  *   Returns the node id or path associated with the share settings ID.
@@ -255,7 +268,6 @@ function sb_social_get_id_by_sid($sid) {
  *
  * @param int $id
  *   Node id for node settings, path for path settings.
- *
  * @param bool|string $type
  *   Optional record type.
  *
@@ -549,7 +561,6 @@ function _sb_social_get_webform_sid_by_donation_id($did) {
  *
  * @param mixed $item
  *   Salesforce queue item.
- *
  * @param mixed $record
  *   Salesforce queue response record.
  *
@@ -571,7 +582,6 @@ function sb_social_update_opportunity_id($item, $record) {
  *
  * @param object $item
  *   Salesforce queue item.
- *
  * @param object $record
  *   Salesforce queue response record.
  */

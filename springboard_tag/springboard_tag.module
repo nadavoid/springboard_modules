@@ -261,24 +261,16 @@ function springboard_tag_springboard_tag_list_alter(&$tags) {
       }
     }
 
-    // Limited visibility blocks must list at least one page.
-    if ($path['page_specific'] == BLOCK_VISIBILITY_LISTED && empty($path['pages'])) {
-      unset($tags[$key]);
-      continue;
-    }
-
-    // Match path if necessary.
+    // Check the path-based visibility settings:
     if (!empty($path['pages'])) {
-      // Convert path to lowercase. This allows comparison of the same path
-      // with different case. Ex: /Page, /page, /PAGE.
-      $pages = drupal_strtolower($path['pages']);
-
-      // Convert the Drupal path to lowercase
-      $drupal_path = drupal_strtolower(drupal_get_path_alias($_GET['q']));
-      // Compare the lowercase internal and lowercase path alias (if any).
-      $page_match = drupal_match_path($drupal_path, $path['pages']);
-      if ($path != $_GET['q']) {
-        $page_match = $page_match || drupal_match_path($_GET['q'], $path['pages']);
+      $path_list = explode("\n", $path['pages']);
+      $current_path = strtolower(drupal_get_path_alias(current_path()));
+      // Check each path pattern to see if it matches the current page's path:
+      foreach ($path_list as $test_path) {
+        $test_path = trim(strtolower($test_path));
+        if ($page_match = drupal_match_path($current_path, $test_path)) {
+          break;
+        }
       }
       // When $path['page_specific'] has a value of 0 (BLOCK_VISIBILITY_NOTLISTED),
       // the tag is displayed on all pages except those listed in $path['pages'].
@@ -286,10 +278,11 @@ function springboard_tag_springboard_tag_list_alter(&$tags) {
       // pages listed in $path['pages'].
       $page_match = !($path['page_specific'] xor $page_match);
     }
+    // If no patterns are defined then determine visibility based on whether
+    // "Only the listed pages" OR "All pages except those listed" is checked:
     else {
-      $page_match = TRUE;
+      $page_match = !($path['page_specific'] == BLOCK_VISIBILITY_LISTED);
     }
-
     if (!$page_match) {
       unset($tags[$key]);
       continue;

@@ -1,0 +1,31 @@
+#sba-legislators {
+  margin-top: 1.5em;
+}
+
+.sba-legislator-type {
+  margin-bottom: 0.5em;
+}
+
+.sba-legislator {
+  margin: 0.5em 0;
+}
+
+.sba-legislator-details {
+  margin: 0 1em 1em;
+}
+
+.leg-lookup-address {
+  margin: 0 1em 1em;
+}
+
+.leg-lookup-committee-name {
+  margin: 0 1em;
+}
+
+.sba-leg-lookup-expand {
+  margin-top: 0.5em;
+}
+
+.leg-lookup-hidden {
+  display: none;
+}

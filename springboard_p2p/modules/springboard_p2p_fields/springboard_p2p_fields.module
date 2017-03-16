@@ -398,7 +398,8 @@ function springboard_p2p_fields_format_campaign_goal_value($goal) {
   $markup = '';
 
   if ($goal['goal_type'] == 'amount') {
-    $prefix = '$ ';
+    // Set the currency symbol prefix, excluding a space separator for page springboard/p2p:
+    $prefix = '$' . (current_path() == 'admin/springboard/p2p' ? '' : ' ');
     $markup = number_format($goal['goal_value'], 2);
   }
   elseif ($goal['goal_type'] == 'submissions') {

@@ -583,12 +583,11 @@ function fundraiser_fund_group_views_api() {
  *
  * Dashboad and edit form theme functions.
  */
-function fundraiser_fund_group_theme($existing, $type, $theme) {
-  $path = drupal_get_path('module', 'fundraiser_fund_group');
+function fundraiser_fund_group_theme($existing, $type, $theme, $path) {
   $templates = array(
     'fundraiser_fund_group_dashboard' => array(
       'variables' => array('sections' => array()),
-      'template' => drupal_get_path('theme', $theme) . '/templates/fundraiser-fund-group-dashboard',
+      'template' => 'templates/fundraiser-fund-group-dashboard',
     ),
     'fundraiser_fund_group_form' => array(
       'render element' => 'form',

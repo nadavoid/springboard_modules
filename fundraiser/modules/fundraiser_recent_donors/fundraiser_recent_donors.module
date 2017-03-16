@@ -489,17 +489,21 @@ function _fundraiser_recent_donors_set_node_opt_in_data($nid, $is_enabled, $min_
  *   Timestamp of when the donation was made.
  */
 function _fundraiser_recent_donors_insert_donor_optin($sid, $nid, $did, $donation_timestamp = FALSE) {
-  if (!$donation_timestamp) {
-    $donation_timestamp = time();
+  $donation_timestamp = !$donation_timestamp ? time() : $donation_timestamp;
+
+  $exists = db_query("SELECT did FROM {fundraiser_donor_opt_in} WHERE did = :did", array(':did' => $did))
+   ->fetchField();
+
+  if (!$exists) {
+    db_query("INSERT INTO {fundraiser_donor_opt_in} VALUES (:sid, :nid, :did, :created)", 
+      array(
+        ':sid' => $sid,
+        ':nid' => $nid,
+        ':did' => $did,
+        ':created' => $donation_timestamp,
+      )
+    );
   }
-  db_query("INSERT INTO {fundraiser_donor_opt_in} VALUES (:sid, :nid, :did, :created)",
-    array(
-      ':sid' => $sid,
-      ':nid' => $nid,
-      ':did' => $did,
-      ':created' => $donation_timestamp,
-    )
-  );
 }
 
 /**

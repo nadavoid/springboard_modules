@@ -4,8 +4,6 @@
  * Provides Braintree subscription integration.
  */
 
-require_once dirname(__FILE__) . '/includes/commerce.inc';
-
 /**
  * Implements hook_menu().
  */
@@ -81,7 +79,7 @@ function braintree_subscription_create(&$subscription_data, $context = array(), 
     $result = Braintree_Subscription::create($subscription_data);
   }
   catch (Exception $e) {
-    $error_message = braintree_exception_error_message($e);
+    $error_message = braintree_report_error($e);
     return FALSE;
   }
 
@@ -94,7 +92,7 @@ function braintree_subscription_create(&$subscription_data, $context = array(), 
     return $result;
   }
 
-  $error_message = braintree_result_error_message($result);
+  $error_message = braintree_report_result($result);
   return FALSE;
 }
 
@@ -116,7 +114,7 @@ function braintree_subscription_update($id, $subscription_data, &$context = arra
   }
   catch(Exception $e) {
     braintree_last_error($e);
-    $error_message = braintree_exception_error_message($e);
+    $error_message = braintree_report_error($e);
     return FALSE;
   }
 
@@ -129,7 +127,7 @@ function braintree_subscription_update($id, $subscription_data, &$context = arra
     return $result;
   }
 
-  $error_message = braintree_result_error_message($result);
+  $error_message = braintree_report_result($result);
   return FALSE;
 }
 
@@ -147,13 +145,13 @@ function braintree_subscription_cancel($id, &$context = array(), &$error_message
   }
   catch(Exception $e) {
     braintree_last_error($e);
-    $error_message = braintree_exception_error_message($e);
+    $error_message = braintree_report_error($e);
     return FALSE;
   }
 
   if ($result->success) {
     global $user;
-    braintree_customer_cache_reset($user->uid);
+    braintree_vault_customer_cache_reset($user->uid);
 
     // Invoke post hook when subscription is updated successfully.
     foreach (module_implements('braintree_subscription_cancel') as $module) {
@@ -163,7 +161,7 @@ function braintree_subscription_cancel($id, &$context = array(), &$error_message
     return $result;
   }
 
-  $error_message = braintree_result_error_message($result);
+  $error_message = braintree_report_result($result);
   return FALSE;
 }
 
@@ -237,11 +235,11 @@ function braintree_subscription_customer_id($subscription) {
  */
 function braintree_customer_subscriptions($customer_id) {
   if (is_string($customer_id)) {
-    $customer = braintree_customer_load($customer_id);
+    $customer = braintree_vault_customer_load($customer_id);
   }
   else {
-    $customer = $customer_id;
-    $customer_id = $customer->id;
+    $customer = (array) $customer_id;
+    $customer_id = $customer['id'];
   }
 
   $subscriptions = array();
@@ -303,7 +301,7 @@ function braintree_subscription_to_array($subscription) {
     'nextBillingPeriodAmount', 'nextBillingDate', 'numberOfBillingCycles',
     'paidThroughDate', 'paymentMethodToken', 'planId', 'price', 'status',
     'trialDuration', 'trialDurationUnit', 'trialPeriod', 'descriptor',
-    'transactions', 'statusHistory'
+    'transactions', 'statusHistory',
   );
 
   $result = [];
@@ -312,4 +310,33 @@ function braintree_subscription_to_array($subscription) {
   }
 
   return $result;
+}
+
+/**
+ * Implements hoook_braintree_vault_change_default_payment_method().
+ */
+function braintree_subscription_braintree_vault_payment_method_make_default($context) {
+  // Braintree makeDefault method only changes default payment method for
+  // future payment. For existing subscriptions, we need update payment
+  // method token of subscription manually.
+  global $user;
+
+  $customer = braintree_vault_load_customer_by_account($user);
+  if ($customer !== FALSE) {
+    $subscriptions = braintree_customer_subscriptions($customer);
+
+    foreach ($subscriptions as $subscription) {
+      if ($subscription->paymentMethodToken == $payment_method->token) {
+        continue;
+      }
+
+      $subscription_data = array(
+        'paymentMethodToken' => $payment_method->token,
+      );
+      $context = array('function' => 'braintree_payment_method_make_default_form_submit');
+      braintree_subscription_update($subscription->id, $subscription_data, $context, $error_message);
+    }
+  }
+
+  braintree_vault_customer_cache_reset($user->uid);
 }

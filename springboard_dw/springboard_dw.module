@@ -103,9 +103,9 @@ function springboard_dw_watchdog_log($watchdog_string) {
 }
 
 /**
- * Success hook for advocacy actions and submissions.
+ * Implements hook_advocacy_success().
  *
- * Implements advocacy_hook_success()
+ * Success hook for advocacy actions and submissions.
  *
  * @param object $node
  *   The node object supplied by the advocacy success hook.
@@ -950,6 +950,7 @@ function springboard_dw_map_advocacy_action_item($message_action) {
   $advocacy_item['device_name'] = $message_action->webform['device_name']['value'][0];
   $advocacy_item['device_os'] = $message_action->webform['device_os']['value'][0];
   $advocacy_item['device_browser'] = $message_action->webform['device_browser']['value'][0];
+  $advocacy_item['submission_id'] = $message_action->sid;
 
   // Legislative and organizational issues get added
   // as CSV strings if they exist.
@@ -986,8 +987,8 @@ function springboard_dw_map_advocacy_action_item($message_action) {
   $advocacy_item['legislative_issues'] = $legislative_issues;
   $advocacy_item['organization_issues'] = $organizational_issues;
 
-  $advocacy_item['created_at'] = $message_action->node->created;
-  $advocacy_item['updated_at'] = $message_action->node->changed;
+  $advocacy_item['created_at'] = springboard_dw_get_submission_timestamp($message_action->sid);
+  $advocacy_item['updated_at'] = $advocacy_item['created_at'];
 
   return $advocacy_item;
 }
@@ -1078,7 +1079,6 @@ function springboard_dw_map_petition_item($petition) {
  */
 function springboard_dw_map_petition_submission_item($petition,
                                                      $petition_unique_id) {
-
   // Get the Advocacy petition object details and prep
   // for warehousing (sb_action).
   $message_item = array();
@@ -1091,8 +1091,11 @@ function springboard_dw_map_petition_submission_item($petition,
   $message_item['subject'] = $petition->node->title;
   $message_item['body'] = '';
   $message_item['user_edited'] = '';
-  $message_item['created_at'] = $petition->node->created;
-  $message_item['updated_at'] = $petition->node->changed;
+  $message_item['created_at'] = springboard_dw_get_submission_timestamp($petition->sid);
+  $message_item['updated_at'] = $message_item['created_at'];
+  $message_item['contact_id'] = $petition->contact->uid;
+  $message_item['contact_email'] = $petition->contact->mail;
+  $message_item['submission_id'] = $petition->sid;
 
   $dw_extra_props = array();
 
@@ -1701,6 +1704,7 @@ function springboard_dw_extract_form_extra_props($form, $form_item) {
  */
 function springboard_dw_map_social_action_item($message, $action, $node,
                                                $action_unique_id) {
+
   // Get the Advocacy message object id and prep for warehousing (sb_message)
   $message_item = array();
   $message_item['queue_type'] = 'advocacy social action message';
@@ -1727,8 +1731,9 @@ function springboard_dw_map_social_action_item($message, $action, $node,
   $message_item['target_district_name'] = $message['targets']->district_name;
   $message_item['target_role'] = $message['targets']->role;
   $message_item['target_person_id'] = $message['targets']->person_id;
-  $message_item['created_at'] = date('U');
-  $message_item['updated_at'] = date('U');
+  $message_item['created_at'] = springboard_dw_get_submission_timestamp($action->sid);
+  $message_item['updated_at'] = $message_item['created_at'];
+  $message_item['submission_id'] = $action->sid;
 
   // Add the extra props attributes.
   $dw_extra_props = array();
@@ -2132,3 +2137,4 @@ function springboard_dw_vendor($item) {
 function springboard_dw_generate_queue_item_response($status_code) {
   return $status_code == 200 ? TRUE : FALSE;
 }
+

@@ -18,7 +18,7 @@ function springboard_p2p_dashboard() {
     'p2p_campaigns' => array (
       'header' => t('Active peer to peer campaigns'),
       'content' => views_embed_view('p2p_campaigns', 'block'),
-      'create_link' => array('title' => t('Create a new campaign'), 'href' => 'node/add/p2p-campaign'),
+      'create_link' => array('title' => t('Create a new landing page link'), 'href' => 'node/add/p2p-campaign'),
       'viewmore_link' => array('title' => t('See all campaigns'), 'href' => 'admin/springboard/p2p/campaign')
     ),
     'p2p_categories' => array(

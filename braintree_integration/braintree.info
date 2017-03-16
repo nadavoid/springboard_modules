@@ -3,6 +3,4 @@ description = Provide Braintree core function.
 package = Braintree
 core = 7.x
 dependencies[] = libraries
-# dependencies[] = static_cache
-
-configure = admin/config/services/braintree
+dependencies[] = commerce_payment

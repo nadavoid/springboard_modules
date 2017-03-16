@@ -56,11 +56,10 @@ function fundraiser_designations_tokens_alter(&$replacements, $context) {
  */
 function theme_fundraiser_designations_line_item_token($vars) {
   $list = [];
-  $vars['donation']->node->fd_addon['pid'];
   $symbol = $vars['donation']->donation['currency']['symbol'];
   foreach ($vars['line_items'] as $delta => $item) {
     $name = $item['name'];
-    if ($item['pid'] == $vars['donation']->node->fd_addon['pid'] && $item['type'] == 'addon') {
+    if (!empty($vars['donation']->node->fd_addon['pid']) && $item['pid'] == $vars['donation']->node->fd_addon['pid'] && $item['type'] == 'addon') {
       $name = t('One time add-on donation - !name', array('!name' => $name));
     }
     $amount = $symbol . commerce_currency_amount_to_decimal($item['quantity'] * $item['amount']['amount'], $item['amount']['currency_code']);

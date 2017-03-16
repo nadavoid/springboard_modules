@@ -1,0 +1,3 @@
+name = Springboard Data Purge
+description = Provides drush commands to delete old data.
+core = 7.x

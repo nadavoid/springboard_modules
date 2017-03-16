@@ -405,6 +405,23 @@ function fundraiser_designations_commerce_line_item_type_info() {
  * Returns TRUE if line items have been generated. Otherwise, returns FALSE.
  */
 function fundraiser_designations_fundraiser_commerce_generate_line_items($donation, $order) {
+
+  // Stop here if this is not a designated donation.
+  $designation_types = array_keys(fundraiser_designations_get_designation_types());
+  if (empty($donation->node->type) || !in_array($donation->node->type, $designation_types)) {
+    return FALSE;
+  }
+
+  // If this is a recurring series donation created via cron,
+  // just clone the master donations line items.
+  if (!empty($donation->recurring->master_did) && variable_get('fundraiser_sustainers_create_series_cron', 0)) {
+    fundraiser_designations_save_cloned_line_items($order, $donation);
+    return TRUE;
+  }
+
+  // Normal, non-cron donation series. The master donation will have
+  // $donation->donation['fd_cart'][0] in the donation array, the recurring
+  // donations won't.
   if (!empty($donation->donation['fd_cart'][0]) && $cart = unserialize($donation->donation['fd_cart'][0])) {
     // Get the cart values from the hidden field containing the json string.
     $fund_object = json_decode(str_replace('&quot;', '"', $cart['cart_body']['fund_catcher']));
@@ -581,11 +598,36 @@ function fundraiser_designations_form_fundraiser_sustainers_donation_amount_form
     $form['fee_amount']['#access'] = FALSE;
     $form['fee_amount']['#required'] = FALSE;
     $line_items =& $form['commerce_line_items'][$form['commerce_line_items']['#language']]['line_items'];
+
     foreach ($line_items as $key => $item) {
+      $lock_it = FALSE;
+      if (!empty($item['line_item']['#value'])) {
+        $item_wrapper = entity_metadata_wrapper('commerce_line_item', $item['line_item']['#value']);
+        if (!empty($item_wrapper->commerce_product->value()->product_id)) {
+          $product_id = $item_wrapper->commerce_product->value()->product_id;
+          $product = commerce_product_load($product_id);
+          if (!empty($product)) {
+            $product_wrapper = entity_metadata_wrapper('commerce_product', $product);
+            $terms = $product_wrapper->field_fd_designation_categories->value();
+            foreach ($terms as $term) {
+              $term_wrapper = entity_metadata_wrapper('taxonomy_term', $term);
+              $locked = $term_wrapper->field_fd_lock_donation_amount->value();
+              if (!empty($locked[0]) && $locked[0] == 1) {
+                $lock_it = TRUE;
+                break;
+              }
+            }
+          }
+        }
+      }
       $line_items[$key]['remove']['#disabled'] = TRUE;
       $line_items[$key]['remove']['#description'] = 'N/A';
+      if ($lock_it) {
+        $line_items[$key]['commerce_unit_price']['#disabled'] = TRUE;
+      }
     }
     array_unshift($form['#validate'], 'fundraiser_designation_donation_amount_form_validate');
+    $form['#submit'][] = 'fundraiser_designation_donation_amount_form_submit';
   }
 }
 
@@ -611,7 +653,18 @@ function fundraiser_designation_donation_amount_form_validate($form, &$form_stat
 }
 
 /**
- * Implements hook_fundraiser_donation_update().
+ * Update line items when sustainers series is upgraded.
+ */
+function fundraiser_designation_donation_amount_form_submit($form, $form_state) {
+  $remaining = _fundraiser_sustainers_get_donations_recurr_remaining($form['master_did']['#value']);
+  foreach ($remaining as $donation_obj) {
+    $donation = fundraiser_donation_get_donation($donation_obj->did);
+    _fundraiser_designations_update_line_items($donation, $remaining);
+  }
+}
+
+/**
+ * Update line items when sustainers series is upgraded.
  *
  * When you save the line item manager form on the sustainers edit page,
  * only the first sustaining donation is updated with the new line item values
@@ -619,16 +672,13 @@ function fundraiser_designation_donation_amount_form_validate($form, &$form_stat
  * We grab that order's line items and re-apply their values to the other
  * orders so that DCOM recognizes the update.
  */
-function fundraiser_designations_fundraiser_donation_update($donation) {
+function _fundraiser_designations_update_line_items($donation, $remaining) {
   if (fundraiser_designations_is_designation_type($donation->node->type) && !empty($donation->master_did)) {
-    $remaining = _fundraiser_sustainers_get_donations_recurr_remaining($donation->master_did);
     $next_donation = $donation;
-    if ($remaining) {
+    if (!empty($remaining)) {
       $next_donation = fundraiser_donation_get_donation($remaining[0]->did);
     }
-    $node = node_load($donation->nid);
     if (!empty($donation->recurring->master_did)) {
-
       // Get the next pending sustainer order (the one that was updated when
       // we saved the sustainer edit form).
       $first_order = commerce_order_load($next_donation->did);
@@ -682,8 +732,8 @@ function fundraiser_designations_fundraiser_donation_update($donation) {
             TRUE
           );
           commerce_line_item_save($line_item_wrapper->value());
-          commerce_order_save($this_order_wrapper->value());
         }
+        commerce_order_save($this_order_wrapper->value());
       }
     }
   }

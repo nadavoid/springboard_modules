@@ -16,3 +16,7 @@ files[] = tests/fundraiser.test
 files[] = tests/fundraiser.clone.test
 files[] = tests/fundraiser.setup.test
 files[] = tests/fundraiser.email.test
+
+; Migrate classes
+files[] = includes/donation-migration.inc
+files[] = includes/donation-destination.inc
