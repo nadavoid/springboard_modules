@@ -1,0 +1,125 @@
+<?php
+/**
+ * @file
+ * Salesforce One Click Donate module file.
+ */
+
+/**
+ * Implements hook_fundraiser_ocd_optin_create().
+ */
+function salesforce_ocd_fundraiser_ocd_optin_create($account, $donation, $card) {
+  salesforce_ocd_optin($account, $donation, $card);
+}
+
+/**
+ * Implements hook_fundraiser_ocd_optin_update().
+ */
+function salesforce_ocd_fundraiser_ocd_optin_update($account, $donation, $old_card, $new_card) {
+  // When an optin is updated, e.g., the current card is replaced.
+  // Add a new one-click donate subscription object and opt out of the old one.
+  salesforce_ocd_optin($account, $donation, $new_card);
+  salesforce_ocd_optout($account, $donation, $old_card);
+}
+
+/**
+ * Implements hook_salesforce_genmap_map_fields_alter().
+ */
+function salesforce_ocd_salesforce_genmap_map_fields_alter(&$fields, $context) {
+  if ($context['module'] == 'salesforce_donation') {
+    // Add the card on file id to the opportunity if it was a one-click donate
+    // transaction.
+    if (isset($context['object']->data['is_ocd'])) {
+      $fields['OCDonate_Originating_Subscription__c'] = sprintf('[One_Click_Donate_Subscription__c:commerce_cardonfile:%d]', $context['object']->data['cardonfile']);
+    }
+  }
+}
+
+/**
+ * Implements hook_fundraiser_ocd_optout().
+ */
+function salesforce_ocd_fundraiser_ocd_optout($account, $donation, $card) {
+  salesforce_ocd_queue_subscription_item($account, $donation, $card, 'UPDATE', TRUE);
+}
+
+/**
+ * Implements hook_fundraiser_ocd_update_card().
+ */
+function salesforce_ocd_fundraiser_ocd_update_card($account, $donation, $card) {
+  salesforce_ocd_queue_subscription_item($account, $donation, $card, 'UPDATE');
+}
+
+/**
+ * Generates and queues a new one-click donate subscription object.
+ */
+function salesforce_ocd_optin($account, $donation, $card) {
+  salesforce_ocd_queue_subscription_item($account, $donation, $card);
+}
+
+/**
+ * Generates and queues a new one-click donate subscription object.
+ */
+function salesforce_ocd_optout($account, $donation, $card) {
+  salesforce_ocd_queue_subscription_item($account, $donation, $card, 'UPDATE', TRUE);
+}
+
+/**
+ * Generates and queues a new one-click donate subscription object.
+ */
+function salesforce_ocd_queue_subscription_item($account, $donation, $card_on_file, $operation = 'CREATE', $optout = FALSE) {
+  if (is_numeric($card_on_file)) {
+    $card_on_file = commerce_cardonfile_load($card_on_file);
+  }
+
+  $card_id = $card_on_file->card_id;
+
+  // Create a one-click donate subscription object and queue it up.
+  $sobject = new stdClass();
+  $sobject->type = 'One_Click_Donate_Subscription__c';
+  $sobject->fields = array(
+    'Payment_Token_Id__c' => $card_id,
+    'Payment_Method__c' => $card_on_file->payment_method,
+    'Payment_Gateway__c' => !empty($donation->gateway['title']) ? $donation->gateway['title'] : $card_on_file->instance_id,
+    'Payment_Token__c' => $card_on_file->remote_id,
+    'CC_Type__c' => $card_on_file->card_type,
+    'Donor_Name__c' => $card_on_file->card_name,
+    'CC_Last_4__c' => $card_on_file->card_number,
+    'CC_Exp_Month__c' => $card_on_file->card_exp_month,
+    'CC_Exp_Year__c' => $card_on_file->card_exp_year,
+    'Activation_Date__c' => $card_on_file->created,
+    'Default_Payment_Method__c' => $card_on_file->instance_default,
+    'Contact__c' => sprintf('[Contact:user:%d]', $account->uid),
+    'Donation__c' => sprintf('[Opportunity:donation:%d]', $donation->did),
+    'Donation_Form_Id__c' => $donation->node->nid,
+    'Donation_Form_Name__c' => $donation->node->title,
+  );
+
+  $item = array(
+    'drupal_id' => $card_id,
+    'module' => 'salesforce_ocd',
+    'delta' => 'commerce_cardonfile',
+    'object_type' => 'One_Click_Donate_Subscription__c',
+    'operation' => $operation,
+    'sobject' => $sobject,
+  );
+
+  $queue = salesforce_queue_load();
+  if ($optout) {
+    $sobject->fields['Deactivation_Date__c'] = "" . time();
+    $sobject->fields['Default_Payment_Method__c'] = "0";
+
+    // Only queue these up if they've actually been exported.
+    if (salesforce_sync_load_map($item)) {
+      _salesforce_genmap_alter_operation($item);
+      $item['delta'] = 'commerce_cardonfile_optout';
+      $result = $queue->createItem($item);
+    }
+    else {
+      // If the initial opt-in never exported. Delete it from the
+      // queue because there is nothing to update.
+      $queue->deleteItem((object) $item);
+    }
+  }
+  else {
+    $result = $queue->createItem($item);
+  }
+}

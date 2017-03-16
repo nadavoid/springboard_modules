@@ -1,0 +1,152 @@
+<?php
+
+
+/**
+ * Implements hook_block_info().
+ */
+function sba_leg_lookup_block_info() {
+  $blocks['sba_legislator_lookup'] = array(
+    'info' => t('Springboard Advocacy Legislator Lookup'),
+    'region' => BLOCK_REGION_NONE,
+    'mb_enabled' => TRUE,
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_configure().
+ *
+ */
+function sba_leg_lookup_block_configure($delta, $edit = array()) {
+  $form = array();
+  switch ($delta) {
+    case 'sba_legislator_lookup':
+      module_load_include(
+        'inc',
+        'sba_leg_lookup',
+        'includes/sba_leg_lookup.block'
+      );
+      $mb_delta = 0;
+      if (!empty($edit['multiblock_delta']['#value'])) {
+        $mb_delta = $edit['multiblock_delta']['#value'];
+      }
+      $options = sba_leg_lookup_legislator_roles();
+      $form['sba_legislator_lookup_types_' . $mb_delta] = array(
+        '#type' => 'checkboxes',
+        '#title' => t('Configure the legislator types you want to display'),
+        '#options' => $options,
+        '#default_value' => variable_get('sba_legislator_lookup_types_' . $mb_delta, array(
+          'FS',
+          'FR',
+          'SS',
+          'SR',
+          'GOVNR',
+          'PRES01',
+          'PRES02',
+          'PRES03',
+        )),
+      );
+
+      $form['sba_legislator_lookup_phone_' . $mb_delta] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Only show telephone numbers in the contact info.'),
+        '#default_value' => variable_get('sba_legislator_lookup_phone_' . $mb_delta, 0),
+      );
+
+      $form['sba_legislator_lookup_submit_text'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Submit button text'),
+        '#default_value' => variable_get('sba_legislator_lookup_submit_text_' . $mb_delta, array('Find my legislators')),
+      );
+
+      break;
+  }
+
+  return $form;
+}
+
+/**
+ * Implements hook_block_save().
+ */
+function sba_leg_lookup_block_save($delta = '', $edit = array()) {
+  switch ($delta) {
+    case 'sba_legislator_lookup':
+      module_load_include(
+        'inc',
+        'sba_leg_lookup',
+        'includes/sba_leg_lookup.block'
+      );
+      $enabled_types = array();
+      // Filter out only those types selected.
+      $mb_delta = 0;
+      if (!empty($edit['multiblock_delta']['#value'])) {
+        $mb_delta = $edit['multiblock_delta']['#value'];
+      }
+      foreach ($edit['sba_legislator_lookup_types_' . $mb_delta] as $type) {
+        if ($type) {
+          $enabled_types[$type] = $type;
+        }
+      }
+
+      variable_set('sba_legislator_lookup_types_' . $mb_delta, $enabled_types);
+      variable_set('sba_legislator_lookup_phone_' . $mb_delta, $edit['sba_legislator_lookup_phone_' . $mb_delta]);
+      variable_set('sba_legislator_lookup_submit_text_' . $mb_delta, $edit['sba_legislator_lookup_submit_text']);
+
+      break;
+  }
+
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function sba_leg_lookup_block_view($delta = '', $edit = array()) {
+  $block = array();
+  switch ($delta) {
+    case 'sba_legislator_lookup':
+      $unconfigured = springboard_advocacy_api_unconfigured('springboard');
+      if ($unconfigured) {
+        if (user_access('administer springboard advocacy')) {
+          $items = implode(', ', $unconfigured);
+          $message = t('Please <a href="!url">configure</a> the Springboard Advocacy API settings. There are empty values in :items. This feature will not function without required configuration.', array(
+            '!url' => url('admin/config/services/advocacy'),
+            ':items' => $items,
+          ));
+          drupal_set_message($message, 'error');
+        }
+        break;
+      }
+      module_load_include(
+        'inc',
+        'sba_leg_lookup',
+        'includes/sba_leg_lookup.block'
+      );
+      $block['subject'] = t('Find your legislators');
+      $mb_delta = 0;
+      if (!empty($edit['multiblock_delta']['#value'])) {
+        $mb_delta = $edit['multiblock_delta']['#value'];
+      }
+      $block['content'] = sba_leg_lookup_legislator_lookup($delta, $mb_delta);
+      break;
+
+  }
+  return $block;
+}
+
+
+function sba_leg_lookup_theme($existing, $type, $theme) {
+  $path = drupal_get_path('module', 'sba_leg_lookup');
+  $templates = array(
+    'sba_leg_lookup_legislators' => array(
+      'variables' => array(
+        'legislators' => array(),
+      ),
+      'file' => 'includes/sba_leg_lookup.block.inc',
+    ),
+  );
+  // Look for theme templates in sba_leg_lookup.
+  $templates += drupal_find_theme_functions($existing, array($theme));
+  $templates += drupal_find_theme_templates($existing, '.tpl.php', $path);
+  return $templates;
+}
