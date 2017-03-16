@@ -585,13 +585,11 @@ function commerce_braintree_web_submit_form_submit($payment_method, $pane_form, 
 
     $flag_update_default_method = TRUE;
     $braintree_payment_method = $result['result']->paymentMethod;
-    $token = $braintree_payment_method->token;
+    $token = $result['result']->token;
   }
 
-  $card = new stdClass();
-
   $order_data = unserialize(decrypt($order->data['fundraiser_commerce']));
-  if (isset($order_data['cardonfile'])) {
+  if (empty($token) && !empty($order_data['cardonfile'])) {
     $card = commerce_cardonfile_load($order_data['cardonfile']);
     // Fail now if it is no longer available or the card is inactive.
     if (empty($card) || $card->status == 0) {
@@ -618,45 +616,70 @@ function commerce_braintree_web_submit_form_submit($payment_method, $pane_form, 
 
   list($success, $braintree_result) = braintree_transaction_sale($sale_data, $context);
   $braintree_result = $braintree_result['result'];
-
   if ($success) {
     // If cardonfile is enabled and this appears to be a new card.
-    $existing_cards = commerce_cardonfile_load_multiple(array(), array('remote_id' => $braintree_result->transaction->creditCardDetails->token));
-    if (module_exists('commerce_cardonfile') && empty($existing_cards)) {
-      // Store the token with cardonfile.
-      $card = commerce_cardonfile_new();
-      $card->uid = $order->uid;
-      $card->payment_method = $payment_method['method_id'];
-      $card->instance_id = $payment_method['instance_id'];
-      $card->remote_id = $braintree_result->transaction->creditCardDetails->token;
-      $card->card_type = $braintree_result->transaction->creditCardDetails->cardType;
-      $card->card_name = $braintree_result->transaction->creditCardDetails->cardholderName;
-      $card->card_number = $braintree_result->transaction->creditCardDetails->last4;
-      $card->card_exp_month = $braintree_result->transaction->creditCardDetails->expirationMonth;
-      $card->card_exp_year = $braintree_result->transaction->creditCardDetails->expirationYear;
-      $card->status = 1;
+    $existing = db_query('SELECT uid, card_id FROM {braintree_vault_payment_methods} WHERE unique_identifier = :id', array(
+      ':id' => $braintree_result->transaction->creditCardDetails->uniqueNumberIdentifier,
+    ))->fetchAll();
 
-      // If expiration dates are empty, this must have been paypal, so stub
-      // an expiration date 24 months in the future.
-      if (empty($card->card_exp_month) && empty($card->card_exp_month)) {
-        $noncc_exp_date = strtotime("now +" . variable_get('commerce_braintree_web_sustainer_series_count', 24) . " months");
-        $card->card_exp_month = date('m', $noncc_exp_date);
-        $card->card_exp_year = date('Y', $noncc_exp_date);
-        if ($card->payment_method == 'braintree_paypal') {
-          $card->card_type = 'PayPal';
-          $card->card_name = $braintree_result->transaction->paypalDetails->payerEmail;
+    $existing = reset($existing);
+    if (module_exists('commerce_cardonfile')) {
+      // If the cardonfile card doesn't exist yet, create it.
+      if (empty($existing)) {
+        // Store the token with cardonfile.
+        $card = commerce_cardonfile_new();
+        $card->uid = $order->uid;
+        $card->payment_method = $payment_method['method_id'];
+        $card->instance_id = $payment_method['instance_id'];
+        $card->remote_id = $braintree_result->transaction->creditCardDetails->token;
+        $card->card_type = $braintree_result->transaction->creditCardDetails->cardType;
+        $card->card_name = $braintree_result->transaction->creditCardDetails->cardholderName;
+        $card->card_number = $braintree_result->transaction->creditCardDetails->last4;
+        $card->card_exp_month = $braintree_result->transaction->creditCardDetails->expirationMonth;
+        $card->card_exp_year = $braintree_result->transaction->creditCardDetails->expirationYear;
+        $card->status = 1;
+
+        // If expiration dates are empty, this must have been paypal, so stub
+        // an expiration date 24 months in the future.
+        if (empty($card->card_exp_month) && empty($card->card_exp_month)) {
+          $noncc_exp_date = strtotime("now +" . variable_get('commerce_braintree_web_sustainer_series_count', 24) . " months");
+          $card->card_exp_month = date('m', $noncc_exp_date);
+          $card->card_exp_year = date('Y', $noncc_exp_date);
+          if ($card->payment_method == 'braintree_paypal') {
+            $card->card_type = 'PayPal';
+            $card->card_name = $braintree_result->transaction->paypalDetails->payerEmail;
+          }
+          elseif ($card->payment_method == 'braintree_applepay') {
+            $card->card_type = 'Apple Pay';
+            $card->card_name = $braintree_result->transaction->applePayCardDetails->cardholderName;
+          }
+          $card->card_number = 'N/A';
         }
-        elseif ($card->payment_method == 'braintree_applepay') {
-          $card->card_type = 'Apple Pay';
-          $card->card_name = $braintree_result->transaction->applePayCardDetails->cardholderName;
-        }
-        $card->card_number = 'N/A';
+
+        // Save and log the creation of the new card on file.
+        commerce_cardonfile_save($card);
+        $braintree_result->card_id = $card->card_id;
+        $braintree_result->uid = $card->uid;
+        watchdog('commerce_braintree_web', 'Braintree customer ID @profile_id created and saved to Drupal user @uid.', array('@profile_id' => (string) $braintree_result->transaction->customerDetails->id, '@uid' => $order->uid));
       }
-
-      // Save and log the creation of the new card on file.
-      commerce_cardonfile_save($card);
-      watchdog('commerce_braintree_web', 'Braintree customer ID @profile_id created and saved to Drupal user @uid.', array('@profile_id' => (string) $braintree_result->transaction->customerDetails->id, '@uid' => $order->uid));
-      $braintree_result->card_id = $card->card_id;
+      // Otherwise, update the existing record.
+      else {
+        $card = commerce_cardonfile_load($existing->card_id);
+        $update_card = FALSE;
+        if ($card->card_exp_month != $braintree_result->transaction->creditCardDetails->expirationMonth) {
+          $card->card_exp_month = $braintree_result->transaction->creditCardDetails->expirationMonth;
+          $update_card = TRUE;
+        }
+        if ($card->card_exp_year != $braintree_result->transaction->creditCardDetails->expirationYear) {
+          $card->card_exp_year = $braintree_result->transaction->creditCardDetails->expirationYear;
+          $update_card = TRUE;
+        }
+        if ($update_card) {
+          commerce_cardonfile_save($card);
+        }
+        $braintree_result->card_id = $existing->card_id;
+        $braintree_result->uid = $card->uid = $existing->uid;
+      }
     }
 
     if ($flag_update_default_method) {

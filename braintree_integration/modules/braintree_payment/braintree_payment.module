@@ -123,6 +123,7 @@ function braintree_form_elements($payment_type, $config, $billing_update = FALSE
   );
 
   $js_settings['storeName'] = variable_get('site_name');
+  $js_settings['formId'] = 'fundraiser-sustainers-billing-update-form';
   $form['#attached']['js'][] = array(
     'data' => array('braintree' => $js_settings),
     'type' => 'setting',
