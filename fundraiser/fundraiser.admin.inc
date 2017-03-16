@@ -36,6 +36,14 @@ function fundraiser_admin_settings($form, &$form_state) {
     '#default_value' => variable_get('fundraiser_default_minimum', 10.00),
     '#description' => t('Enter the default minimum donation amount that will be used on new donation forms.'),
   );
+
+  $form['fundraiser']['fundraiser_maximum_other_amount'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Maximum "other amount" value'),
+    '#default_value' => variable_get('fundraiser_maximum_other_amount', 999999.99),
+    '#description' => t('Enter the maximum donation amount that donors can enter in the "other amount" field. Do not use commas.'),
+  );
+
   $form['fundraiser']['fundraiser_default_amounts'] = array(
     '#type' => 'textarea',
     '#title' => t('Default ask amounts'),
