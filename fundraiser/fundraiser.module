@@ -1386,7 +1386,7 @@ function _fundraiser_other_amount_field_validate($form, $form_state, $submission
   if ($value > $maximum) {
     $maximum = number_format($maximum, 2);
     return array('other_amount' => t('Your donation amount must be less than or equal to @max_amount.',
-      array('@max_amount' => "$maximum")));
+      array('@max_amount' => $maximum)));
   }
 }
 
