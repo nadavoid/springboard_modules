@@ -1052,10 +1052,10 @@ function fundraiser_designations_client_form_validate($form, &$form_state) {
   }
 
   if (!empty($component_hierarchy['recurs_monthly'])) {
-    $recurs = $component_hierarchy['recurs_monthly'];
+    $recurs_component = $component_hierarchy['recurs_monthly'];
+    $recurs = _fundraiser_designations_find_field_form_state($form_state['values'], $recurs_component);
   }
-
-  if (!empty($recurs['recurs']) || $recurs == 'recurs') {
+  if ((!empty($recurs['recurs']) && !empty($node->recurring_dual_ask_amounts)) || $recurs == 'recurs') {
     $minimum = isset($node->recurring_minimum_donation_amount) ? $node->recurring_minimum_donation_amount : NULL;
   }
   else {
@@ -1064,9 +1064,8 @@ function fundraiser_designations_client_form_validate($form, &$form_state) {
 
   if (!empty($minimum)) {
     $this_amount = empty($total) ? 0 : floatval($total);
-
     if ($this_amount < floatval($minimum)) {
-      form_set_error('amount', t('Donation amount is less than minimum donation amount.'));
+      form_set_error('amount', t('Donation amount is less than minimum required donation amount.'));
     }
   }
   // Make sure there is not just an add-on conation in the cart.
