@@ -361,7 +361,7 @@ function sba_social_action_form_alter(&$form, &$form_state, $form_id) {
     global $base_url;
     $settings = array('sbaSiteUrl' => $base_url .'/advocacy/ajax/search');
     $form['#attached']['js'][] = array('data' => $settings, 'type' => 'setting');
-    $form['#attached']['css'] = array(drupal_get_path('module', 'sba_social_action') . '/css/sba-social-message.css');
+    $form['#attached']['css'][] = drupal_get_path('module', 'sba_social_action') . '/css/sba-social-message.css';
     $form['sba_target_options_warning'] = array(
       '#type' => 'container',
       '#children' => '<span class="undistricted-update"></span>',

@@ -399,17 +399,25 @@ function _fundraiser_ocd_checkout_form_submit($form, &$form_state) {
     }
   }*/
 
+  if ($card_id == 0) {
+    $card = _fundraiser_donation_cardonfile_card($donation);
+    if (!empty($card)) {
+      $card_id = $card->card_id;
+    }
+  }
+
   // In the case that the card id is still set to 0, retrieve user's latest
   // card on file.
   if ($card_id == 0) {
     $card_id = _fundraiser_ocd_users_latest_cardid($account->uid);
-    // If no card was found, return early.
-    if ($card_id === FALSE) {
-      return;
-    }
   }
 
-  // Does the user already have a default one-click donate card
+  // If no card was found, return early.
+  if ($card_id === FALSE) {
+    return;
+  }
+
+  // Does the user already have a default one-click donate card?
   $is_card_replacement = FALSE;
   $existing_ocd_card_id = fundraiser_ocd_get_default_card($account->uid);
   if ($card_id != $existing_ocd_card_id) {
@@ -431,11 +439,15 @@ function _fundraiser_ocd_checkout_form_submit($form, &$form_state) {
     ))
     ->execute();
 
-  if ($is_card_replacement) {
-    module_invoke_all('fundraiser_ocd_optin_update', $account, $donation, $existing_ocd_card_id, $card_id);
+  if (empty($card)) {
+    $card = commerce_cardonfile_load($card_id);
+  }
+  if (!empty($existing_ocd_card_id) && $is_card_replacement) {
+    $existing_card = commerce_cardonfile_load($existing_ocd_card_id);
+    module_invoke_all('fundraiser_ocd_optin_update', $account, $donation, $existing_card, $card);
   }
   else {
-    module_invoke_all('fundraiser_ocd_optin_create', $account, $donation, $card_id);
+    module_invoke_all('fundraiser_ocd_optin_create', $account, $donation, $card);
   }
 }
 

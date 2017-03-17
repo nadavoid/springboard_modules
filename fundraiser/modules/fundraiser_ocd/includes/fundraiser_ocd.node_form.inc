@@ -26,7 +26,7 @@ function fundraiser_ocd_form_node_form_alter(&$form, &$form_state, $form_id) {
     '#default_value' => isset($form['#node']->ocd) ? $form['#node']->ocd : FALSE,
   );
 
-  if (empty(variable_get(fundraiser_ocd_DEFAULT_FORM_PREFIX . 'default', array()))) {
+  if (empty(variable_get(FUNDRAISER_OCD_DEFAULT_FORM_PREFIX . 'default', array()))) {
     $form['payment_methods']['ocd']['#suffix'] = t("Reminder: Don't forget to set default forms on the !config_page so donors can be directed to the right place when following a secure One Click Donate link.<br/><br/>", array(
       '!config_page' => l(t('One Click Donate configuration page'), 'springboard/options/fundraiser/fundraiser_ocd'),
     ));
