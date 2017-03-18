@@ -173,11 +173,9 @@ function commerce_cybersource_fundraiser_commerce_update($donation, $card_data =
 
   // Pull the new credit card values from the donation
   $pane_values = array('values' => _fundraiser_commerce_credit_card_pane_values($donation));
-  dpm($pane_values);
 
   // Load the card on file values for this donation
   $cardonfile_fields = _fundraiser_commerce_credit_card_cardonfile_fields($donation);
-  dpm($cardonfile_fields);
 
   // Check the card number to see if it matches the current card data number
   // If it does then we use the update function
