@@ -51,6 +51,29 @@ function commerce_payment_example_fundraiser_commerce_fundraiser_gateway_info() 
 }
 
 /**
+ * Provides different settings for the example payment gateway.
+ */
+function commerce_payment_example_settings_form($settings = array()) {
+  $form = array();
+  if (module_exists('commerce_cardonfile')) {
+    $enabled = FALSE;
+    if (!empty($settings['cardonfile'])) {
+      $enabled = TRUE;
+    }
+    elseif (!empty($settings['credit_card']['cardonfile'])) {
+      $enabled = TRUE;
+    }
+
+    $form['cardonfile'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Enable card on file to store credit card information.'),
+      '#default_value' => $enabled,
+    );
+  }
+  return $form;
+}
+
+/**
  * Callback function, use this form for the given gateway.
  */
 function commerce_payment_example_fundraiser_commerce_form($payment_method) {
