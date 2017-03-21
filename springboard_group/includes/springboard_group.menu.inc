@@ -155,6 +155,11 @@ function springboard_group_menu_alter(&$items) {
     // Swap out OG's group landing page for our own.
     if (strpos($path, 'node/%/group') !== FALSE && isset($item['page callback']) && $item['page callback'] == 'og_ui_group_admin_overview') {
       $items[$path]['page callback'] = 'springboard_group_og_ui_group_admin_overview';
+      $items[$path]['title'] = t('Members');
+    }
+    if (strpos($path, 'group/add-people') !== FALSE) {
+      $items[$path]['access callback'] = FALSE;
+      unset($items[$path]['access arguments']);
     }
     // Custom access for payment method overview page.
     if ($path == 'admin/commerce/config/payment-methods') {
@@ -184,7 +189,7 @@ function springboard_group_rules_payment_method_overview_access($orig_args) {
 function springboard_group_springboard_admin_admin_menu_items_alter(&$items) {
 
   $items['admin/springboard/groups'] = array(
-    'link_path' => 'admin/springboard/groups',
+    'link_path' => 'admin/springboard/groups/my',
     'link_title' => t('Groups'),
     'menu_name' => 'springboard_admin_menu',
     'expanded' => 1,
@@ -195,7 +200,7 @@ function springboard_group_springboard_admin_admin_menu_items_alter(&$items) {
 
   $items['admin/springboard/groups']['_children']['admin/springboard/groups'] = array(
     'link_path' => 'admin/springboard/groups',
-    'link_title' => 'View All Groups',
+    'link_title' => 'All Groups',
     'menu_name' => 'springboard_admin_menu',
     'expanded' => 1,
     'customized' => 1,
@@ -208,7 +213,7 @@ function springboard_group_springboard_admin_admin_menu_items_alter(&$items) {
     'menu_name' => 'springboard_admin_menu',
     'expanded' => 1,
     'customized' => 1,
-    'weight' => -4,
+    'weight' => -6,
   );
 
   $items['admin/springboard/groups']['_children']['admin/springboard/groups/settings'] = array(
