@@ -96,7 +96,7 @@
           },
           highlight: function(element) {
             $element = $(element);
-            if ($element.attr('name') == 'submitted[donation][amount]') {
+            if ($element.attr('name') == 'submitted[donation][amount]' || $element.attr('name') == 'submitted[donation][recurring_amount]') {
               var $error = $element.next('label.error');
               if ($error.length) {
                 $error.detach().appendTo('#edit-submitted-donation-amount');
@@ -251,10 +251,11 @@
 
         var $recurring_other_amount = $('input[name*="other_amount"][type!="hidden"]');
         if (!$other_amount.length && !$recurring_other_amount.length) {
-          $('input[name="submitted[donation][amount]"]:first').each(function() {
-            $(this).rules('add', {
+          $('input[name="submitted[donation][amount]"]:first, input[name="submitted[donation][recurring_amount]"]:first').each(function() {
+            var $this = $(this);
+            $this.rules('add', {
               required: function(element) {
-                return $('input[name="submitted[donation][amount]"]:checked').length == 0;
+                return $this.filter(':checked').length == 0;
               },
               messages: {
                 required: "This field is required",
