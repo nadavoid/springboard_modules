@@ -1232,6 +1232,16 @@ function fundraiser_sustainers_process_single_recurring_donation(&$log, $recurri
     // Get the donation information that we need.
     $donation = fundraiser_donation_get_donation($recurring->did);
 
+    // Avoid charging donations with certain statuses.
+    $dont_charge = array(
+      'canceled',
+      'auto_canceled',
+      'skipped'
+    );
+    if (in_array($donation->status, $dont_charge)) {
+      return FALSE;
+    }
+
     // Set the reference charge flag to TRUE
     $donation->reference_charge = TRUE;
 
@@ -4018,8 +4028,13 @@ function _fundraiser_sustainers_get_donations_recurr_remaining($master_did) {
   $donations = db_query('SELECT * FROM {fundraiser_sustainers} r ' .
     'LEFT JOIN {fundraiser_donation} d on r.did = d.did ' .
     'WHERE r.master_did = :master_did ' .
-    'AND (r.gateway_resp IS NULL OR (r.gateway_resp = :status && r.attempts != :max_attempts)) ' .
-    'ORDER BY r.next_charge ASC', array(':master_did' => $master_did, ':status' => FUNDRAISER_SUSTAINERS_RETRY_STATUS, ':max_attempts' => $max_processing_attempts))->fetchAll();
+    'AND (r.gateway_resp IS NULL OR (r.gateway_resp = :status && r.attempts != :max_attempts) OR gateway_resp = :locked) ' .
+    'ORDER BY r.next_charge ASC', array(
+      ':master_did' => $master_did,
+      ':status' => FUNDRAISER_SUSTAINERS_RETRY_STATUS,
+      ':max_attempts' => $max_processing_attempts,
+      ':locked' => FUNDRAISER_SUSTAINERS_LOCKED_STATUS
+    ))->fetchAll();
   return $donations;
 }
 
