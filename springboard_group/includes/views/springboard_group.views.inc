@@ -216,3 +216,23 @@ function springboard_group_views_add_group_field(&$fields, $position, $group_fie
   $post = array_slice($fields, $position, NULL, TRUE);
   $fields = array_merge($pre, $group_field, $post);
 }
+
+function springboard_group_views_pre_view(&$view, &$display_id, &$args) {
+  if ($view->name == 'springboard_group' || $view->name == 'springboard_group_my_groups') {
+    if (user_access('administer group') || user_access('create springboard-group content')) {
+      drupal_add_css(drupal_get_path('module', 'springboard_group') . '/css/springboard-og-admin.css');
+      $content = l(t('Create New group'), 'node/add/springboard-group', array(
+        'attributes' => array(
+          'class' => array(
+            'button',
+            'add-button',
+          ),
+        ),
+        'query' => array(
+          'destination' => current_path(),
+        ),
+      ));
+      $view->attachment_before = $content;
+    }
+  }
+}

@@ -52,3 +52,17 @@ font-size: 0.9em;
 #springboard-group-help ul {
   margin-left:2em;
 }
+.view-filters {
+  float: left
+}
+
+.attachment-before {
+  float: right;
+  margin-top:1em;
+}
+
+
+.attachment-before .add-button {
+  float: right;
+  margin-bottom: 2em;
+}
