@@ -109,9 +109,8 @@ function fundraiser_maximum_other_amount_validate($element, $form_state) {
   if (!is_numeric($form_state['values']['fundraiser_maximum_other_amount'])) {
     form_set_error('fundraiser_maximum_other_amount', t('Maximum "other amount" must be numeric, with no commas'));
   }
-  $max_other_amount = variable_get('fundraiser_maximum_other_amount', 999999.99);
-  if ($form_state['values']['fundraiser_maximum_other_amount'] > $max_other_amount) {
-    form_set_error('fundraiser_maximum_other_amount', t('Maximum "other amount" must be less than @max', array('@max' => $max_other_amount)));
+  if ($form_state['values']['fundraiser_maximum_other_amount'] > 999999.99) {
+    form_set_error('fundraiser_maximum_other_amount', t('Maximum "other amount" must be less than 999999.99'));
   }
 }
 
