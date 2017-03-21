@@ -149,15 +149,13 @@ function springboard_group_form_rules_ui_edit_element_alter(&$form, &$form_state
     // It's a custom UI managed rule.
     $rule = rules_config_load('rules_' . $rule_name);
   }
-
-  // This field is required to be on this form, but if you change
-  // the value it gets blanked because ajax. So we include it and hide it.
-  // The submit hook doesn't fire, because ajax, but if you don't include the
-  // element, the value is lost.
-  if (!empty($rule)) {
+  if (empty($rule)) {
+    // Ajax.
+    $rule = !empty($form_state['build_info']['args'][0]->name) ? rules_config_load($form_state['build_info']['args'][0]->name) : FALSE;
+  }
+  if (!empty($rule) && empty($form['events'])) {
     springboard_group_rules_add_group_widget($form, $form_state, $rule);
   }
-  $form['og_group_ref_rules_config']['#access'] = FALSE;
 }
 
 /**
@@ -178,7 +176,7 @@ function springboard_group_form_rules_ui_form_edit_rules_config_alter(&$form, &$
     $rule = rules_config_load('rules_' . $rule_name);
   }
   if (!empty($rule)) {
-    springboard_group_rules_add_group_widget($form, $form_state, $rule);
+    //springboard_group_rules_add_group_widget($form, $form_state, $rule);
   }
 
 }
@@ -263,7 +261,7 @@ function springboard_group_submit_payment($form, &$form_state) {
   field_attach_insert('rules_config', $rule);
 }
 
-function springboard_group_rules_config_form__validate($form, &$form_state, $callback = NULL) {
+function springboard_group_rules_config_form__validate(&$form, &$form_state, $callback = NULL) {
   if ($callback != 'springboard_group_og_group_field_ajax_callback') {
     return;
   }
