@@ -591,7 +591,7 @@ function commerce_cybersource_soap_cc_submit_form_submit($payment_method, $pane_
   $declines = !empty($avs) ? implode(' ', $avs) : 'N';
   //$request->businessRules_declineAVSFlags = $declines;
   $ignoreAVSResult = 'false';
-  if (!empty($donation) && (!empty($donation->reference_charge) || !empty($donation->donation['recurs_monthly']))) {
+  if (!empty($donation) && !empty($donation->reference_charge)) {
     $ignoreAVSResult = 'true';
   }
   $request->businessRules = (object) array(
