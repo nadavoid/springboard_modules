@@ -590,16 +590,17 @@ function commerce_cybersource_soap_cc_submit_form_submit($payment_method, $pane_
   }
   $declines = !empty($avs) ? implode(' ', $avs) : 'N';
   //$request->businessRules_declineAVSFlags = $declines;
-  $ignoreAVSResult = FALSE;
-  if (!empty($donation) && !empty($donation->reference_charge)) {
-    $ignoreAVSResult = TRUE;
+  $ignoreAVSResult = 'false';
+  if (!empty($donation) && (!empty($donation->reference_charge) || !empty($donation->donation['recurs_monthly']))) {
+    $ignoreAVSResult = 'true';
   }
   $request->businessRules = (object) array(
     'decline_AVSFlags' => $declines,
     'ignoreAVSResult' => $ignoreAVSResult,
   );
 
-  if ($response = commerce_cybersource_soap_api_request($payment_method, $request)) {
+  $response = commerce_cybersource_soap_api_request($payment_method, $request);
+  if (!empty($response)) {
     // Prepare a transaction object to log the API response.
     $transaction = commerce_payment_transaction_new('cybersource_soap_cc', $order->order_id);
     $transaction->instance_id = $payment_method['instance_id'];
