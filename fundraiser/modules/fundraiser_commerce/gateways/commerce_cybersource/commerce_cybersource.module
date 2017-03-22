@@ -608,10 +608,9 @@ function commerce_cybersource_soap_cc_submit_form_submit($payment_method, $pane_
     $transaction->payload[REQUEST_TIME] = $response;
 
     // If we didn't get an approval response code...
-    if ($response->reasonCode != 100) {
+    if ($response->ccAuthReply->reasonCode != 100) {
       // Create a failed transaction with the error message.
       $transaction->status = COMMERCE_PAYMENT_STATUS_FAILURE;
-      return FALSE;
     }
     else {
       // Otherwise if we also captured successfully, mark this as a success.
