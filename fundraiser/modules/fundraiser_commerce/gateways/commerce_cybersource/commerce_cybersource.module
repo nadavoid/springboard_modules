@@ -590,14 +590,12 @@ function commerce_cybersource_soap_cc_submit_form_submit($payment_method, $pane_
   }
   $declines = !empty($avs) ? implode(' ', $avs) : 'N';
   //$request->businessRules_declineAVSFlags = $declines;
-  $ignoreAVSResult = 'false';
-  if (!empty($donation) && !empty($donation->reference_charge)) {
-    $ignoreAVSResult = 'true';
-  }
   $request->businessRules = (object) array(
     'decline_AVSFlags' => $declines,
-    'ignoreAVSResult' => $ignoreAVSResult,
   );
+  if (!empty($donation) && !empty($donation->reference_charge)) {
+    $request->businessRules->ignoreAVSResult = 'true';
+  }
 
   $response = commerce_cybersource_soap_api_request($payment_method, $request);
   if (!empty($response)) {
@@ -610,9 +608,10 @@ function commerce_cybersource_soap_cc_submit_form_submit($payment_method, $pane_
     $transaction->payload[REQUEST_TIME] = $response;
 
     // If we didn't get an approval response code...
-    if ($response->ccAuthReply->reasonCode != 100) {
+    if ($response->reasonCode != 100) {
       // Create a failed transaction with the error message.
       $transaction->status = COMMERCE_PAYMENT_STATUS_FAILURE;
+      return FALSE;
     }
     else {
       // Otherwise if we also captured successfully, mark this as a success.
