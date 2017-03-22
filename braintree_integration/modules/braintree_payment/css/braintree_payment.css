@@ -37,12 +37,20 @@
 */
 
 /* Why are these IDs so long? */
-#edit-submitted-payment-information-payment-fields-credit-braintree-new-expiration-month, #edit-month,
-#edit-submitted-payment-information-payment-fields-credit-braintree-new-expiration-year, #edit-year {
+#edit-submitted-payment-information-payment-fields-credit-braintree-new-expiration-month,
+#edit-month,
+#edit-payment-fields-credit-braintree-new-expiration-month,
+#edit-submitted-payment-information-payment-fields-credit-braintree-new-expiration-year,
+#edit-year,
+#edit-payment-fields-credit-braintree-new-expiration-year {
   display: inline-block;
   width: 10em;
   clear:none;
   float: none;
+}
+#edit-payment-fields-credit-braintree-new-expiration-month,
+#edit-payment-fields-credit-braintree-new-expiration-year {
+  width: 9em;
 }
 
 #expiration-month {
