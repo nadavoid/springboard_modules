@@ -482,7 +482,7 @@ function commerce_cybersource_soap_cc_submit_form_validate($payment_method, $pan
 /**
  * Payment method callback: checkout form submission.
  */
-function commerce_cybersource_soap_cc_submit_form_submit($payment_method, $pane_form, $pane_values, $order, $charge) {
+function commerce_cybersource_soap_cc_submit_form_submit($payment_method, $pane_form, $pane_values, $order, $charge, $donation = NULL) {
   $payment_method['settings'] += commerce_cybersource_soap_cc_default_settings();
   // Create and populate the request object.
   $request = (object) array(
@@ -590,9 +590,13 @@ function commerce_cybersource_soap_cc_submit_form_submit($payment_method, $pane_
   }
   $declines = !empty($avs) ? implode(' ', $avs) : 'N';
   //$request->businessRules_declineAVSFlags = $declines;
+  $ignoreAVSResult = FALSE;
+  if (!empty($donation) && !empty($donation->reference_charge)) {
+    $ignoreAVSResult = TRUE;
+  }
   $request->businessRules = (object) array(
     'decline_AVSFlags' => $declines,
-    'ignoreAVSResult' => TRUE,
+    'ignoreAVSResult' => $ignoreAVSResult,
   );
 
   if ($response = commerce_cybersource_soap_api_request($payment_method, $request)) {
