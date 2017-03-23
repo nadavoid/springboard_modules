@@ -3182,7 +3182,7 @@ function fundraiser_sustainers_cancel_form_submit($form, &$form_state) {
     $reason = t('No reason given.');
   }
   // Cancel the donations.
-  $sustainer_donations = _fundraiser_sustainers_get_donations_recurr_remaining($master_did);
+  $sustainer_donations = _fundraiser_sustainers_get_donations_for_canceling($master_did);
   foreach ($sustainer_donations as $sustainer_donation) {
     $donation = fundraiser_donation_get_donation($sustainer_donation->did);
 
@@ -4028,14 +4028,43 @@ function _fundraiser_sustainers_get_donations_recurr_remaining($master_did) {
   $donations = db_query('SELECT * FROM {fundraiser_sustainers} r ' .
     'LEFT JOIN {fundraiser_donation} d on r.did = d.did ' .
     'WHERE r.master_did = :master_did ' .
-    'AND (r.gateway_resp IS NULL OR (r.gateway_resp = :status && r.attempts != :max_attempts) OR gateway_resp = :locked) ' .
-    'ORDER BY r.next_charge ASC', array(
-      ':master_did' => $master_did,
-      ':status' => FUNDRAISER_SUSTAINERS_RETRY_STATUS,
-      ':max_attempts' => $max_processing_attempts,
-      ':locked' => FUNDRAISER_SUSTAINERS_LOCKED_STATUS
-    ))->fetchAll();
+    'AND (r.gateway_resp IS NULL OR (r.gateway_resp = :status && r.attempts != :max_attempts)) ' .
+    'ORDER BY r.next_charge ASC', array(':master_did' => $master_did, ':status' => FUNDRAISER_SUSTAINERS_RETRY_STATUS, ':max_attempts' => $max_processing_attempts))->fetchAll();
   return $donations;
+}
+
+/**
+ * Return an array of donations for canceling, including locked donations.
+ *
+ * @param int $master_did
+ *   Master did of the donation series.
+ *
+ * @return array
+ *   Array of donations.
+ */
+function _fundraiser_sustainers_get_donations_for_canceling($master_did) {
+  $max_processing_attempts = variable_get('fundraiser_sustainers_max_processing_attempts', 3);
+
+  // Build the query for selecting donations for canceling.
+  $query = db_select('fundraiser_sustainers', 'r');
+  $query->fields('r');
+  $query->leftJoin('fundraiser_donation', 'd', 'r.did = d.did');
+  $query->condition('r.master_did', $master_did);
+
+  // Build an OR condition to filter on the gateway_resp value.
+  $db_or = db_or();
+  // Select donations that have not been charged.
+  $db_or->isNull('r.gateway_resp');
+  // Select donations that are in retry.
+  $db_and = db_and();
+  $db_and->condition('r.gateway_resp', FUNDRAISER_SUSTAINERS_RETRY_STATUS);
+  $db_and->condition('r.attempts', $max_processing_attempts, '!=');
+  $db_or->condition($db_and);
+  // Select donations that are locked.
+  $db_or->condition('r.gateway_resp', FUNDRAISER_SUSTAINERS_LOCKED_STATUS);
+  $query->condition($db_or);
+
+  return $query->execute()->fetchAll();
 }
 
 /**
