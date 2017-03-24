@@ -3916,7 +3916,7 @@ function fundraiser_update_billing_form($form, &$form_state, $data) {
   }
 
   // If the "update cardonfile" element is non-empty, add the cardonfile
-  // validation and submission handlers are set.
+  // validation and ensure the proper submission handlers are set.
   if ($data['update payment'] && $data['update cardonfile'] && !empty($form['#donation']->gateway['gateway_details']['settings']['cardonfile'])) {
     $use_cardonfile = FALSE;
     if (!empty($data['card'])) {
@@ -4201,7 +4201,13 @@ function fundraiser_update_billing_form_submit($form, &$form_state) {
   $donation->update_billing = TRUE;
   $donation->update_payment = TRUE;
   $donation->update_other_orders = $form['#fundraiser_data']['update other orders'];
+  $form_state['values']['cardonfile']['card'] = $form_state['card'];
+  // Using `clone` to ensure this isn't modified by reference later.
+  $form_state['values']['cardonfile']['old_card'] = clone $form_state['card'];
   fundraiser_donation_update($donation);
+  if ($donation->data['cardonfile'] != $form_state['values']['cardonfile']['old_card']->card_id) {
+    $form_state['values']['cardonfile']['card'] = commerce_cardonfile_load($donation->data['cardonfile']);
+  }
 }
 
 /**

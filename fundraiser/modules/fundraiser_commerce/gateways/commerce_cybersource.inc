@@ -168,7 +168,7 @@ function commerce_cybersource_fundraiser_commerce_update($donation, $card_data =
       array('@id' => $donation->did),
       WATCHDOG_CRITICAL
     );
-    return;
+    return $card_data;
   }
 
   // Pull the new credit card values from the donation

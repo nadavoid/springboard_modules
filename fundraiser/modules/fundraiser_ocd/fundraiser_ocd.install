@@ -173,6 +173,9 @@ function fundraiser_ocd_install() {
   _fundraiser_ocd_create_date_field('field_ocd_opt_out', 'One Click Donate Opt Out');
 }
 
+/**
+ * Helper function to create a date field.
+ */
 function _fundraiser_ocd_create_date_field($field_name, $field_label) {
   if (empty(field_info_field($field_name))) {
     $field = array(
