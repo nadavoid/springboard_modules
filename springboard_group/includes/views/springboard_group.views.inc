@@ -192,7 +192,7 @@ function springboard_group_views_default_views_alter(&$views) {
         $group_field['title_sb_group']['id'] = 'title_sb_group';
         $group_field['title_sb_group']['table'] = 'node';
         $group_field['title_sb_group']['field'] = 'title';
-        $group_field['title_sb_group']['label'] = 'Owner';
+        $group_field['title_sb_group']['label'] = 'Group';
         $group_field['title_sb_group']['relationship'] = 'og_membership_related_node_group';
         springboard_group_views_add_group_field($fields, $index, $group_field);
       }
