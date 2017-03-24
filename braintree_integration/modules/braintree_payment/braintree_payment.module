@@ -97,12 +97,13 @@ function braintree_form_elements($payment_type, $config, $billing_update = FALSE
       $error_message = braintree_report_error($e);
       $message = t('Braintree token generation failed: @message. Please check Braintree gateway configuration.', array('@message' => $error_message));
       drupal_set_message($message, 'error');
-      return;
+      return array();
     }
 
     $form_processed = TRUE;
   }
 
+  $form_state = array();
   $context = array(
     'form' => &$form,
     'form_state' => &$form_state,
