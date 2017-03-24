@@ -544,12 +544,16 @@ function fundraiser_sustainers_salesforce_genmap_map_fields_alter(&$fields, $con
         }
       }
 
-      // If we're dealing with a sustainer charge, only send a subset of data so that other fields
-      // that may have been changed in Salesforce isn't overwritten.
-      if ($donation->donation['recurs_monthly'] == TRUE && $donation->status_charged == 1
+      // If we're dealing with a sustainer charge that has already been synced, only send a subset of data
+      // so that other fields that may have been changed in Salesforce are not overwritten.
+      $synced_donation_id = FALSE;
+      if (isset($donation->did) && is_numeric($donation->did)) {
+        $synced_donation_id = db_query("SELECT drupal_id FROM {salesforce_sync_map} WHERE delta='donation' AND drupal_id = :donation_id",
+          array(':donation_id' => $donation->did))
+          ->fetchField();
+      }
+      if ($synced_donation_id && $donation->donation['recurs_monthly'] == TRUE && $donation->status_charged == 1
          && !empty($donation->master_did) && $donation->did != $donation->master_did) {
-        // @TODO: Add a configuration screen for specifying which fields get sent back
-        // to Salesforce when a recurring donation charge is processed.
         $fields_to_update_on_charge = variable_get('fundraiser_sustainers_recurring_donation_charge_fields',
           array('StageName', 'Amount', 'Gateway_Reference__c', 'Transaction_Date_Time__c', 'Probability'));
 
