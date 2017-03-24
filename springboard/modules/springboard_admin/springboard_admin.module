@@ -100,9 +100,8 @@ function springboard_admin_form_alter(&$form, &$form_state, $form_id) {
               '#type' => 'checkbox',
               '#title' => $roles[$role_id],
               '#default_value' => in_array($role_id, $form['account']['roles']['#default_value']),
-              '#disabled' => TRUE,
+              '#access' => FALSE,
               '#weight' => 0,
-              '#description' => t('You do not have permission to assign this role.'),
             );
             // Remove disallowed from the regular set of checkboxes.
             unset($roles[$role_id]);
