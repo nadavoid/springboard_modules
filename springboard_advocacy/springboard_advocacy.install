@@ -25,7 +25,7 @@ function springboard_advocacy_requirements($phase) {
 
   if ($phase == 'runtime' && !empty($lib['installed'])) {
     $requirements['springboard_advocacy']['severity'] = REQUIREMENT_OK;
-  } 
+  }
   elseif($phase == 'runtime') {
     $requirements['springboard_advocacy']['severity'] = REQUIREMENT_ERROR;
     $requirements['springboard_advocacy']['description'] = 'Springboard Advocacy library not installed';
@@ -258,5 +258,14 @@ function springboard_advocacy_update_7011() {
   $schema = module_invoke('springboard_advocacy', 'schema');
   if(db_table_exists('springboard_action_opt_in_block') == FALSE) {
     db_create_table('springboard_action_opt_in_block', $schema['springboard_action_opt_in_block']);
+  }
+}
+
+/**
+ * Enable springboard target saerch module if springboard target is enabled.
+ */
+function springboard_advocacy_update_7012() {
+  if (module_exists('springboard_target')) {
+    module_enable(array('sba_target_search'));
   }
 }

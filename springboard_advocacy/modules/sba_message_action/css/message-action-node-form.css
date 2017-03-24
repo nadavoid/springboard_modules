@@ -6,8 +6,9 @@
     padding-top: 0;
 }
 
+fieldset .text-format-wrapper fieldset legend,
 .filter-wrapper legend{
-    top: -20px;
+    top: -10px;
     margin-bottom:10px;
     position: relative;
     z-index: 0;
@@ -18,6 +19,6 @@
     z-index: 1;
 }
 
-#sba-message-action-node-form fieldset.filter-wrapper.collapsed {
-    height: 20px;
+#edit-field-sba-action-step-two-submit input {
+    max-width: 320px;
 }

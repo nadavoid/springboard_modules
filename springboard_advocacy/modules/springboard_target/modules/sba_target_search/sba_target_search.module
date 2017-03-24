@@ -1,0 +1,443 @@
+<?php
+
+/**
+* Implements hook_menu().
+*/
+function sba_target_search_menu() {
+// Committee Search Selector autocomplete path.
+  $items['target-search/committee/autocomplete'] = array(
+    'page callback' => '_sba_target_search_committee_autocomplete',
+    'access callback' => 'springboard_target_target_access',
+    'access arguments' => array('add target to action'),
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_views_api().
+ */
+function sba_target_search_views_api() {
+  return array(
+    'api' => 3.0,
+    'path' => drupal_get_path('module', 'sba_target_search') . '/includes',
+  );
+}
+
+/**
+ * Autocomplete callback to populate committee list dropdown.
+ *
+ * @param string $name
+ *   The value of the autocomplete textfield.
+ * @param string $state
+ *   The value of the state field.
+ * @param string $chamber
+ *   The value of the chamber field.
+ */
+function _sba_target_search_committee_autocomplete($name, $state, $chamber, $subscription, $states) {
+
+  // Retrieve committee list from cache or via API call if not cached.
+  $api_call = springboard_advocacy_api_call();
+  $committee_list = $api_call->getCommittees();
+
+  // Filter the list by subscription.
+  $filter_committee_list = [];
+  if ($subscription) {
+    switch ($subscription) {
+      case 'federal-and-states':
+        $filter_committee_list = $committee_list;
+        break;
+
+      case 'federal-only':
+        $allowed = array('(FS)', '(FH)');
+        foreach ($allowed as $item) {
+          $chamber_pattern = '/\(' . $item . '\)/i';
+          $filter_committee_list += preg_grep($chamber_pattern, $committee_list);
+        }
+        break;
+
+      case 'state-only':
+        $allowed = array('(SS)', '(SH');
+        foreach ($allowed as $item) {
+          $chamber_pattern = '/\(' . $item . '\)/i';
+          $filter_committee_list += preg_grep($chamber_pattern, $committee_list);
+        }
+        break;
+
+      case 'federal-and-states-selected':
+        $state_allowed = explode(',', $states);
+        foreach ($state_allowed as $state_item) {
+          $state_pattern = '/\(' . $state_item . '\)/i';
+          $filter_committee_list += preg_grep($state_pattern, $committee_list);
+        }
+        $allowed = array('(FS)', '(FH)');
+        foreach ($allowed as $item) {
+          $chamber_pattern = '/\(' . $item . '\)/i';
+          $filter_committee_list += preg_grep($chamber_pattern, $committee_list);
+        }
+        break;
+
+      case 'states-selected':
+        $allowed = explode(',', $states);
+        foreach ($allowed as $item) {
+          $state_pattern = '/\(' . $item . '\)/i';
+          $filter_committee_list += preg_grep($state_pattern, $committee_list);
+        }
+        break;
+
+    }
+  }
+  else {
+    $filter_committee_list = $committee_list;
+  }
+
+  $matches = array();
+  // Grep the results using patterns based on form input.
+  $name_pattern = '/' . $name . '/i';
+  $state_pattern = '/\(' . $state . '\)/i';
+  $chamber_pattern = '/\(' . $chamber . '\)/i';
+  if (!empty($filter_committee_list)) {
+    $results = preg_grep($name_pattern, $filter_committee_list);
+    if ($state != 'All') {
+      $results = preg_grep($state_pattern, $results);
+    }
+    if ($chamber != 'All') {
+      $results = preg_grep($chamber_pattern, $results);
+    }
+    if (is_array($results)) {
+      $num = count($results);
+      // Limit the displayed results (there are 7,000+ committees)
+      // and create a tally message.
+      $results = array_slice($results, 0, 5);
+      $rest = $num - 5;
+      if ($rest > 0) {
+        $results['message'] = 'Plus ' . $rest . ' more. Try narrowing your search with more letters, words or filters';
+      }
+      else {
+        // Prevent the autocompelte js from bolding the last suggestion.
+        $results['message'] = '';
+      }
+      foreach ($results as $key => $row) {
+        $matches[$row] = $row;
+      }
+    }
+  }
+  drupal_json_output($matches);
+}
+
+/**
+ * Implements hook_theme().
+ */
+function sba_target_search_theme() {
+  return array(
+    'views_exposed_form' => array(
+      'template' => 'templates/views-exposed-form--targets-block-3',
+      'render element' => 'form',
+    ),
+    'views_view' => array(
+      'template' => 'templates/views-view--targets-block-3',
+      'render element' => 'form',
+    ),
+  );
+}
+
+
+/**
+ * Implements hook_preprocess_hook().
+ *
+ * Override springboard theme's conversion of button text.
+ */
+function sba_target_search_preprocess_views_exposed_form(&$vars, $hook) {
+  if (isset($vars['theme_hook_suggestion']) &&  $vars['theme_hook_suggestion'] == 'views_exposed_form__targets__block_3') {
+    unset($vars['form']['submit']['#printed']);
+    $vars['target_button'] = drupal_render($vars['form']['submit']);
+  }
+}
+
+
+/**
+ * Implements hook_preprocess_views_view_table().
+ *
+ * Change the table output of the Target search based on class type of search
+ * result.
+ */
+
+function sba_target_search_preprocess_views_view_table(&$vars) {
+  $view = $vars['view'];
+
+  $fields = &$view->field;
+  $columns = $view->style_plugin->options['columns'];
+  $classes = isset($view->filter['search_class_name']->value) ? $view->filter['search_class_name']->value : [];
+  $omit_fields = [];
+
+  if ($view->name == 'sba_custom_targets' && $view->current_display == 'block_2') {
+
+    if (empty($view->query->search_terms['group_name'])) {
+      $omit_fields = array_merge($omit_fields, array('matching_targets'));
+      sba_target_search_remove_views_table_columns($vars, $omit_fields, $columns, $fields);
+    }
+  }
+
+  if ($view->name == 'targets' && $view->current_display == 'block_3') {
+
+    if (!in_array('Group', $classes)) {
+      $omit_fields = array_merge($omit_fields, array('matching_targets', 'child_groups'));
+    }
+    if (!in_array('Legislator', $classes)) {
+      $omit_fields = array_merge($omit_fields, array(
+        'district_code',
+        'committee_memberships',
+        'role',
+      ));
+    }
+    if (count($classes) == 1 && in_array('Group', $classes)) {
+      $omit_fields = array_merge($omit_fields, array(
+        'salutation',
+        'first_name',
+        'email',
+        'party',
+        'title',
+        'organization',
+        'role',
+        'state',
+        'district_code',
+        'committee_memberships',
+      ));
+    }
+    sba_target_search_remove_views_table_columns($vars, $omit_fields, $columns, $fields);
+  }
+}
+
+function sba_target_search_remove_views_table_columns(&$vars, $omit_fields, $columns, &$fields) {
+
+  foreach ($vars['header'] as $key => $head) {
+    if (in_array($key, $omit_fields)) {
+      unset($vars['header'][$key]);
+    }
+  }
+  foreach ($columns as $key => $column) {
+    if (in_array($key, $omit_fields)) {
+      // Prevent headers from being rebuilt in
+      // springboard_advocacy_preprocess_views_view_table().
+      unset($columns[$key]);
+    }
+  }
+  foreach ($fields as $key => $field) {
+    if (in_array($key, $omit_fields)) {
+      unset($fields[$key]);
+    }
+  }
+  $vars['view']->style_plugin->options['columns'] = $columns;
+  $vars['view']->style_options['columns'] = $columns;
+  $vars['options']['columns'] = $columns;
+  foreach ($vars['rows'] as $key => $row) {
+    foreach ($row as $field_name => $value) {
+      if (in_array($field_name, $omit_fields)) {
+        unset($vars['rows'][$key][$field_name]);
+      }
+    }
+  }
+}
+
+
+/**
+ * Helper function. Adds Target Search-related functionality to any form.
+ *
+ * @param $form
+ * @param $form_state
+ * @param string $entity
+ * @return mixed
+ *
+ */
+function sba_target_search_add_target_search_form($form, &$form_state, $entity = '') {
+  $form['data']['#tree'] = TRUE;
+  $recipients = '';
+  if (!empty($entity->type) && $entity->type == 'sba_message_action_message') {
+    $type = t("Message");
+  }
+  else {
+    $type = t("Group");
+  }
+  // If we are using a Drupal entity that saves the UI json string locally, we
+  // can just use that string directly.
+  if (isset($entity->data['recipients'])) {
+    $recipients = str_replace('"', '&quot;', $entity->data['recipients']);
+  }
+  // Otherwise, a plain group entity needs its attributes converted to the json
+  // string format expected in the UI.
+  elseif (isset($entity->targets)) {
+    $recipients = sba_target_search_convert_recipients($entity);
+    $recipients = str_replace('"', '&quot;', $recipients);
+  }
+  $form['data']['recipients'] = array(
+    '#type' => 'hidden',
+    '#default_value' => $recipients,
+  );
+
+  $form['target_recipients'] = array(
+    '#id' => 'springboard-advocacy-target-recipients',
+    '#type' => 'markup',
+    '#markup' => '<div id="springboard-advocacy-target-recipients"><h3>' . $type . ' Targets</h3><div class = "sba-charcount-status"></div><div class = "sba-target-status"></div><div class = "sba-message-status"></div><div id="springboard-advocacy-target-recipients-content" class="clearfix"></div></div>',
+    '#prefix' => '<div id="springboard-advocacy-target-recipients-container"><div class="inner">',
+    '#suffix' => '</div></div>',
+    '#weight' => 99,
+  );
+
+  $form['#suffix'] = '<div id="springboard-advocacy-find-targets-container"><div id="springboard-advocacy-find-targets"><h3>Find Targets</h3>' . views_embed_view('targets', 'block_3') . '</div></div>';
+
+  $form['#attached']['css'][] = drupal_get_path('module', 'sba_target_search') . '/css/sba_target_search.css';
+  $form['#attached']['js'][] = drupal_get_path('module', 'sba_target_search') . '/js/sba_target_search.js';
+  $form['#attributes']['class'][] = 'sba_target_search_parent_form';
+
+  return $form;
+}
+
+/**
+ * @TODO comment this
+ * @param $group
+ * @return string
+ */
+
+function sba_target_search_convert_recipients($group) {
+  $recipients = array();
+  foreach ($group->chambers as $chamber) {
+    $recipient = array();
+    if (isset($chamber->committee_id) && $chamber->committee_id != '0' && $chamber->committee_id != '') {
+      $recipient['committee_id'] = $chamber->committee_id;
+      $state = $chamber->committee_state != "All" ? ' (' . $chamber->committee_state . ')' : '';
+      $role = ' (' . $chamber->committee_chamber . ')';
+      $recipient['committee'] = $chamber->committee_name . $role . $state;
+    }
+    else {
+      foreach ($chamber as $field_name => $value) {
+        if ($value != '') {
+          if ($field_name != 'keywords') {
+            $recipient[$field_name] = $value;
+          }
+          else {
+            $fields = unserialize($value);
+            foreach ($fields as $name => $content) {
+              $recipient[$name] = $content;
+            }
+          }
+        }
+      }
+    }
+    if (!empty($recipient)) {
+      $recipients[] = $recipient;
+    }
+  }
+
+  foreach ($group->targets as $target) {
+
+    $recipients[] = array(
+      'id' => $target->target_id,
+      'type' => $target->target->class_name,
+      'first' => $target->target->first_name,
+      'last' => $target->target->last_name,
+      'sal' => isset($target->target->salutation) ? $target->target->salutation : '',
+      'twitter' => isset($target->target->twitter) ? $target->target->twitter : '',
+      'facebook' => isset($target->target->facebook) ? $target->target->facebook : '',
+      'org' => isset($target->target->organization) ? $target->target->organization : '',
+      'title' => isset( $target->target->title) ? $target->target->title : '',
+      'state' => isset($target->target->state) ? $target->target->state : '',
+      'district' => isset($target->target->district_name) ? $target->target->district_name : '',
+      'party' => isset($target->target->party) ? $target->target->party : '',
+    );
+
+  }
+  foreach ($group->groups as $child_group) {
+    $recipients[] = array(
+      'id' => $child_group->target_group_group_id,
+      'name' => $child_group->name,
+      'type' => 'group',
+    );
+  }
+
+  return json_encode($recipients);
+}
+
+/**
+ * Process the matching targets for display.
+ *
+ * @param array $matches
+ *   An array of targets matching the keyword.
+ *
+ * @return null|string
+ *   The matching targets, formatted for display.
+ */
+function sba_target_search_process_matches($matches) {
+  $output = '';
+  if (!empty($matches) && count($matches) < 11) {
+    $output = '';
+    $names = array();
+    foreach ($matches as $match) {
+      $names[] = sba_target_search_match_details($match);
+    }
+    $output .= implode(' | ', $names);
+  }
+  elseif (!empty($matches)) {
+    // @todo show in modal?
+    $count = count($matches);
+    $output = t('@count targets in this group matched this search.', array('@count' => $count));
+  }
+  return $output;
+}
+
+/**
+ * Process the matching targets for display.
+ *
+ * @param array $matches
+ *   An array of targets matching the keyword.
+ *
+ * @return null|string
+ *   The matching targets, formatted for display.
+ */
+function sba_target_search_process_groups($groups) {
+  $output = '';
+  if (!empty($groups) && count($groups) < 21) {
+    $output = '';
+    $names = array();
+    foreach ($groups as $group) {
+      $names[] = $group->name;
+    }
+    $output .= implode(' | ', $names);
+  }
+  elseif (!empty($groups)) {
+    // @todo show in modal?
+    $count = count($groups);
+    $output = t('@count targets in this group matched this search.', array('@count' => $count));
+  }
+  return $output;
+}
+
+
+/**
+ * Display info about the target.
+ *
+ * @param object $match
+ *   A target object.
+ *
+ * @return string
+ *   The formatted target.
+ */
+function sba_target_search_match_details($match) {
+  $output = array();
+  $target = (array) $match;
+  $title = isset($target['salutation']) ? ' ' . $target['salutation'] : '';
+  $person = $title . ' ' . $target['first_name'] . ' ' . $target['last_name'];
+  $output[] = $person;
+  $party = isset($target['party']) ? ' (' . $target['party'] . ')' : '';
+  if (!empty($party)) {
+    $output[] = $party;
+  }
+  $organization = !empty($target['organization']) ? $target['organization'] : '';
+  if (!empty($organization)) {
+    $output[] = ', ' . $organization;
+  }
+  if (!empty($target['state'])) {
+    $output[] = ', ' . $target['state'];
+  }
+  return implode(' ', $output);
+}
