@@ -1081,7 +1081,11 @@ function email_wrappers_node_insert($node) {
         // save.
         $data['nid'] = $node->nid;
         $data['extra'] = serialize($data['extra']);
-        drupal_write_record('email_wrappers_webform', $data);
+        // Check if the record already exists. Shouldn't have to do this,
+        // but we've seen repeated insert attempts.
+        if (!email_wrappers_load_settings($node->nid, $data['eid'])) {
+          drupal_write_record('email_wrappers_webform', $data);
+        }
       }
     }
   }
