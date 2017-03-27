@@ -87,6 +87,7 @@ function braintree_payment_form_node_form_alter(&$form, &$form_state, $form_id) 
 
 /**
  * Additional submit handler for donation_form node form.
+ * Track which nodes have the paypal compact flow enabled.
  */
 function _braintree_payment_node_form_submit($form, &$form_state) {
    if (isset($form_state['values']['gateways']['paypal']) &&
@@ -99,17 +100,14 @@ function _braintree_payment_node_form_submit($form, &$form_state) {
       $enabled_form_ids[] = $form_state['nid'];
       variable_set('braintree_paypal_compact', $enabled_form_ids);
     }
-    
   }
   else {
-    // refactor this
     $enabled_form_ids = variable_get('braintree_paypal_compact', array());
     $index = array_search($form_state['nid'], $enabled_form_ids);
     if ($index !== FALSE) {
       unset($enabled_form_ids[$index]);
       variable_set('braintree_paypal_compact', $enabled_form_ids);
     }
-    // delete the var if in array
   }
 }
 
@@ -121,6 +119,8 @@ function braintree_payment_form_webform_component_edit_form_alter(&$form, &$form
   if ($form_id == 'webform_component_edit_form') {
     if (isset($form['nid']) && isset($form['nid']['#value'])) {
       $node = node_load($form['nid']['#value']);
+      // Need to do some additional component validation to prevent breaking
+      // the compact flow.
       if (_braintree_payment_paypal_method_is_option($node) && _braintree_payment_paypal_method_is_enabled($node)) {
         $form['#validate'][] = '_braintree_payment_webform_components_validate';
       }
@@ -134,6 +134,8 @@ function braintree_payment_form_webform_component_edit_form_alter(&$form, &$form
 function braintree_payment_form_webform_components_form_alter(&$form, &$form_state) {
   if (isset($form['#node'])) {
    if (_braintree_payment_paypal_method_is_option($form['#node']) && _braintree_payment_paypal_method_is_enabled($form['#node'])) {
+    // On the components overview page, need to workaround an issue with the weights
+    // (which determine the components position) not being updated after a validation error.
     if (!empty($form_state['input'])) {
       drupal_add_js(drupal_get_path('module', 'braintree_payment') . '/js/braintree_payment.paypal.admin.js');
     }
@@ -142,6 +144,11 @@ function braintree_payment_form_webform_components_form_alter(&$form, &$form_sta
   }
 }
 
+/**
+ * Validation for component placement and type when compact flow is enabled.
+ * This does double duty for both the individual component add/edit page
+ * and the components overview page.
+ */
 function _braintree_payment_webform_components_validate($form, &$form_state) {
   if ($form['#form_id'] == 'webform_component_edit_form') {
     $node = node_load($form['nid']['#value']);
@@ -152,18 +159,9 @@ function _braintree_payment_webform_components_validate($form, &$form_state) {
     }
     return;
   }
-  $default_fundraiser_fields = array(
-    'first_name',
-    'last_name',
-    'mail',
-    'address',
-    'address_line_2',
-    'city',
-    'zip',
-    'country',
-    'state',
-    'sbp_phone',
-  );
+  // Check the component position and type against the default fundraiser fields.
+  // If there's a non-hidden field present in either of the default fieldsets, flag it.
+  $default_fundraiser_fields = _braintree_payment_default_fundraiser_fields();
   $billing_cid = webform_get_cid($form['#node'], 'billing_information', 0);
   $billing_children = _braintree_payment_webform_components_find_parent_children($billing_cid, $form_state['values']['components']);
   $donor_cid = webform_get_cid($form['#node'], 'donor_information', 0);
@@ -181,6 +179,9 @@ function _braintree_payment_webform_components_validate($form, &$form_state) {
   }
 }
 
+/**
+ * Helper function get children of webform components.
+ */
 function _braintree_payment_webform_components_find_parent_children($pid, $components) {
   $children = array();
   foreach ($components as $cid => $component) {
@@ -191,6 +192,9 @@ function _braintree_payment_webform_components_find_parent_children($pid, $compo
   return $children;
 }
 
+/**
+ * Helper function get a webform component's info by $nid,$cid.
+ */
 function _braintree_payment_webform_get_component_by_cid($nid, $cid) {
   $query = db_select('webform_component', 'c')
     ->fields('c', array('form_key', 'type', 'pid', 'cid', 'weight'))
@@ -208,24 +212,14 @@ function braintree_payment_form_webform_client_form_alter(&$form, &$form_state) 
     return;
   }
   if (_braintree_payment_paypal_method_is_enabled($form['#node'])) {
-    // TODO: refactor this duplicate code from validation.
-    $default_fundraiser_fields = array(
-      'first_name',
-      'last_name',
-      'mail',
-      'address',
-      'address_line_2',
-      'city',
-      'zip',
-      'country',
-      'state',
-      'sbp_phone',
-      );
+    // TODO: refactor this duplicate code from validation. Ideally call the validate function.
+    $default_fundraiser_fields = _braintree_payment_default_fundraiser_fields();
     $billing_cid = webform_get_cid($form['#node'], 'billing_information', 0);
     $donor_cid = webform_get_cid($form['#node'], 'donor_information', 0);
     $billing_children = _braintree_payment_webform_components_find_parent_children($billing_cid, $form['#node']->webform['components']);
     $donor_children = _braintree_payment_webform_components_find_parent_children($donor_cid, $form['#node']->webform['components']);
     $children = array_merge($donor_children, $billing_children);
+    // If compact flow is enabled display a warning if there are disallowed components present.
     foreach ($children as $cid) {
       $component = _braintree_payment_webform_get_component_by_cid($form['#node']->nid, $cid);
       if (!in_array($component->form_key, $default_fundraiser_fields) && $component->type != 'hidden') {
@@ -262,7 +256,6 @@ function braintree_payment_clone_node_alter(&$node, $context) {
   if (empty($context['original_node']->gateways) || empty($context['original_node']->gateways['paypal'])) {
     return;
   }
-   // refactor this
   if ($context['original_node']->gateways['paypal']['status'] &&
       $context['original_node']->gateways['paypal']['id'] == 'braintree_paypal|commerce_payment_braintree_paypal') {
     $enabled_form_ids = variable_get('braintree_paypal_compact', array());
@@ -280,12 +273,14 @@ function braintree_payment_clone_node_alter(&$node, $context) {
  * Braintree compact flow enabled.
  */
 function braintree_payment_node_insert($node) {
-  // TODO: check to see if node is fundraiser type.
   if (isset($node->braintree_paypal_compact) && $node->braintree_paypal_compact) {
     _braintree_payment_paypal_set_compact($node->nid);
   }
 }
 
+/**
+ * Helper function to determine if the node has the braintree paypal option.
+ */
 function _braintree_payment_paypal_method_is_option($node, $form = NULL) {
   if (empty($node->type) || !fundraiser_is_donation_type($node->type)) {
     return FALSE;
@@ -295,7 +290,6 @@ function _braintree_payment_paypal_method_is_option($node, $form = NULL) {
     return TRUE;  
   }
   return FALSE;
-
 }
 
 /**
@@ -320,4 +314,23 @@ function _braintree_payment_paypal_set_compact($nid) {
     $enabled_form_ids[] = $nid;
     variable_set('braintree_paypal_compact', $enabled_form_ids);
   }
+}
+
+/**
+ * Helper function get standard default field keys for fundraiser
+ * webform components.
+ */
+function _braintree_payment_default_fundraiser_fields() {
+  return  array(
+    'first_name',
+    'last_name',
+    'mail',
+    'address',
+    'address_line_2',
+    'city',
+    'zip',
+    'country',
+    'state',
+    'sbp_phone',
+  );
 }
