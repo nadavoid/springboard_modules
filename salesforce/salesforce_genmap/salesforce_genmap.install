@@ -181,12 +181,14 @@ function salesforce_genmap_update_7002(&$sandbox) {
   }
 }
 
-
-
 /**
  * Create Salesforce mappings for secure preopoulate autofill.
  */
 function salesforce_genmap_update_7003(&$sandbox) {
+  if (!module_exists('salesforce_genmap')) {
+    throw new DrupalUpdateException('Bailing out of salesforce_genmap_update_7003() because salesforce_genmap is not available.');
+  }
+
   $path = libraries_get_path('salesforce');
   require_once $path . '/soapclient/SforcePartnerClient.php';
 

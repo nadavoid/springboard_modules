@@ -197,6 +197,15 @@ function springboard_p2p_set_country_and_state_defaults_and_options(&$form, $for
   if (count($new_options)) {
     $form['sbp_state'][$form['sbp_state']['#language']]['#options'] = $new_options;
   }
+  else {
+    $form['sbp_state'][$form['sbp_state']['#language']]['#type'] = 'textfield';
+    unset($form['sbp_state'][$form['sbp_state']['#language']]['#options']);
+  }
+
+  if (isset($form['#entity']->sbp_state[$form['sbp_state']['#language']][0]['value'])) {
+    $form['sbp_state'][$form['sbp_state']['#language']]['#default_value'] = $form['#entity']->sbp_state[$form['sbp_state']['#language']][0]['value'];
+  }
+  $form['sbp_state'][$form['sbp_state']['#language']]['#element_validate'] = array('springboard_p2p_add_state_and_country_ajax_value_validate');
 }
 
 /**
@@ -224,7 +233,11 @@ function springboard_p2p_add_state_and_country_ajax(&$form) {
  * selected country.
  */
 function springboard_p2p_register_form_state_ajax_submit($form, $form_state) {
-
+  // If no zones are available and a text field is returned then empty it so its
+  // previous value is not present:
+  if ($form['sbp_state'][$form['sbp_state']['#language']]['#type'] == 'textfield') {
+    $form['sbp_state'][$form['sbp_state']['#language']]['#value'] = '';
+  }
   return $form['sbp_state'];
 }
 

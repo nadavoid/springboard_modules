@@ -174,10 +174,18 @@ function commerce_cybersource_soap_cc_settings_form($settings = NULL) {
   );
 
   if (module_exists('commerce_cardonfile')) {
+    $enabled = FALSE;
+    if (!empty($settings['cardonfile'])) {
+      $enabled = TRUE;
+    }
+    elseif (!empty($settings['credit_card']['cardonfile'])) {
+      $enabled = TRUE;
+    }
+
     $form['cardonfile'] = array(
       '#type' => 'checkbox',
       '#title' => t('Enable card on file to store credit card information.'),
-      '#default_value' => $settings['cardonfile'],
+      '#default_value' => $enabled,
     );
   }
 
@@ -210,7 +218,6 @@ function commerce_cybersource_soap_cc_settings_form($settings = NULL) {
     '#options' => commerce_payment_credit_card_types(),
     '#default_value' => $settings['credit_card']['card_types'],
   );
-
 
   $form['credit_card']['avs_codes'] = array(
     '#type' => 'checkboxes',
@@ -475,7 +482,7 @@ function commerce_cybersource_soap_cc_submit_form_validate($payment_method, $pan
 /**
  * Payment method callback: checkout form submission.
  */
-function commerce_cybersource_soap_cc_submit_form_submit($payment_method, $pane_form, $pane_values, $order, $charge) {
+function commerce_cybersource_soap_cc_submit_form_submit($payment_method, $pane_form, $pane_values, $order, $charge, $donation = NULL) {
   $payment_method['settings'] += commerce_cybersource_soap_cc_default_settings();
   // Create and populate the request object.
   $request = (object) array(
@@ -585,9 +592,13 @@ function commerce_cybersource_soap_cc_submit_form_submit($payment_method, $pane_
   //$request->businessRules_declineAVSFlags = $declines;
   $request->businessRules = (object) array(
     'decline_AVSFlags' => $declines,
-    );
+  );
+  if (!empty($donation) && !empty($donation->reference_charge)) {
+    $request->businessRules->ignoreAVSResult = 'true';
+  }
 
-  if ($response = commerce_cybersource_soap_api_request($payment_method, $request)) {
+  $response = commerce_cybersource_soap_api_request($payment_method, $request);
+  if (!empty($response)) {
     // Prepare a transaction object to log the API response.
     $transaction = commerce_payment_transaction_new('cybersource_soap_cc', $order->order_id);
     $transaction->instance_id = $payment_method['instance_id'];
@@ -1119,8 +1130,7 @@ function commerce_cybersource_soap_api_request($payment_method, $request) {
     // Mask the credit card number and CVV.
     if (!empty($log_request->card)) {
       $log_request->card = clone($log_request->card);
-
-      $log_request->card->accountNumber = str_repeat('X', strlen($log_request->card->accountNumber) - 4) . substr($log_request->card->accountNumber, -4);
+      $log_request->card->accountNumber = str_repeat('X', max(4, strlen($log_request->card->accountNumber)) - 4) . substr($log_request->card->accountNumber, -4);
 
       if (!empty($log_request->card->cavv)) {
         $log_request->card->cavv = str_repeat('X', strlen($log_request->card->cavv));

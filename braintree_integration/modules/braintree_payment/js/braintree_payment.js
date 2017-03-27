@@ -40,7 +40,7 @@
         // If this method is currently checked, check the first payment
         // method instead.
         var $first_payment_method = $input.parent('.form-item').siblings('.form-item').eq(0).find('input[name="submitted[payment_information][payment_method]"]');
-        $first_payment_method.attr('checked', 'checked');
+        $first_payment_method.attr('checked', 'checked').trigger('change');
         parent.settings.currentPaymentMethod = $first_payment_method.val();
       }
       $input.parent('.form-item').remove();
@@ -288,6 +288,8 @@
         return;
       }
 
+      var isBillingUpdateForm = undefined !== parent.settings.billing_update_type;
+
       if (!parent.$nonce.val().length) {
         event.preventDefault();
         var triggerBraintreeFieldEvent = function() {
@@ -298,7 +300,9 @@
           }
         };
         parent.hostedFieldsInstance.tokenize(function(error_message, payload) {
-          if (error_message) {
+          // Show errors when not on a billing update form, or when on a billing
+          // update form and only some fields are filled out.
+          if (!isBillingUpdateForm && error_message || (isBillingUpdateForm && error_message && error_message.code != 'HOSTED_FIELDS_FIELDS_EMPTY')) {
             switch (error_message.code) {
               case 'HOSTED_FIELDS_FIELDS_EMPTY':
                 triggerBraintreeFieldEvent();
@@ -318,10 +322,12 @@
                 error('Something bad happened!', error_message);
             }
             parent.$submit.show().next('.donation-processing-wrapper').remove();
-            return;
           }
 
-          parent.$nonce.val(payload.nonce);
+          if (undefined !== payload && undefined !== payload.nonce) {
+            parent.$nonce.val(payload.nonce);
+          }
+
           $.data(parent.$form[0], 'events')['submit'] = parent.callbacks;
           parent.$form.submit();
         });
@@ -546,6 +552,8 @@
     attach: function(context, settings) {
       settings = settings.braintree;
 
+      // If the $paymentMethod variable is defined, we're probably on a donation
+      // page. Otherwise we're probably on a billing update page.
       var $paymentMethod = $('input[name="submitted[payment_information][payment_method]"]');
       if ($paymentMethod.length) {
         if ($paymentMethod.is('[type=hidden]')) {
@@ -555,11 +563,19 @@
           settings.currentPaymentMethod = $paymentMethod.filter(':checked').val();
         }
 
-        // Get the available payment methods.
         settings.availableMethods = $paymentMethod.map(function() {
           return this.value;
         }).get();
+      }
+      else if (undefined !== Drupal.settings.braintree.billing_update_type) {
+        settings.currentPaymentMethod = Drupal.settings.braintree.billing_update_type;
+        settings.availableMethods = [Drupal.settings.braintree.billing_update_type];
+        if (!$.inArray(Drupal.settings.braintree.billing_update_type, settings.enabledMethods)) {
+          settings.enabledMethods.push(Drupal.settings.braintree.billing_update_type);
+        }
+      }
 
+      if (undefined !== settings.currentPaymentMethod) {
         Drupal.braintreeInstance = new BraintreePayment(settings);
         $paymentMethod.on('change', function() {
           Drupal.braintreeInstance.setCurrentPaymentMethod($(this).val());
