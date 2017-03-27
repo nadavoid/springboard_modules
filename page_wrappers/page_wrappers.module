@@ -673,13 +673,13 @@ function theme_page_wrappers_node_assignments($variables) {
 function page_wrappers_file_insert($file) {
 
   //add timestamps to files and rename js files, do not do this on clone process
-  if (arg(2) != 'clone' && isset($file->source) && (strpos($file->source, 'page_wrappers_js_und_') === 0 || strpos($file->source, 'page_wrappers_css_und_') === 0)) {
+  if (arg(2) != 'clone' && isset($file->source) && (strpos($file->source, 'page_wrappers_js_') === 0 || strpos($file->source, 'page_wrappers_css_') === 0)) {
 
     $dir = drupal_dirname($file->uri);
     $filename = _page_wrappers_add_timestamp($file->filename);
 
     // for .js files, strip off the .txt extension that gets added
-    if (strpos($file->source, 'page_wrappers_js_und_') === 0) {
+    if (strpos($file->source, 'page_wrappers_js_') === 0) {
       $filename = substr($filename, 0, strlen($filename) - 4);
     }
 
