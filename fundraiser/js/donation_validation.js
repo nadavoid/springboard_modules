@@ -3,6 +3,7 @@
     attach: function (context, settings) {
       var clearElement = function($selector) {
         $selector
+          .val('')
           .removeClass('valid')
           .next('label')
             .remove()
