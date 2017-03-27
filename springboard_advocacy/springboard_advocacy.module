@@ -1051,3 +1051,11 @@ function springboard_advocacy_node_form_post_save($node) {
     $form_state['redirect'] = $path;
   }
 }
+
+function springboard_advocacy_springboard_views_springboard_dashboard_panes_alter(&$types) {
+  foreach ($types as $key => $type) {
+    if (springboard_advocacy_is_action_type($type)) {
+      unset($types[$key]);
+    }
+  }
+}
