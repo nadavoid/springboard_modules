@@ -1844,10 +1844,17 @@ function commerce_cybersource_update_customer_profile_request($payment_method, $
       $card_type = $pane_values['card_data']->card_type;
       $request->card->cardType = commerce_cybersource_cc_type_code($card_type);
     }
+
   // Add the CVV data if included.
   if (isset($pane_values['credit_card']['code'])) {
     $request->card->cvNumber = $pane_values['credit_card']['code'];
   }
+
+  // Do not update the profile if card type is unavailable:
+  if (!isset($request->card->cardType) || empty($request->card->cardType)) {
+    return FALSE;
+  }
+
   return commerce_cybersource_soap_api_request($payment_method, $request);
 }
 
@@ -1865,3 +1872,38 @@ function commerce_cybersource_delete_customer_profile_request($payment_method, $
   return commerce_cybersource_soap_api_request($payment_method, $request);
 }
 
+/**
+ * Implements hook_fundraiser_donation_success().
+ */
+function commerce_cybersource_fundraiser_donation_success($donation) {
+  // If this donor made another donation prior to this one, check for updated address field values and trigger an
+  // update of the donor's Cybersource profile if any field is different:
+  if (isset($donation->did) && isset($donation->donation) && is_array($donation->donation))  {
+    $previous_did = db_query("SELECT did FROM {fundraiser_donation} WHERE uid = :uid AND did != :current_did ORDER BY did DESC LIMIT 1",
+      array(':uid' => $donation->uid, ':current_did' => $donation->did))
+      ->fetchField();
+    if ($previous_did) {
+      $previous_donation = fundraiser_donation_load($previous_did);
+      if (isset($previous_donation->donation) && is_array($previous_donation->donation)) {
+        $address_fields = array(
+          'first_name',
+          'last_name',
+          'address',
+          'address_line_2',
+          'city',
+          'country',
+          'state', 
+          'zip',
+        );
+        foreach ($address_fields as $address_field) {
+          $current_field_val = isset($donation->donation[$address_field]) ? $donation->donation[$address_field] : '';
+          $previous_field_val = isset($previous_donation->donation[$address_field]) ? $previous_donation->donation[$address_field] : '';
+          if ($current_field_val != $previous_field_val) {
+            $donation->update_payment = TRUE;
+            break;
+          }
+        }
+      }
+    }
+  }
+}

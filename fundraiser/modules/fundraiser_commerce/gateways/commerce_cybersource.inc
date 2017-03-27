@@ -97,12 +97,11 @@ function commerce_cybersource_fundraiser_commerce_charge($payment_method, $donat
   $order = commerce_order_load($donation->did);
   $wrapper = entity_metadata_wrapper('commerce_order', $order);
   $charge = $wrapper->commerce_order_total->value();
-
   $pane_form = array(); // Not actually used anywhere in this system, so ignore it.
 
   $pane_values = _fundraiser_commerce_credit_card_pane_values($donation);
   _fundraiser_commerce_submit_handler_pane_values($pane_values, $donation);
-
+  
   // Customer data for charge pulls from the customer profile given on the order, so we can ignore that.
   // If the charge fails, returns false, else nothing.
   $result = commerce_cybersource_soap_cc_submit_form_submit($payment_method, $pane_form, $pane_values, $order, $charge, $donation);
