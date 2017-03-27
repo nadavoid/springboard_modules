@@ -983,8 +983,8 @@ function commerce_cybersource_soap_refund($order, $transaction, $amount) {
       $transaction->status = COMMERCE_PAYMENT_STATUS_SUCCESS;
       $transaction->remote_status = COMMERCE_CREDIT_CREDIT . ':' . REQUEST_TIME;
     }
-
     commerce_payment_transaction_save($transaction);
+    return $response;
   }
   else {
     return FALSE;
