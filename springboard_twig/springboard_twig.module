@@ -31,93 +31,82 @@ function springboard_twig_libraries_info() {
 }
 
 /**
+ * Implements hook_module_implements_alter().
+ *
+ * Reorder module weights so that springboard_twig will run last.
+ */
+function springboard_twig_module_implements_alter(&$implementations, $hook) {
+  $hooks = array(
+    'form_email_wrapper_node_form_alter',
+    'mail_alter',
+  );
+  if (in_array($hook, $hooks)) {
+    $module_name = 'springboard_twig';
+    $group = $implementations[$module_name];
+    unset($implementations[$module_name]);
+    $implementations[$module_name] = $group;
+  }
+}
+
+/**
  * Generates an informative field to be inserted into forms.
  *
  * @return array
  *   An array of form elements to be added to a form.
  */
-function _springboard_twig_info_form_field($type = 'donation_form') {
-  $twig_description = array(
-    'twig' => array(
-      '#type' => 'markup',
-      '#prefix' => '<br/>',
-      '#markup' => t('You may also use the Twig templating language in your message. The available object variables are !variables. For more information about Twig, visit !url.!breaks', array(
-        '!variables' => '<code>node</code>, <code>submission</code>, and <code>donation</code>',
-        '!url' => l(t('the Twig project page'), 'http://twig.sensiolabs.org/doc/1.x/', array(
-          'attributes' => array(
-            'target' => '_blank',
-          ),
-        )),
-        '!breaks' => '<br/><br/>',
-      )),
-    ),
-  );
+function _springboard_twig_info_form_field($type) {
   $twig_variables = array(
-    'Node' => array(
-      'nid' => t('The node ID.'),
-      'title' => t('The node title.'),
+    'node' => array(
+      'node.nid' => t('The node ID.'),
+      'node.title' => t('The node title.'),
     ),
-    'Submission' => array(
-      'sid' => t('The submission ID.'),
-      'nid' => t('The node ID.'),
-      'uid' => t("The user's ID."),
+    'submission' => array(
+      'submission.sid' => t('The submission ID.'),
+      'submission.nid' => t('The node ID.'),
+      'submission.uid' => t("The user's ID."),
+    ),
+    'website' => array(
+      'website.mail' => t("The website's email address."),
+      'website.login_url' => t("The website's login URL."),
+      'website.name' => t("The website's name."),
+      'website.slogan' => t("The website's slogan."),
+      'website.url' => t("The website's full URL."),
+      'website.url_brief' => t("The website's URL, excluding 'https://'."),
     ),
   );
 
-  if ($type == 'donation_form') {
-    $twig_variables['Donation'] = array(
-      'did' => t('The donation ID.'),
-      'nid' => t('The node ID.'),
-      'sid' => t('The submission ID.'),
-      'uid' => t("The user's ID."),
-      'user' => t('The user object.'),
-      'user.name' => t("The user's name."),
-      'user.mail' => t("The user's email."),
-      'amount' => t('The amount of the donation.'),
-      'amount.percent' => t('The amount of the donation as a percantage relative to the goal amount.'),
-      'currency' => t('The currency of the donation.'),
-      'transaction_date' => t('The transaction date.'),
-      'donation' => t('The raw donation data.'),
-      'donation.amount' => t('The amount of the donation, from the submission data.'),
-      'donation.amount_formatted' => t('The formatted amount, e.g. "$10.00".'),
-      'donation.currency' => t('The currency of the donation, e.g. USD, from the submission data.'),
-      'donation.currency.symbol' => t('The currency symbol, e.g. $.'),
-      'donation.currency.minor_unit' => t('The currencies minor sybmol, e.g. "cent".'),
-      'donation.currency.code' => t('The currency code, e.g. USD.'),
-      'donation.quantity' => t('The quantity.'),
-      'donation.payment_method' => t('The payment method, e.g. "credit".'),
-      'donation.payment_fields.credit' => t('Holds the credit data, if the payment_method is credit.'),
-      'donation.payment_fields.credit.card_number' => t('The credit card number, if the payment_method is credit.'),
-      'donation.payment_fields.credit.card_type' => t('The credit card type, e.g. "Visa", if the payment_method is credit.'),
-      'donation.payment_fields.credit.ocd' => t('Boolean value signifying if the donation was used to enroll in One Click Donate.'),
-      'donation.payment_fields.credit.card_expiration_month' => t('The credit card expiration month, if the payment_method is credit.'),
-      'donation.payment_fields.credit.card_expiration_year' => t('The credit card expiration year, if the payment_method is credit.'),
-      'donation.first_name' => t('The first name, from the submission data.'),
-      'donation.last_name' => t('The last name, from the submission data.'),
-      'donation.mail' => t('The email address, from the submission data.'),
-      'donation.address' => t('The street address, from the submission data.'),
-      'donation.address_line_2' => t('The street address, line 2, from the submission data.'),
-      'donation.city' => t('The city, from the submission data.'),
-      'donation.state' => t('The state, from the submission data.'),
-      'donation.country' => t('The country, from the submission data.'),
-      'donation.zip' => t('The zip code, from the submission data.'),
-      'donation.payment_method' => t('The payment method type, from the submission data.'),
-      'donation.recurs_monthly' => t('Boolean value, if the donation recurs montly.'),
-      'submission_data' => t('The submission data for this donation.'),
-      'submission_data.amount' => t('The amount of the donation, from the submission data.'),
-      'submission_data.currency' => t('The currency of the donation, e.g. USD, from the submission data.'),
-      'submission_data.first_name' => t('The first name, from the submission data.'),
-      'submission_data.last_name' => t('The last name, from the submission data.'),
-      'submission_data.mail' => t('The email address, from the submission data.'),
-      'submission_data.address' => t('The street address, from the submission data.'),
-      'submission_data.address_line_2' => t('The street address, line 2, from the submission data.'),
-      'submission_data.city' => t('The city, from the submission data.'),
-      'submission_data.state' => t('The state, from the submission data.'),
-      'submission_data.country' => t('The country, from the submission data.'),
-      'submission_data.zip' => t('The zip code, from the submission data.'),
-      'submission_data.payment_method' => t('The payment method type, from the submission data.'),
-    );
+  $available_types = '';
+  $last = count($twig_variables) - 1;
+  foreach (array_keys($twig_variables) as $index => $key) {
+    if ($index < $last) {
+      $available_types .= '<code>' . $key . '</code>, ';
+    }
+    else {
+      $available_types .= 'and <code>' . $key . '</code>';
+    }
   }
+
+  $description_markup = t('You may also use the Twig templating language in your message. The available object variables are !types. For more information about Twig, visit !url.!breaks', array(
+    '!types' => $available_types,
+    '!url' => l(t('the Twig project page'), 'http://twig.sensiolabs.org/doc/1.x/', array(
+      'attributes' => array(
+        'target' => '_blank',
+      ),
+    )),
+    '!breaks' => '<br/><br/>',
+  ));
+
+  drupal_alter('springboard_twig_form_twig_info_field_description', $description_markup);
+
+  $twig_description = array(
+    'twig' => array(
+      '#type' => 'markup',
+      '#prefix' => '<br />',
+      '#markup' => $description_markup,
+    ),
+  );
+
+  drupal_alter('springboard_twig_form_twig_info_field_variables', $type, $twig_variables);
 
   $header = array(
     array('data' => 'Variable'),
@@ -161,7 +150,7 @@ function _springboard_twig_info_form_field($type = 'donation_form') {
  * @return string
  *   The processed text.
  */
-function _springboard_twig_process_text($text, $replacements) {
+function _springboard_twig_process_text($text, array $replacements) {
   $library_name = 'twig';
   if (($library = libraries_load($library_name)) && !empty($library['installed'])) {
     try {
@@ -169,6 +158,23 @@ function _springboard_twig_process_text($text, $replacements) {
       $loader = new Twig_Loader_Array();
       $twig = new Twig_Environment($loader);
       $twig->addExtension(new Twig_Extension_StringLoader());
+
+      $node_type = $replacements['node']->type;
+
+      // Add website variables.
+      $site_url = str_replace(request_path(), '', url(current_path(), array('absolute' => TRUE)));
+      $replacements['website'] = array(
+        'website.mail' => variable_get('site_mail'),
+        'website.login_url' => $site_url . 'user',
+        'website.name' => variable_get('site_name'),
+        'website.slogan' => variable_get('site_slogan'),
+        'website.url' => $site_url,
+        'website.url_brief' => rtrim(preg_replace('/https?:\/\//i', '', $site_url), '/'),
+      );
+
+      // Let other modules add or replace their own variables.
+      drupal_alter('springboard_twig_variable_replacements', $node_type, $replacements);
+
       $text = html_entity_decode($text);
       $text = $twig->createTemplate($text)->render($replacements);
     }
@@ -198,10 +204,38 @@ function _springboard_twig_process_text($text, $replacements) {
  * their messages, and which variables are available to them.
  */
 function springboard_twig_form_webform_email_edit_form_alter(&$form, &$form_state) {
+  if (!empty($form['#node'])) {
+    $node = $form['#node'];
+  }
+  elseif (!empty($form['node'])) {
+    $node = $form['node']['#value'];
+  }
+  else {
+    return;
+  }
+
   // Insert text after the components token field.
   $i = array_search('preview_url', array_keys($form['template']));
-  $twig = _springboard_twig_info_form_field($form['#node']->type);
+  $twig = _springboard_twig_info_form_field($node->type);
   $form['template'] = array_slice($form['template'], 0, $i, TRUE) + $twig + array_slice($form['template'], $i, NULL, TRUE);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function springboard_twig_form_email_wrapper_node_form_alter(&$form, &$form_state) {
+  if (empty($form['tokenset'])) {
+    $form['tokenset'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Available tokens'),
+      '#description' => t('Tokens may be used in the "Subject," "HTML Message" and "Text Message" Fields.'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#weight' => 15,
+    );
+  }
+
+  $form['tokenset']['twig'] = _springboard_twig_info_form_field($form['#node']->type);
 }
 
 /**
@@ -210,11 +244,7 @@ function springboard_twig_form_webform_email_edit_form_alter(&$form, &$form_stat
  * Process the email messages with the Twig templating language.
  */
 function springboard_twig_email_wrappers_email_body_messages_alter(&$data) {
-  if (empty($data['message']['params']['donation'])) {
-    $data['message']['params']['donation'] = fundraiser_donation_get_donation($data['message']['params']['submission']->sid);
-  }
   $replacements = array(
-    'donation' => $data['message']['params']['donation'],
     'node' => $data['message']['params']['node'],
     'submission' => $data['message']['params']['submission'],
   );
@@ -252,13 +282,6 @@ function springboard_twig_webform_confirmations_confirmation_message_alter(&$con
     'node' => $vars['node'],
     'submission' => webform_get_submission($vars['node']->nid, $vars['sid']),
   );
-
-  $type = $vars['node']->type;
-  if ($type == 'donation_form') {
-    $replacements += array(
-      'donation' => fundraiser_donation_get_donation($vars['sid']),
-    );
-  }
 
   $confirmation_message = _springboard_twig_process_text($confirmation_message, $replacements);
 }

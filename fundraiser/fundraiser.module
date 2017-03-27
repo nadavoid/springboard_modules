@@ -4374,3 +4374,76 @@ function _fundraiser_update_webform_component_descr($nid, $cid, $new_descr) {
         ->execute();
   }
 }
+
+/**
+ * Implements hook_springboard_twig_form_twig_info_field_variables_alter().
+ */
+function fundraiser_springboard_twig_form_twig_info_field_variables_alter($node_type, &$vars) {
+  if (!fundraiser_is_donation_type($node_type)) {
+    return;
+  }
+
+  $vars['donation'] = array(
+    'donation.did' => t('The donation ID.'),
+    'donation.nid' => t('The node ID.'),
+    'donation.sid' => t('The submission ID.'),
+    'donation.uid' => t("The user's ID."),
+    'donation.user' => t('The user object.'),
+    'donation.user.name' => t("The user's name."),
+    'donation.user.mail' => t("The user's email."),
+    'donation.amount' => t('The amount of the donation.'),
+    'donation.amount.percent' => t('The amount of the donation as a percantage relative to the goal amount.'),
+    'donation.currency' => t('The currency of the donation.'),
+    'donation.transaction_date' => t('The transaction date.'),
+    'donation.donation' => t('The raw donation data.'),
+    'donation.donation.amount' => t('The amount of the donation, from the submission data.'),
+    'donation.donation.amount_formatted' => t('The formatted amount, e.g. "$10.00".'),
+    'donation.donation.currency' => t('The currency of the donation, e.g. USD, from the submission data.'),
+    'donation.donation.currency.symbol' => t('The currency symbol, e.g. $.'),
+    'donation.donation.currency.minor_unit' => t('The currencies minor sybmol, e.g. "cent".'),
+    'donation.donation.currency.code' => t('The currency code, e.g. USD.'),
+    'donation.donation.quantity' => t('The quantity.'),
+    'donation.donation.payment_method' => t('The payment method, e.g. "credit".'),
+    'donation.donation.payment_fields.credit' => t('Holds the credit data, if the payment_method is credit.'),
+    'donation.donation.payment_fields.credit.card_number' => t('The credit card number, if the payment_method is credit.'),
+    'donation.donation.payment_fields.credit.card_type' => t('The credit card type, e.g. "Visa", if the payment_method is credit.'),
+    'donation.donation.payment_fields.credit.ocd' => t('Boolean value signifying if the donation was used to enroll in One Click Donate.'),
+    'donation.donation.payment_fields.credit.card_expiration_month' => t('The credit card expiration month, if the payment_method is credit.'),
+    'donation.donation.payment_fields.credit.card_expiration_year' => t('The credit card expiration year, if the payment_method is credit.'),
+    'donation.donation.first_name' => t('The first name, from the submission data.'),
+    'donation.donation.last_name' => t('The last name, from the submission data.'),
+    'donation.donation.mail' => t('The email address, from the submission data.'),
+    'donation.donation.address' => t('The street address, from the submission data.'),
+    'donation.donation.address_line_2' => t('The street address, line 2, from the submission data.'),
+    'donation.donation.city' => t('The city, from the submission data.'),
+    'donation.donation.state' => t('The state, from the submission data.'),
+    'donation.donation.country' => t('The country, from the submission data.'),
+    'donation.donation.zip' => t('The zip code, from the submission data.'),
+    'donation.donation.payment_method' => t('The payment method type, from the submission data.'),
+    'donation.donation.recurs_monthly' => t('Boolean value, if the donation recurs montly.'),
+    'donation.submission_data' => t('The submission data for this donation.'),
+    'donation.submission_data.amount' => t('The amount of the donation, from the submission data.'),
+    'donation.submission_data.currency' => t('The currency of the donation, e.g. USD, from the submission data.'),
+    'donation.submission_data.first_name' => t('The first name, from the submission data.'),
+    'donation.submission_data.last_name' => t('The last name, from the submission data.'),
+    'donation.submission_data.mail' => t('The email address, from the submission data.'),
+    'donation.submission_data.address' => t('The street address, from the submission data.'),
+    'donation.submission_data.address_line_2' => t('The street address, line 2, from the submission data.'),
+    'donation.submission_data.city' => t('The city, from the submission data.'),
+    'donation.submission_data.state' => t('The state, from the submission data.'),
+    'donation.submission_data.country' => t('The country, from the submission data.'),
+    'donation.submission_data.zip' => t('The zip code, from the submission data.'),
+    'donation.submission_data.payment_method' => t('The payment method type, from the submission data.'),
+  );
+}
+
+/**
+ * Implements hook_springboard_twig_variable_replacements_alter().
+ */
+function fundraiser_springboard_twig_variable_replacements_alter($node_type, &$vars) {
+  if (!fundraiser_is_donation_type($node_type)) {
+    return;
+  }
+
+  $vars['donation'] = fundraiser_donation_get_donation(fundraiser_donation_get_did_by_sid($vars['submission']->sid));
+}
