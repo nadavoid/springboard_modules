@@ -112,6 +112,7 @@ function springboard_cookie_init() {
       array(
         'springboard_cookie' => array(
           'name' => variable_get('springboard_cookie_name', SPRINGBOARD_COOKIE_NAME_DEFAULT),
+          'domain' => variable_get('springboard_cookie_domain', ''),
         ),
       ),
       'setting'
@@ -276,6 +277,12 @@ function springboard_cookie_form_alter(&$form, &$form_state, $form_id) {
       '#default_value' => variable_get('springboard_cookie_name', SPRINGBOARD_COOKIE_NAME_DEFAULT),
       '#description' => t('This will be the name of the Springboard cookie in the client browser cache.'),
     );
+    $form['springboard_cookie']['springboard_cookie_domain'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Cookie domain'),
+      '#default_value' => variable_get('springboard_cookie_domain', ""),
+      '#description' => t("Optional. The Springboard cookie will be set on this domain. Leave blank for the client browser default."),
+    );
     $form['springboard_cookie']['springboard_cookie_expiration_days'] = array(
       '#type' => 'textfield',
       '#title' => t('Days to expiration'),
@@ -304,6 +311,11 @@ function springboard_cookie_settings_validate($form, &$form_state) {
   if (!preg_match("|^[a-zA-Z0-9_\\.]+\$|", $form_state['values']['springboard_cookie_name'])) {
     form_set_error('springboard_cookie_name', t('Springboard cookie name must be alphanumeric.'));
   }
+  // Cookie domain needs to be blank or a valid domain name.
+  if (!empty($form_state['values']['springboard_cookie_domain']) && !preg_match("/^([a-z0-9]+(-[a-z0-9]+)*\\.)+[a-z]{2,}$/", $form_state['values']['springboard_cookie_domain'])) {
+    form_set_error('springboard_cookie_domain', t("Springboard cookie domain must be a valid URL domain name."));
+  }
+  // Cookie expiration needs to be an integer.
   $expiration_days = (float)$form_state['values']['springboard_cookie_expiration_days'];
   if (!is_numeric($form_state['values']['springboard_cookie_expiration_days']) || $expiration_days < 0 || (int)$expiration_days != $expiration_days) {
     form_set_error('springboard_cookie_expiration_days', t('Springboard cookie days to expiration must be an integer greater than zero.'));
@@ -453,5 +465,12 @@ function springboard_cookie_set_cookie($cookie_data) {
   $encrypted = secure_prepopulate_encrypt($serialized);
   $cookie_name = variable_get('springboard_cookie_name', SPRINGBOARD_COOKIE_NAME_DEFAULT);
   $expiration_days = variable_get('springboard_cookie_expiration_days', SPRINGBOARD_COOKIE_EXPIRATION_DAYS_DEFAULT);
-  setcookie($cookie_name, $encrypted, time() + 60 * 60 * 24 * $expiration_days, ini_get('session.cookie_path'));
+  $cookie_domain = variable_get('springboard_cookie_domain', '');
+  setcookie(
+    $cookie_name,
+    $encrypted,
+    time() + 60 * 60 * 24 * $expiration_days,
+    ini_get('session.cookie_path'),
+    empty($cookie_domain) ? null : $cookie_domain
+  );
 }
