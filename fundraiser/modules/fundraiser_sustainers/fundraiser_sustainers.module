@@ -332,17 +332,6 @@ function fundraiser_sustainers_check_access($did) {
 }
 
 /**
- * Menu callback function, determines if a user has any recurring donations.
- */
-function _fundraiser_sustainers_user_has_recurring_donations($user) {
-  $donations = _fundraiser_sustainers_get_donation_sets_recurr_by_uid($user->uid);
-  if (!$donations) {
-    return FALSE;
-  }
-  return TRUE;
-}
-
-/**
  * Menu callback for the standalone cron.
  */
 function fundraiser_sustainers_standalone_cron() {
