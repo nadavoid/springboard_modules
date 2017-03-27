@@ -73,6 +73,11 @@ function _springboard_twig_info_form_field($type) {
       'website.url' => t("The website's full URL."),
       'website.url_brief' => t("The website's URL, excluding 'https://'."),
     ),
+    'date' => array(
+      'date.long' => t('Current date, long format (Wednesday, September 23, 2015 - 09:06).'),
+      'date.medium' => t('Current date, medium format (Wed, 09/23/2015 - 09:06).'),
+      'date.short' => t('Current date, short format (09/23/2015 - 09:06).'),
+    ),
   );
 
   $available_types = '';
@@ -170,6 +175,13 @@ function _springboard_twig_process_text($text, array $replacements) {
         'website.slogan' => variable_get('site_slogan'),
         'website.url' => $site_url,
         'website.url_brief' => rtrim(preg_replace('/https?:\/\//i', '', $site_url), '/'),
+      );
+
+      $time = time();
+      $replacements['date'] = array(
+        'long' => format_date($time, 'long'),
+        'medium' => format_date($time, 'medium'),
+        'short' => format_date($time, 'short'),
       );
 
       // Let other modules add or replace their own variables.
