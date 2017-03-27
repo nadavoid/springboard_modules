@@ -199,6 +199,12 @@ function fundraiser_commerce_form_fundraiser_admin_settings_alter(&$form, &$form
     '#default_value' => variable_get('fundraiser_default_country', 'US'),
     '#description' => t('Enter the default initial country to be used on donation forms.'),
   );
+  $form['fundraiser']['fundraiser_all_countries'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show All Countries'),
+    '#default_value' => variable_get('fundraiser_all_countries', 0),
+    '#description' => t('Show all countries in the country field on donation forms and billing update forms.'),
+  );
 }
 
 /**
