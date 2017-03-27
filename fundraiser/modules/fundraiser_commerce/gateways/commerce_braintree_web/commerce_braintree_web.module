@@ -498,7 +498,7 @@ function commerce_braintree_web_submit_form_submit($payment_method, $pane_form, 
   drupal_alter('commerce_braintree_web_submit_form_customer', $customer);
 
   if (!empty($customer['customer'])) {
-    $user = $customer;
+    $user = $customer['customer'];
   }
   else {
     global $user;
@@ -619,8 +619,9 @@ function commerce_braintree_web_submit_form_submit($payment_method, $pane_form, 
   $braintree_result->new_payment_method = FALSE;
   if ($success) {
     // If cardonfile is enabled and this appears to be a new card.
-    $existing = db_query('SELECT uid, card_id FROM {braintree_vault_payment_methods} WHERE unique_identifier = :id', array(
+    $existing = db_query('SELECT uid, card_id FROM {braintree_vault_payment_methods} WHERE unique_identifier = :id AND uid = :uid', array(
       ':id' => $braintree_result->transaction->creditCardDetails->uniqueNumberIdentifier,
+      ':uid' => $user->uid,
     ))->fetchAll();
 
     $existing = reset($existing);
