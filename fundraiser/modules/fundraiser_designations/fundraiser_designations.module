@@ -1362,6 +1362,9 @@ function fundraiser_designations_clone_fund_groups($node) {
       fundraiser_fund_group_draggable_save($arg, $group->fundraiser_fund_group_id, $group->data['weight']);
 
       $data = db_query("SELECT * FROM {fundraiser_fund_group_overrides} WHERE gid = :gid", array(':gid' => $group_id))->fetchAssoc();
+      if (isset($data['price_set'])) {
+        $data['price_set'] = unserialize($data['price_set']);
+      }
       if (!empty($data)) {
         $data['gid'] = $group->fundraiser_fund_group_id;
         drupal_write_record('fundraiser_fund_group_overrides', $data);
