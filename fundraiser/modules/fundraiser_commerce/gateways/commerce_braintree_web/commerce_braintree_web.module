@@ -616,6 +616,7 @@ function commerce_braintree_web_submit_form_submit($payment_method, $pane_form, 
 
   list($success, $braintree_result) = braintree_transaction_sale($sale_data, $context);
   $braintree_result = $braintree_result['result'];
+  $braintree_result->new_payment_method = FALSE;
   if ($success) {
     // If cardonfile is enabled and this appears to be a new card.
     $existing = db_query('SELECT uid, card_id FROM {braintree_vault_payment_methods} WHERE unique_identifier = :id', array(
@@ -660,6 +661,7 @@ function commerce_braintree_web_submit_form_submit($payment_method, $pane_form, 
         commerce_cardonfile_save($card);
         $braintree_result->card_id = $card->card_id;
         $braintree_result->uid = $card->uid;
+        $braintree_result->new_payment_method = TRUE;
         watchdog('commerce_braintree_web', 'Braintree customer ID @profile_id created and saved to Drupal user @uid.', array('@profile_id' => (string) $braintree_result->transaction->customerDetails->id, '@uid' => $order->uid));
       }
       // Otherwise, update the existing record.
