@@ -809,6 +809,11 @@ function _fundraiser_commerce_zone_field_display($form, $form_state, $field) {
   // Get countries.
   $countries = fundraiser_commerce_get_countries();
 
+  // Copying the form values into a 'submitted' array to work with the zone field display.
+  if (empty($form_state['values']['submitted']) && !empty($form_state['values'])) {
+    $form_state['values']['submitted'] = $form_state['values'];
+  }
+
   // Look for the value passed from the form_state first
   if (!empty($form_state['values']['submitted'])) {
     // Flatten form state array
@@ -854,6 +859,9 @@ function _fundraiser_commerce_zone_field_display($form, $form_state, $field) {
   else {
     // If there are no zones to match, then fall back on a non-select solution.
     $field['#type'] = 'textfield';
+
+    // Prevent validation failure if the zone field is not populated:
+    $field['#validated'] = TRUE;
 
     // Unset the options to avoid validation errors
     unset($field['#options']);
