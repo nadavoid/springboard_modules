@@ -571,7 +571,7 @@ function webform_user_webform_submit($form, &$form_state) {
       }
       webform_submission_update($node, $submission);
       // Save webform user fields in user session for the existing user.
-      if (_webform_user_is_webform_user_session_store()) {
+      if (_webform_user_is_webform_user_session_store($form_state)) {
         _webform_user_session_set($node->nid, $map);
       }
     }
@@ -603,7 +603,7 @@ function webform_user_webform_submit($form, &$form_state) {
       }
       webform_submission_update($node, $submission);
       // Save webform user fields in user session.
-      if (_webform_user_is_webform_user_session_store()) {
+      if (_webform_user_is_webform_user_session_store($form_state)) {
         _webform_user_session_set($node->nid, $map);
       }
     }
@@ -1297,8 +1297,22 @@ function _webform_user_is_webform_user_node_type($type) {
 
 /**
  * Check if webform_user should save submission values to session.
+ *
+ * @form_state
+ *   The submitted form state.
+ *
+ * @return bool
+ *   Whether to allow session storage.
  */
-function _webform_user_is_webform_user_session_store() {
+function _webform_user_is_webform_user_session_store($form_state) {
+  // Allow other modules to prevent webform user session storage.
+  $session_cancel = module_invoke_all('webform_user_session_storage_cancel', $form_state);
+  foreach ($session_cancel as $cancel) {
+    if (!$cancel) {
+      return FALSE;
+    }
+  }
+
   return variable_get('webform_user_session_store', FALSE);
 }
 
