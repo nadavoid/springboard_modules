@@ -49,7 +49,7 @@ function salesforce_cache_clear_form() {
 }
 
 /**
- * Implements hook_form_alter().
+ * Submit function.
  */
 function salesforce_cache_clear_form_submit(&$form, &$form_state) {
   cache_clear_all('*', 'cache_salesforce_object', TRUE);
