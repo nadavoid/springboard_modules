@@ -9,7 +9,7 @@ function salesforce_cache_menu() {
     'description' => '',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('salesforce_cache_clear_form'),
-    'access arguments' => array('administer salesforce'),
+    'access callback' => 'salesforce_mappings_access',
     'type' => MENU_LOCAL_ACTION,
   );
 
@@ -18,7 +18,7 @@ function salesforce_cache_menu() {
     'description' => '',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('salesforce_cache_clear_form'),
-    'access arguments' => array('administer salesforce'),
+    'access callback' => 'salesforce_mappings_access',
     'type' => MENU_LOCAL_ACTION,
   );
 
