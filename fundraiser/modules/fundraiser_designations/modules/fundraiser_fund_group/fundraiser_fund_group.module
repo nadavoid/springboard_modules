@@ -278,7 +278,7 @@ function fundraiser_fund_group_drag_submit(&$form, &$form_state) {
  */
 function fundraiser_fund_group_draggable_save($arg, $fundraiser_fund_group_id, $weight) {
   $record = array(
-    'view_name' => 'fundraiser_fund_groups_node',
+    'view_name' => 'fundraiser_fund_group',
     'view_display' => 'block_1',
     'args' => $arg,
     'entity_id' => $fundraiser_fund_group_id,
