@@ -18,13 +18,37 @@ function springboard_group_default_rules_configuration() {
     "ACCESS_EXPOSED" : "1",
     "USES VARIABLES" : { "user" : { "label" : "user", "type" : "user" } },
     "ACTION SET" : [
-      { "og_group_content_add" : { "entity" : [ "user" ], "group" : [ "site:og-context--node" ] } },
+      { "og_group_content_add" : { "entity" : [ "user" ], "group" : [ "site:springboard-group-context--node" ] } },
       { "drupal_message" : { "message" : "User [user:name] added to group" } }
     ]
   }
 }');
 
   return $items;
+}
+
+function springboard_group_entity_property_info() {
+  $info = array();
+  foreach (og_get_all_group_entity() as $entity_type => $label) {
+    $params = array('@label' => $label);
+    $properties = &$info['site']['properties'];
+    $properties['springboard_group_context__' . $entity_type] = array(
+      'label' => t('Current OG group of @label entity type', $params),
+      'description' => t('The @label that is an OG group from context, if exists.', $params),
+      'getter callback' => 'springboard_group_get_properties',
+      'type' => $entity_type,
+    );
+  }
+
+  return $info;
+}
+
+function springboard_group_get_properties($data = array(), array $options, $name, $type) {
+  // Get the entity type form the property name.
+  $group_type = str_replace('springboard_group_context__', '', $name);
+  if (og_is_group($group_type, arg(1))) {
+    return entity_load_single($group_type, arg(1));
+  }
 }
 
 /**
@@ -358,3 +382,4 @@ function springboard_group_rules_config_form__validate(&$form, &$form_state, $ca
     $form_state['group_ajax_messages'][] = $message;
   }
 }
+
