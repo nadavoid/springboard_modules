@@ -339,8 +339,10 @@ function springboard_cookie_webform_user_webform_submit($form, &$form_state) {
     if ($account) {
       $new_data['uid'] = $account->uid;
     }
+
+    springboard_cookie_tag_client($new_data); // This is where user data is added.
     springboard_cookie_add_profile_values($account);
-    springboard_cookie_tag_client($new_data);
+
   }
 }
 
