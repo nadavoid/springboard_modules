@@ -10,7 +10,7 @@ function salesforce_cache_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('salesforce_cache_clear_form'),
     'access arguments' => array('administer salesforce'),
-    'type' => 388,
+    'type' => MENU_LOCAL_ACTION,
   );
 
   $items['node/%node/salesforce/cache'] = array(
@@ -19,7 +19,7 @@ function salesforce_cache_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('salesforce_cache_clear_form'),
     'access arguments' => array('administer salesforce'),
-    'type' => 388,
+    'type' => MENU_LOCAL_ACTION,
   );
 
   return $items;
