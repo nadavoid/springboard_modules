@@ -1,0 +1,59 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function salesforce_cache_menu() {
+  $items['admin/structure/salesforce/mappings/cache'] = array(
+    'title' => 'Clear Salesforce Object Cache',
+    'description' => '',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('salesforce_cache_clear_form'),
+    'access arguments' => array('administer salesforce'),
+    'type' => 388,
+  );
+
+  $items['node/%node/salesforce/cache'] = array(
+    'title' => 'Clear Salesforce Object Cache',
+    'description' => '',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('salesforce_cache_clear_form'),
+    'access arguments' => array('administer salesforce'),
+    'type' => 388,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_access().
+ */
+function salesforce_cache_clear_form() {
+  $form = array();
+  $form['message'] = array(
+    '#prefix' => '<div>',
+    '#markup' => 'This action will clear the Salesforce object cache, adding any new fields to the form.',
+    '#suffix' => '</div>',
+
+  );
+  $form['destination'] = array(
+    '#type' => 'hidden',
+    '#value' => current_path(),
+  );
+  $form['actions'] = array(
+    '#type' => 'submit',
+    '#value' => 'Clear the object cache',
+    '#submit' => array('salesforce_cache_clear_form_submit'),
+  );
+  return $form;
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function salesforce_cache_clear_form_submit(&$form, &$form_state) {
+  cache_clear_all('*', 'cache_salesforce_object', TRUE);
+  drupal_set_message('Cache Cleared');
+  $go = str_replace('/cache', '', $form_state['values']['destination']);
+  $form_state['redirect'] = array($go);
+}

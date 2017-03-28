@@ -1,0 +1,6 @@
+name = Salesforce Cache
+description = Do things to the salesforce cache.
+package = Salesforce
+core = 7.x
+dependencies[] = salesforce
+dependencies[] = salesforce_mapping
