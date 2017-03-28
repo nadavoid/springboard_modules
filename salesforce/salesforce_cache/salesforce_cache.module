@@ -26,7 +26,7 @@ function salesforce_cache_menu() {
 }
 
 /**
- * Implements hook_menu().
+ * Form callback.
  */
 function salesforce_cache_clear_form() {
   $form = array();
