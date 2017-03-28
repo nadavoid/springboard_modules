@@ -1,0 +1,8 @@
+name = Springboard Advocacy Legislator Lookup
+description = Allows Legislator Lookup forms to be added to pages.
+core = 7.x
+package = Springboard Advocacy
+dependencies[] = multiblock
+dependencies[] = springboard_advocacy
+
+

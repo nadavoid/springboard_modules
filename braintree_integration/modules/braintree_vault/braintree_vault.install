@@ -5,6 +5,123 @@
  */
 
 /**
+ * Implements hook_schema().
+ */
+function braintree_vault_schema() {
+  $schema['braintree_vault_addresses'] = array(
+    'description' => 'Stores data for Braintree Vault user addresses.',
+    'fields' => array(
+      'customer_id' => array(
+        'description' => 'The Braintree customer ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'uid' => array(
+        'description' => 'The user ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'address_id' => array(
+        'description' => "The Braintree customer's address ID.",
+        'type' => 'varchar',
+        'length' => 255,
+      ),
+      'profile_id' => array(
+        'description' => 'The profile ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'payment_method_token' => array(
+        'description' => 'The payment method token.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('address_id'),
+    'indexes' => array(
+      'customer_id' => array('customer_id'),
+      'uid' => array('uid'),
+      'address_id' => array('address_id'),
+      'profile_id' => array('profile_id'),
+    ),
+    'foreign keys' => array(
+      'users' => array(
+        'table' => 'users',
+        'columns' => array(
+          'uid' => 'uid',
+        ),
+      ),
+      'field_data_commerce_customer_address' => array(
+        'table' => 'field_data_commerce_customer_address',
+        'columns' => array(
+          'profile_id' => 'entity_id',
+        ),
+      ),
+    ),
+  );
+  $schema['braintree_vault_payment_methods'] = array(
+    'description' => 'Stores data for Braintree Vault payment methods for different users.',
+    'fields' => array(
+      'customer_id' => array(
+        'description' => 'The Braintree customer ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'uid' => array(
+        'description' => 'The user ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'payment_method_token' => array(
+        'description' => 'The payment method token.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'card_id' => array(
+        'description' => 'The cardonfile card id.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+      ),
+      'unique_identifier' => array(
+        'description' => 'The unique identifier returned from Braintree.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('card_id'),
+    'indexes' => array(
+      'customer_id' => array('customer_id'),
+      'uid' => array('uid'),
+      'card_id' => array('card_id'),
+    ),
+    'foreign keys' => array(
+      'users' => array(
+        'table' => 'users',
+        'columns' => array(
+          'uid' => 'uid',
+        ),
+      ),
+      'commerce_cardonfile' => array(
+        'table' => 'commerce_cardonfile',
+        'columns' => array(
+          'card_id' => 'card_id',
+        ),
+      ),
+    ),
+  );
+  return $schema;
+}
+
+/**
  * Implements hook_install().
  */
 function braintree_vault_install() {
@@ -20,6 +137,7 @@ function braintree_vault_install() {
   }
   // Config braintree_vault to use that new field.
   variable_set('braintree_vault_field', 'braintree_customer_id');
+
   // Enable braintree vault.
   variable_set('braintree_use_vault', 1);
 }
@@ -29,42 +147,137 @@ function braintree_vault_install() {
  */
 function braintree_vault_uninstall() {
   variable_del('braintree_use_vault');
-  variable_del('braintree_vault_field');
   variable_del('braintree_payment_base_url');
-  variable_del('braintree_use_payment_methods_page');
-  variable_del('braintree_payment_methods_custom_page');
+  variable_del('braintree_vault_use_payment_methods_page');
+  variable_del('braintree_vault_payment_methods_custom_page');
 }
 
 /**
- * Create the braintree_customer_id field if it doesn't already exist.
+ * Delete the braintree_customer_id user field and create the addresses table.
  */
-function braintree_vault_create_customer_field() {
-  if (!field_info_field('braintree_customer_id')) {
-    $field = array(
-      'field_name' => 'braintree_customer_id',
-      'type' => 'text',
-    );
-    field_create_field($field);
-  }
+function braintree_vault_update_7001() {
+  variable_del('braintree_vault_field');
 
-  // Create the instance on the bundle.
-  $instance = array(
-    'field_name' => 'braintree_customer_id',
-    'entity_type' => 'user',
-    'label' => 'Braintree Customer ID',
-    'bundle' => 'user',
-    'widget' => array(
-      'type' => 'options_select',
+  // Remove old user field.
+  $field_name = 'braintree_customer_id';
+  if ($instance = field_info_instance('user', $field_name, 'user')) {
+    field_delete_instance($instance);
+  }
+  if (field_info_field($field_name)) {
+    field_delete_field($field_name);
+  }
+  field_purge_batch(100);
+
+  // If the braintree_vault_addresses table doesn't exist, create it.
+  $schema['braintree_vault_addresses'] = array(
+    'description' => 'Stores data for Braintree Vault user addresses.',
+    'fields' => array(
+      'customer_id' => array(
+        'description' => 'The Braintree customer ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'uid' => array(
+        'description' => 'The user ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'address_id' => array(
+        'description' => "The Braintree customer's address ID.",
+        'type' => 'varchar',
+        'length' => 255,
+      ),
+      'profile_id' => array(
+        'description' => 'The profile ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'payment_method_token' => array(
+        'description' => 'The payment method token.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
     ),
-    'display' => array(
-      'default' => array(
-        'type' => 'hidden',
-        'weight' => 10,
+    'primary key' => array('address_id'),
+    'indexes' => array(
+      'customer_id' => array('customer_id'),
+      'uid' => array('uid'),
+      'address_id' => array('address_id'),
+      'profile_id' => array('profile_id'),
+    ),
+    'foreign keys' => array(
+      'users' => array(
+        'table' => 'users',
+        'columns' => array(
+          'uid' => 'uid',
+        ),
+      ),
+      'field_data_commerce_customer_address' => array(
+        'table' => 'field_data_commerce_customer_address',
+        'columns' => array(
+          'profile_id' => 'entity_id',
+        ),
       ),
     ),
   );
-  $prior_instance = field_read_instance($instance['entity_type'], $instance['field_name'], $instance['bundle']);
-  if (empty($prior_instance)) {
-    field_create_instance($instance);
-  }
+  $schema['braintree_vault_payment_methods'] = array(
+    'description' => 'Stores data for Braintree Vault payment methods for different users.',
+    'fields' => array(
+      'customer_id' => array(
+        'description' => 'The Braintree customer ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'uid' => array(
+        'description' => 'The user ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'payment_method_token' => array(
+        'description' => 'The payment method token.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'card_id' => array(
+        'description' => 'The cardonfile card id.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+      ),
+      'unique_identifier' => array(
+        'description' => 'The unique identifier returned from Braintree.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('card_id'),
+    'indexes' => array(
+      'customer_id' => array('customer_id'),
+      'uid' => array('uid'),
+    ),
+    'foreign keys' => array(
+      'users' => array(
+        'table' => 'users',
+        'columns' => array(
+          'uid' => 'uid',
+        ),
+      ),
+      'commerce_cardonfile' => array(
+        'table' => 'commerce_cardonfile',
+        'columns' => array(
+          'card_id' => 'card_id',
+        ),
+      ),
+    ),
+  );
+  db_create_table('braintree_vault_addresses', $schema['braintree_vault_addresses']);
+  db_create_table('braintree_vault_payment_methods', $schema['braintree_vault_payment_methods']);
 }

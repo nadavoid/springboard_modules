@@ -125,7 +125,6 @@ function fundraiser_commerce_cardonfile_views_default_views_alter(&$views) {
   $handler->display->display_options['arguments']['user']['summary_options']['items_per_page'] = '25';
   $handler->display->display_options['arguments']['user']['specify_validation'] = TRUE;
   $handler->display->display_options['arguments']['user']['validate']['type'] = 'commerce_cof_owner';
-  $handler->display->display_options['arguments']['user']['validate']['fail'] = 'empty';
   /* Filter criterion: Commerce Card on File: Card Status */
   $handler->display->display_options['filters']['status']['id'] = 'status';
   $handler->display->display_options['filters']['status']['table'] = 'commerce_cardonfile';

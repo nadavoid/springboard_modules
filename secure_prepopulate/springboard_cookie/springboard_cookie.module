@@ -156,13 +156,13 @@ function springboard_cookie_fundraiser_donation_post_submit_alter(&$form, &$form
 }
 
 /**
- * Implementation of hook_sb_social_share_event_save().
+ * Implements hook_sb_social_share_event_save().
  */
 function springboard_cookie_sb_social_share_event_save($share_data) {
   if (!empty($share_data['share_id'])) {
     // Tag the client with this share_id.
     springboard_cookie_tag_client(array(
-      'share_ids' => array($share_data['share_id'])
+      'share_ids' => array($share_data['share_id']),
     ));
   }
 }
