@@ -3961,7 +3961,7 @@ function fundraiser_update_billing_form($form, &$form_state, $data) {
     }
     elseif (empty($cardonfile)) {
       if (!function_exists('_fundraiser_commerce_credit_card_pane_values')) {
-        module_load_include('module', 'fundraiser_commerce');
+        module_load_include('inc', 'fundraiser_commerce', 'includes/fundraiser_commerce.credit_card');
       }
 
       $stored_card = _fundraiser_commerce_credit_card_pane_values($data['donation']);
