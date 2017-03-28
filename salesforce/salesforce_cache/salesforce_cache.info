@@ -1,5 +1,5 @@
 name = Salesforce Cache
-description = Do things to the salesforce cache.
+description = Helper functions for managing Salesforce cache
 package = Salesforce
 core = 7.x
 dependencies[] = salesforce
