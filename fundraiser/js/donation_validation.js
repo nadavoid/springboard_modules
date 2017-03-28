@@ -307,7 +307,7 @@
           else if ($other_amount.length && !$recurring_other_amount.length) {
             selector = 'input[name="submitted[donation][recurring_amount]"]:first';
           }
-          else if ($other_amount.length && $recurring_other_amount.length) {
+          else if (!$other_amount.length && !$recurring_other_amount.length) {
             selector = 'input[name="submitted[donation][amount]"]:first, input[name="submitted[donation][recurring_amount]"]:first';
           }
           $(selector).each(function() {
