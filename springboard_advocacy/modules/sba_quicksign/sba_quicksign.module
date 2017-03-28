@@ -241,27 +241,24 @@ function sba_quicksign_form_validate(&$form, &$form_state) {
         $field_value = _sba_quicksign_find_field_form_state($form_state['values'], $component_hierarchy[$webform_field]);
         if (!empty($field_value)) {
           $profile[$webform_field] = $field_value;
-        }
-        else {
+        } else {
           if ($webform_field != 'mail') {
             $items = field_get_items('user', $account, $profile_field);
             $profile[$webform_field] = !empty($items[0]['value']) ? $items[0]['value'] : FALSE;
-          }
-          else {
+          } else {
             // Special handling for mail.
             if (valid_email_address($mail)) {
               $profile['mail'] = $mail;
             }
           }
-
-          if (in_array($webform_field, $required_fields)) {
-            if (empty($profile[$webform_field])) {
-              // One or more required fields are missing.
-              $profile[$webform_field] = '';
-              $missing_fields = TRUE;
-            }
-          }
         }
+      }
+    }
+    foreach($required_fields as $field_key) {
+      if (empty($profile[$field_key]) && $field_key != 'mail') {
+        // One or more required fields are missing.
+        $profile[$field_key] = '';
+        $missing_fields = TRUE;
       }
     }
 
