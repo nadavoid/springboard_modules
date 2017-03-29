@@ -430,7 +430,7 @@ function fundraiser_sustainers_skip_submit($form, &$form_state) {
     salesforce_genmap_send_object_to_queue('salesforce_donation', 'update', $donation->node, $donation->did, $donation, 'donation');
   }
 
-  drupal_set_message(t('The recurring donation has been cancelled.'));
+  drupal_set_message(t('The recurring donation has been canceled.'));
   // Afterwards return where we came from.
   drupal_goto(drupal_get_destination());
 }
@@ -1188,7 +1188,7 @@ function fundraiser_sustainers_salesforce_sync_complete_item($item, $result) {
  */
 function fundraiser_sustainers_fundraiser_donation_delete($donation) {
   if ($donation->donation['recurs_monthly'] == TRUE) {
-    // If a recurring donation has been cancelled, we should drop it out of the recurring table.
+    // If a recurring donation has been canceled, we should drop it out of the recurring table.
     _fundraiser_sustainers_delete_recurring($donation->did);
   }
 }
@@ -2085,7 +2085,7 @@ function fundraiser_sustainers_form_fundraiser_admin_settings_alter(&$form, &$fo
   $form['fundraiser_sustainers']['fundraiser_recurring_auto_cancel']['fundraiser_recurring_autocancel_enabled'] = array(
     '#type' => 'checkbox',
     '#title' => t('Cancel recurring donation series after multiple consecutive permanent failures?'),
-    '#description' => t('If this option is enabled, recurring donation series which consistently fail will be permanently cancelled.'),
+    '#description' => t('If this option is enabled, recurring donation series which consistently fail will be permanently canceled.'),
     '#default_value' => variable_get('fundraiser_recurring_autocancel_enabled', 0),
   );
   $form['fundraiser_sustainers']['fundraiser_recurring_auto_cancel']['fundraiser_recurring_autocancel_threshold'] = array(
@@ -2266,12 +2266,12 @@ function fundraiser_sustainers_edit_form($did) {
   $future_orders .
   '</div>';
 
-  // Check if this order is already cancelled.
-  $cancelled = isset($next_donation->recurring->cancellation_reason) ? $next_donation->recurring->cancellation_reason : '';
+  // Check if this order is already canceled.
+  $canceled = isset($next_donation->recurring->cancellation_reason) ? $next_donation->recurring->cancellation_reason : '';
 
   // Generate forms, or error messages as needed.
   $remaining_donation_count = _fundraiser_sustainers_count_donations_recurr_remaining($did);
-  if ($remaining_donation_count > 0 && empty($cancelled)) {
+  if ($remaining_donation_count > 0 && empty($canceled)) {
     $donation_amount_form_array = drupal_get_form('fundraiser_sustainers_donation_amount_form', $donation, $next_donation);
     $donation_amount_form = drupal_render($donation_amount_form_array);
     if (user_access('set new recurring charge date')) {
@@ -2294,11 +2294,11 @@ function fundraiser_sustainers_edit_form($did) {
     $donation_date_form = '';
   }
   else {
-    $donation_amount_form = t('This recurring donation has been cancelled.');
+    $donation_amount_form = t('This recurring donation has been canceled.');
   }
   $donation_amount_form = '<div id="donation-amount-form"><h2>Update Donation Amount</h2>' . $donation_amount_form . '</div>';
 
-  if ($remaining_donation_count > 0 && empty($cancelled)) {
+  if ($remaining_donation_count > 0 && empty($canceled)) {
     $data = array(
       'donation' => $next_donation,
       'calling module' => 'fundraiser_sustainers',
@@ -2334,13 +2334,13 @@ function fundraiser_sustainers_edit_form($did) {
     $billing_update_form = $no_remaining_message;
   }
   else {
-    $billing_update_form = t('This recurring donation has been cancelled.');
+    $billing_update_form = t('This recurring donation has been canceled.');
   }
   if (!empty($billing_update_form)) {
     $billing_update_form = '<div id="donation-billing-form"><h2>Update Your Payment Information</h2>' . $billing_update_form . '</div>';
   }
 
-  if ($remaining_donation_count > 0 && empty($cancelled)) {
+  if ($remaining_donation_count > 0 && empty($canceled)) {
     $cancel_form_array = drupal_get_form('fundraiser_sustainers_cancel_form', $next_donation);
     $cancel_form = drupal_render($cancel_form_array);
   }
@@ -2348,7 +2348,7 @@ function fundraiser_sustainers_edit_form($did) {
     $cancel_form = $no_remaining_message;
   }
   else {
-    $cancel_form = t('This recurring donation has been cancelled. Your reason given was: %reason', array('%reason' => $cancelled));
+    $cancel_form = t('This recurring donation has been canceled. Your reason given was: %reason', array('%reason' => $canceled));
   }
   if (user_access('cancel future donations')) {
     $cancel_form = '<div id="donation-cancel-form"><h2>Cancel Future Donations</h2>' . $cancel_form . '</div>';
@@ -3184,11 +3184,11 @@ function fundraiser_sustainers_cancel_form_submit($form, &$form_state) {
     fundraiser_donation_cancel($donation);
 
     // Add a watchdog entry with the did and reason.
-    watchdog('fundraiser_sustainers', 'Donation cancelled for #@did. Reason: @reason',
+    watchdog('fundraiser_sustainers', 'Donation canceled for #@did. Reason: @reason',
       array('@did' => $donation->did, '@reason' => $reason));
   }
 
-  drupal_set_message(t('All future payments cancelled.'));
+  drupal_set_message(t('All future payments canceled.'));
 }
 
 /**
@@ -3510,7 +3510,7 @@ function fundraiser_sustainers_auto_cancel($donation) {
       array(':attempts' => $threshold, ':did' => $donation->did));
 
     // Add a watchdog entry with the did and reason.
-    watchdog('fundraiser_sustainers', 'Donation cancelled for #@did. Reason: @reason',
+    watchdog('fundraiser_sustainers', 'Donation canceled for #@did. Reason: @reason',
       array('@did' => $donation->did, '@reason' => $reason));
 
     // Add a log message into the subsequent revision caused when the main order's status is updated:
@@ -3565,14 +3565,14 @@ function fundraiser_sustainers_billing_update_form($form, &$form_state, $donatio
     '#suffix' => '</div>',
   );
 
-  // Build the generic billing update form, unless it's expired or cancelled.
-  $cancelled = isset($next_donation->recurring->cancellation_reason) ? $next_donation->recurring->cancellation_reason : '';
-  if (!empty($cancelled)) {
+  // Build the generic billing update form, unless it's expired or canceled.
+  $canceled = isset($next_donation->recurring->cancellation_reason) ? $next_donation->recurring->cancellation_reason : '';
+  if (!empty($canceled)) {
     $form['closed-message'] = array(
       '#type' => 'container',
     );
     $form['closed-message']['message'] = array(
-      '#markup' => t("This recurring donation has been cancelled."),
+      '#markup' => t("This recurring donation has been canceled."),
     );
   }
   elseif (empty($remaining)) {
@@ -3928,7 +3928,7 @@ function _fundraiser_sustainers_get_donation_sets() {
     $next_charge = _fundraiser_sustainers_get_donations_next_charge($donation_set->master_did);
     if (isset($next_charge->did)) {
       $donation_sets[$index]->next_charge = $next_charge->next_charge;
-      $donation_sets[$index]->status = empty($next_charge->cancellation_reason) ? t('active') : t('cancelled');
+      $donation_sets[$index]->status = empty($next_charge->cancellation_reason) ? t('active') : t('canceled');
     }
   }
   return $donation_sets;

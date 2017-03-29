@@ -32,7 +32,7 @@ function fundraiser_triggers_trigger_info() {
         'label' => t('After a donation has encountered an exception.'),
       ),
       'fundraiser_donation_cancel' => array(
-        'label' => t('After a donation has been cancelled.'),
+        'label' => t('After a donation has been canceled.'),
       ),
       'fundraiser_donation_refund' => array(
         'label' => t('After a donation has been refunded.'),
