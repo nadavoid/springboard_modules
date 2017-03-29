@@ -2840,6 +2840,11 @@ function fundraiser_sustainers_gateway_cleanup($gateway, $submission_fields) {
  *   to create new donations in the sustainer series.
  */
 function fundraiser_sustainers_update_billing_info_create_new_donations($master_donation, $source_donation, $submission_fields) {
+  // Check that the donation series hasn't finished already.
+  if (!count(_fundraiser_sustainers_get_donations_recurr_remaining($master_donation->did))) {
+    return;
+  }
+
   // Update this donation (don't save it) so we have the right
   // parentage with the new billing.
   $master_donation->donation = array_merge($master_donation->donation, $submission_fields);

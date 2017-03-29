@@ -1911,7 +1911,7 @@ function fundraiser_commerce_fundraiser_donation_update($donation) {
 
               // If this record is a master donation which hasn't been processed
               // yet, extend its series.
-              if (($exp_month_changed || $exp_year_changed) && !empty($result['master_did']) && empty($masters_done[$result['master_did']]) && count(_fundraiser_sustainers_get_donations_recurr_remaining($result['master_did']))) {
+              if (($exp_month_changed || $exp_year_changed) && !empty($result['master_did']) && empty($masters_done[$result['master_did']])) {
                 $masters_done[$result['master_did']] = fundraiser_donation_get_donation($result['master_did']);
                 $source_donation = fundraiser_donation_get_donation($result['did']);
                 $source_donation->donation['payment_fields'] = array_merge($source_donation->donation['payment_fields'], $donation->donation['payment_fields']);
