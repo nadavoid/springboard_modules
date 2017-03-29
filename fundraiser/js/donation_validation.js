@@ -3,6 +3,7 @@
     attach: function (context, settings) {
       var clearElement = function($selector) {
         $selector
+          .val('')
           .removeClass('valid')
           .next('label')
             .remove()
@@ -314,6 +315,8 @@
         // radios.
         if (!$other_amount.length || !$recurring_other_amount.length) {
           var selector = '';
+          var recurringRuleEnabled = false;
+
           if (!$other_amount.length && $recurring_other_amount.length) {
             selector = 'input[name="submitted[donation][amount]"]:first';
           }
@@ -323,23 +326,36 @@
           else if (!$other_amount.length && !$recurring_other_amount.length) {
             selector = 'input[name="submitted[donation][amount]"]:first, input[name="submitted[donation][recurring_amount]"]:first';
           }
+
           $(selector).each(function() {
             var $this = $(this);
-            $this.rules('add', {
-              required: function(element) {
-                return $this.filter(':checked').length == 0;
-              },
-              messages: {
-                required: "This field is required",
-              },
-            });
+            var enableRecurringRule = function() {
+              $this.rules('add', {
+                required: function(element) {
+                  return $this.siblings('input[type=radio]').filter(':checked').length == 0;
+                },
+                messages: {
+                  required: "This field is required",
+                },
+              });
+              recurringRuleEnabled = true;
+            };
+
+            if (!$this.is(':visible') && !recurringRuleEnabled) {
+              $('input[type="checkbox"][name="submitted[donation][recurs_monthly][recurs]"]').on('state:checked', function() {
+                enableRecurringRule();
+              });
+            }
+            else {
+              enableRecurringRule();
+            }
           });
 
           $('input[name="submitted[donation][amount]"]').change(function() {
             if ($(this).filter(':checked').length) {
               $(this).parent('.control-group').removeClass('error').addClass('success').siblings('.control-group').removeClass('error').addClass('success');
             }
-          })
+          });
         }
 
         // Focus and Blur conditional functions for non-recurring other amount.
