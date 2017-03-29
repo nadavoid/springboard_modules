@@ -1844,8 +1844,10 @@ function fundraiser_commerce_fundraiser_donation_update($donation) {
     }
   }
 
+  $failed_payment_update_donations = &drupal_static(__FUNCTION__ . '_failed_payment_update', array());
+
   // Update the payment information
-  if (!empty($donation->update_payment)) {
+  if (!empty($donation->update_payment) && empty($failed_payment_update_donations[$donation->did])) {
     // Allow the gateways to clean the data before going to the update function
     if (isset($donation->gateway['cleanup callback']) && function_exists($donation->gateway['cleanup callback'])) {
       $cleaned = $donation->gateway['cleanup callback']($donation->donation, $donation->donation['payment_method']);
@@ -1856,8 +1858,7 @@ function fundraiser_commerce_fundraiser_donation_update($donation) {
     // Gateways that allow recurring donation will have an update callback.
     $update_callback = isset($donation->gateway['update callback']) && function_exists($donation->gateway['update callback']) ? $donation->gateway['update callback'] : FALSE;
 
-    // If we're in a sustainer update, and this is the first record update the
-    // stored payment information.
+    // If we're in a sustainer update's first donation or a regular donation.
     if (empty($donation->sustainer_update) || (!empty($donation->sustainer_update) && !empty($donation->sustainer_update_first)) && $update_callback) {
       // Load the current card data for updating.
       $card_data = _fundraiser_commerce_donation_cardonfile_card($donation);
@@ -1866,6 +1867,12 @@ function fundraiser_commerce_fundraiser_donation_update($donation) {
         $old_card = clone $card_data;
         $card_data = $update_callback($donation, $card_data);
         drupal_alter('fundraiser_commerce_donation_update_card_update', $donation, $card_data);
+
+        if (empty($card_data)) {
+          $failed_payment_update_donations[$donation->did] = TRUE;
+          drupal_set_message(t('Unable to update payment information. Please check your information and try again.'), 'warning');
+          return FALSE;
+        }
 
         // Determine if the card id has changed.
         $card_id_changed = $old_card->card_id != $card_data->card_id;
@@ -1947,15 +1954,11 @@ function fundraiser_commerce_fundraiser_donation_update($donation) {
             ->condition('status', 'pending_future_payment', '=')
             ->execute();
         }
-        else {
-          drupal_set_message(t('Unable to update payment information. Please check your information and try again.'), 'warning');
-          return FALSE;
-        }
       }
     }
     // Sustainer update, update remaining donations with the first record's cardonfile id
     // This avoids calling the APIs for each donation
-    elseif (!empty($donation->sustainer_update) && !empty($donation->sustainer_update_did)) {
+    elseif (!empty($donation->sustainer_update) && !empty($donation->sustainer_update_did) && empty($failed_payment_update_donations[$donation->sustainer_update_did])) {
       $master = fundraiser_donation_get_donation($donation->sustainer_update_did);
       drupal_alter('fundraiser_commerce_sustainer_series_donation_update', $master, $donation);
 
