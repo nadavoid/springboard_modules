@@ -576,6 +576,7 @@ function springboard_dw_queue_legacy_get_advocacy_message_details($action_id) {
         'created' => $message['delivery']['createdAt']['sec'],
       );
     }
+    db_query("SELECT 1")->fetchAll();
   }
   return $details;
 }
