@@ -54,7 +54,18 @@ function springboard_api_menu() {
     'type' => MENU_NORMAL_ITEM,
     'file' => 'includes/springboard_api.admin.inc',
   );
+
+  $items['admin/config/services/springboard_api/%/delete'] = array(
+    'title' => 'Springboard API Key Delete',
+    'description' => 'Remove Springboard API App.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('springboard_api_admin_remove_app_form', 4),
+    'access arguments' => array('administer springboard api'),
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/springboard_api.admin.inc',
+  );
   return $items;
+
 }
 
 /**
