@@ -295,8 +295,11 @@
             // of dual ask amounts), we need to add it's rule when it becomes
             // visible.
             if (!$this.is(':visible') && !recurringOtherRuleEnabled) {
-              $('input[type="checkbox"][name="submitted[donation][recurs_monthly][recurs]"]').on('state:checked', function() {
-                enableRecurringOtherRule();
+              $('input[type="checkbox"][name="submitted[donation][recurs_monthly][recurs]"], input[type="radio"][name="submitted[donation][recurs_monthly]"]').on('change', function(e) {
+                var $target = $(e.target);
+                if ($target.is(':checked') && $target.val() == 'recurs') {
+                  enableRecurringOtherRule();
+                }
               });
             }
             else {
@@ -342,8 +345,11 @@
             };
 
             if (!$this.is(':visible') && !recurringRuleEnabled) {
-              $('input[type="checkbox"][name="submitted[donation][recurs_monthly][recurs]"]').on('state:checked', function() {
-                enableRecurringRule();
+              $('input[type="checkbox"][name="submitted[donation][recurs_monthly][recurs]"], input[type="radio"][name="submitted[donation][recurs_monthly]"]').on('change', function(e) {
+                var $target = $(e.target);
+                if ($target.is(':checked') && $target.val() == 'recurs') {
+                  enableRecurringRule();
+                }
               });
             }
             else {
