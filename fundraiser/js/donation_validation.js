@@ -105,7 +105,7 @@
                   $error.detach().appendTo('#edit-submitted-donation-amount');
                 }
                 else if (recurring) {
-                  $error.detach().appendTo($('#edit-submitted-donation-recurring-amount'));
+                  $error.detach().appendTo('#edit-submitted-donation-recurring-amount');
                 }
               }
               $element.parent('.control-group').removeClass('success').addClass('error').siblings('.control-group').removeClass('success').addClass('error');
@@ -116,7 +116,20 @@
             }
           },
           success: function(element) {
-            $(element).text('OK').addClass('valid').closest('.control-group').removeClass('error').addClass('success');
+            $element = $(element);
+            var single = $element.prev('input[name="submitted[donation][amount]"]').length;
+            var recurring = $element.prev('input[name="submitted[donation][recurring_amount]"]').length;
+            if (single || recurring) {
+              if (single) {
+                $element.detach().appendTo('#edit-submitted-donation-amount');
+              }
+              else if (recurring) {
+                $element.detach().appendTo('#edit-submitted-donation-recurring-amount');
+              }
+            }
+            else {
+              $element.text('OK').addClass('valid').closest('.control-group').removeClass('error').addClass('success');
+            }
           }
         });
 
