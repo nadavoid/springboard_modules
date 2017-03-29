@@ -773,6 +773,11 @@ function springboard_p2p_personal_campaign_url_ajax(&$form, $form_state) {
  */
 function springboard_p2p_entity_insert($entity, $type) {
   if ($type == 'node' && isset($entity->type) && $entity->type == 'p2p_personal_campaign') {
+    if (isset($entity->springboard_p2p_skip_create_event) && $entity->springboard_p2p_skip_create_event) {
+      unset($entity->springboard_p2p_skip_create_event);
+      return;
+    }
+
     if (springboard_p2p_account_has_created_a_personal_campaign($entity->uid)) {
       $account = user_load($entity->uid);
       $event = new SpringboardP2pEvents();
