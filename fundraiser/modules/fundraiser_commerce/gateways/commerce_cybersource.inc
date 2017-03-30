@@ -105,7 +105,7 @@ function commerce_cybersource_fundraiser_commerce_charge($payment_method, $donat
 
   // Customer data for charge pulls from the customer profile given on the order, so we can ignore that.
   // If the charge fails, returns false, else nothing.
-  $result = commerce_cybersource_soap_cc_submit_form_submit($payment_method, $pane_form, $pane_values, $order, $charge);
+  $result = commerce_cybersource_soap_cc_submit_form_submit($payment_method, $pane_form, $pane_values, $order, $charge, $donation);
   $success = FALSE;
   if ($result !== FALSE) {
     $success = TRUE;
