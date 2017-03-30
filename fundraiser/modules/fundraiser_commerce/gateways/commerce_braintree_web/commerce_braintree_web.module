@@ -585,7 +585,7 @@ function commerce_braintree_web_submit_form_submit($payment_method, $pane_form, 
 
     $flag_update_default_method = TRUE;
     $braintree_payment_method = $result['result']->paymentMethod;
-    $token = $result['result']->token;
+    $token = $braintree_payment_method->token;
   }
 
   $order_data = unserialize(decrypt($order->data['fundraiser_commerce']));
