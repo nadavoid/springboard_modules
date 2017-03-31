@@ -1,5 +1,0 @@
-name = Fundraiser Quick Donate - Auto populate
-description = Adds ability to auto populate payment fields with a few clicks.
-package = Jackson River Springboard
-core = 7.x
-dependencies[] = fundraiser_quick_donate

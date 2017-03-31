@@ -462,6 +462,12 @@ function fundraiser_webform_form_alter(&$form, &$form_state, $form_id) {
         $form['#donation'] = $donation;
         fundraiser_webform_submission_display($form, $form_state);
       }
+      
+      // Display the State/Province value as a textfield rather than a drop-down:
+      if (isset($form['submitted']['billing_information']['state'])) {
+        $form['submitted']['billing_information']['state']['#type'] = 'textfield';
+        unset($form['submitted']['billing_information']['state']['#options']);
+      }
     }
     // Handle the donation form display.
     else {
@@ -1375,6 +1381,7 @@ function fundraiser_webform_get_submission($sid) {
   $query->fields('sd', array('no', 'data'))
     ->fields('sc', array('form_key'))
     ->condition('sd.sid', $sid)
+    ->isNotNull('sc.form_key')
     ->orderBy('sd.sid', 'ASC')
     ->orderBy('sd.cid', 'ASC')
     ->orderBy('sd.no', 'ASC');

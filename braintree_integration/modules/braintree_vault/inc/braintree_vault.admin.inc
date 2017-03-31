@@ -24,15 +24,6 @@ function braintree_vault_admin_settings($form, &$form_state) {
     '#default_value' => variable_get('braintree_use_vault', 0),
   );
 
-  $form['vault']['braintree_vault_field'] = array(
-    '#type' => 'select',
-    '#title' => t('Braintree customer ID field'),
-    '#description' => t('Custom field to store customer ID in Braintree vault.'),
-    '#options' =>  drupal_map_assoc(array_keys($instances)),
-    '#default_value' => variable_get('braintree_vault_field', ''),
-    '#required' => TRUE,
-  );
-
   $form['payment_method'] = array(
     '#type' => 'fieldset',
     '#title' => t('Payment method settings'),
@@ -42,26 +33,26 @@ function braintree_vault_admin_settings($form, &$form_state) {
     '#type' => 'textfield',
     '#title' => t('Base URL of payment method pages'),
     '#description' => t('Custom field to store customer ID in Braintree vault.'),
-    '#default_value' => braintree_payment_method_base_url(),
+    '#default_value' => braintree_vault_payment_method_base_url(),
     '#required' => TRUE,
   );
 
-  $form['payment_method']['braintree_use_payment_methods_page'] = array(
+  $form['payment_method']['braintree_vault_use_payment_methods_page'] = array(
     '#type' => 'checkbox',
     '#title' => t('Use default payment method list page'),
     '#description' => t('Provide a default payment method list page for user to manage their payment methods stored in Braintree vault. Disable this option when you implement your own payment method list page.'),
     '#return_value' => 1,
-    '#default_value' => variable_get('braintree_use_payment_methods_page', 1),
+    '#default_value' => variable_get('braintree_vault_use_payment_methods_page', 1),
   );
 
-  $form['payment_method']['braintree_payment_methods_custom_page'] = array(
+  $form['payment_method']['braintree_vault_payment_methods_custom_page'] = array(
     '#type' => 'textfield',
     '#title' => t('Path of payment methods custom page'),
     '#description' => t('Your own payment method list page.'),
-    '#default_value' => variable_get('braintree_payment_methods_custom_page', 'user'),
+    '#default_value' => variable_get('braintree_vault_payment_methods_custom_page', 'user'),
     '#states' => array(
       'invisible' => array(
-        ':input[name="braintree_use_payment_methods_page"]' => array('checked' => TRUE),
+        ':input[name="braintree_vault_use_payment_methods_page"]' => array('checked' => TRUE),
       ),
     ),
   );

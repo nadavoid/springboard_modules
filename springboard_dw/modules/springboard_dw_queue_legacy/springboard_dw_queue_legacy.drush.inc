@@ -257,19 +257,11 @@ function springboard_dw_queue_legacy_donation($records, $operation_details, $idl
   foreach ($records as $record) {
     $donation = fundraiser_donation_get_donation($record->id);
     // Massage values into format springboard_dw_map_donation_item() expects.
-    $donation->donation['ms'] = $donation->submission_data['ms'];
-    $donation->donation['cid'] = $donation->submission_data['cid'];
-    $donation->donation['referrer'] = $donation->submission_data['referrer'];
-    $donation->donation['initial_referrer'] = $donation->submission_data['initial_referrer'];
-    $donation->donation['payment_method'] = $donation->submission_data['payment_method'];
-    $donation->donation['recurs_monthly'] = $donation->submission_data['recurs_monthly'];
-    $donation->donation['search_engine'] = $donation->submission_data['search_engine'];
-    $donation->donation['search_string'] = $donation->submission_data['search_string'];
-    $donation->donation['user_agent'] = $donation->submission_data['user_agent'];
-    $donation->donation['device_type'] = $donation->submission_data['device_type'];
-    $donation->donation['device_name'] = $donation->submission_data['device_name'];
-    $donation->donation['device_os'] = $donation->submission_data['device_os'];
-    $donation->donation['device_browser'] = $donation->submission_data['device_browser'];
+    foreach ($donation->submission_data as $key => $value) {
+      if (!array_key_exists($key, $donation->donation)) {
+        $donation->donation[$key] = $value;
+      }
+    }
     // If $donation->data could not decrypted, just set the expected values to
     // empty string.
     if (!is_array($donation->data)) {
@@ -584,6 +576,7 @@ function springboard_dw_queue_legacy_get_advocacy_message_details($action_id) {
         'created' => $message['delivery']['createdAt']['sec'],
       );
     }
+    db_query("SELECT 1")->fetchAll();
   }
   return $details;
 }
