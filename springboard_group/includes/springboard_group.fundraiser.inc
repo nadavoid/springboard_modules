@@ -116,10 +116,9 @@ function springboard_group_fundraiser_rebuild_form(&$form, &$form_state) {
       '#tree' => TRUE,
       '#theme' => 'fundraiser_form_payment_methods',
     );
-    $configuration = array();
+    $configuration = !empty($node->gateways) ? $node->gateways : variable_get('fundraiser_payment_method_config_defaults', array());
     $form['payment_methods']['gateways'] = _fundraiser_form_payment_method_config_fieldset($gateways, $configuration, $fieldset, 'gateways');
   }
-
   // Add the ajax wrapper back to the rebuilt fieldset.
   $form['payment_methods']['gateways']['#prefix'] = '<div id = "springboard-groups-payment-ajax-wrapper">';
   $form['payment_methods']['gateways']['#suffix'] = '</div>';
