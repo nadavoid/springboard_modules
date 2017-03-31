@@ -465,6 +465,13 @@ function webform_user_form_alter(&$form, &$form_state, $form_id) {
           if (isset($_SESSION['webform_user_submission_field_values'][$profile_field])) {
             $profile_value = $_SESSION['webform_user_submission_field_values'][$profile_field];
             // Set the value.
+            if (function_exists('_market_source_build_qs_keys') && isset($form_field['#webform_component'])) {
+              $ms_settings = _market_source_build_qs_keys();
+              $form_key = $form_field['#webform_component']['form_key'];
+              if (isset($ms_settings[$form_key]['persistence']) && $ms_settings[$form_key]['persistence'] == 'direct') {
+                continue;
+              }
+            }
             switch ($form_field['#type']) {
               case 'date':
                 $form_field['#default_value'] = $profile_value;
