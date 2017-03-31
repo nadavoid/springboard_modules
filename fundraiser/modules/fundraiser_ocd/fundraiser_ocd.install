@@ -171,6 +171,15 @@ function fundraiser_ocd_schema() {
 function fundraiser_ocd_install() {
   _fundraiser_ocd_create_date_field('field_ocd_opt_in', 'One Click Donate Opt In');
   _fundraiser_ocd_create_date_field('field_ocd_opt_out', 'One Click Donate Opt Out');
+  $field_group = field_group_load_field_group('group_profile_admin', 'user', 'user', 'form');
+  $table = 'field_group';
+
+  // If the group exists make sure its not disabled.
+  if ($field_group) {
+    $field_group->children[] = 'field_ocd_opt_in';
+    $field_group->children[] = 'field_ocd_opt_out';
+    ctools_export_crud_save($table, $field_group);
+  }
 }
 
 /**
