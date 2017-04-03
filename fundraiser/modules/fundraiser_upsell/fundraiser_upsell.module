@@ -203,19 +203,6 @@ function fundraiser_upsell_add_node_settings(&$form) {
     '#description' => t('Content for the initial upsell page.'),
   );
 
-  $form['fundraiser_upsell']['content_tokens'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Available content tokens'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-  );
-  $form['fundraiser_upsell']['content_tokens']['help'] = array(
-    '#theme' => 'token_tree',
-    '#token_types' => array('all', 'donation'),
-    '#global_types' => TRUE,
-    '#click_insert' => TRUE,
-  );
-
   $form['fundraiser_upsell']['footer'] = array(
     '#title' => t('Form specific Upsell Footer'),
     '#type' => 'textfield',
@@ -229,20 +216,6 @@ function fundraiser_upsell_add_node_settings(&$form) {
     '#type' => 'textarea',
     '#default_value' => !empty($node->fundraiser_upsell['thankyou']) ? $node->fundraiser_upsell['thankyou'] : '',
     '#description' => t('The content in the modal after the sustainer is processed.'),
-  );
-
-  $form['fundraiser_upsell']['thankyou_tokens'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Available thank you message tokens'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-  );
-
-  $form['fundraiser_upsell']['thankyou_tokens']['help'] = array(
-    '#theme' => 'token_tree',
-    '#token_types' => array('all', 'donation'),
-    '#global_types' => TRUE,
-    '#click_insert' => TRUE,
   );
 
   $form['fundraiser_upsell']['modal_theme'] = array(
@@ -304,22 +277,6 @@ function fundraiser_upsell_add_node_settings(&$form) {
     unset($form['fundraiser_upsell']['email_wrappers']['save']);
     unset($form['fundraiser_upsell']['email_wrappers']['#validate']);
     unset($form['fundraiser_upsell']['email_wrappers']['#submit']);
-
-    $form['fundraiser_upsell']['email_wrappers']['message']['tokens'] = array(
-      '#type' => 'fieldset',
-      '#title' => t('Available message tokens'),
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
-      '#weight' => 10,
-    );
-
-    $form['fundraiser_upsell']['email_wrappers']['message']['tokens']['help'] = array(
-      '#theme' => 'token_tree',
-      '#token_types' => array('all', 'donation'),
-      '#global_types' => TRUE,
-      '#click_insert' => TRUE,
-    );
-
   }
 
   // Let submodules add settings.

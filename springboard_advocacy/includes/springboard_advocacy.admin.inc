@@ -248,38 +248,6 @@ function springboard_advocacy_confirmation_settings_form() {
         '#required' => TRUE,
       );
     }
-
-
-  //Create the token fieldset
-  $form['template']['tokens'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Available tokens'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-    '#weight' => 9,
-  );
-
-  //Get the node tokens.
-  $token_set = array('node');
-  $form['template']['tokens']['tokens'] = array(
-    '#type' => 'item',
-    '#title' => t('Drupal tokens'),
-    '#description' => theme('token_tree', array(
-      'token_types' => $token_set,
-      'recursion_limit' => 2,
-      'click_insert' => FALSE
-    )),
-  );
-  // Get the webform tokens.
-  $webform_token_help = theme('webform_token_help', array());
-  $webform_token_help = str_replace('%post', '%value', $webform_token_help);
-  $webform_token_help = str_replace('POST ', '', $webform_token_help);
-  $form['template']['tokens']['webform_tokens'] = array(
-    '#type' => 'item',
-    '#title' => t('Webform tokens'),
-    '#description' => $webform_token_help,
-  );
-
   }
   else {
     $form['message']['#markup'] = t('No action modules are enabled to configure');

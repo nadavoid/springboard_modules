@@ -97,17 +97,6 @@ function sb_social_email_settings(&$form, $enabled_services = array(), $settings
     '#title' => t('Email message'),
     '#default_value' => isset($settings['message']) ? $settings['message'] : '',
   );
-  $form['email_settings']['tokens'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Available Tokens'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-  );
-  $form['email_settings']['tokens']['token_help'] = array(
-    '#type' => 'item',
-    '#title' => t('Drupal tokens'),
-    '#description' => theme('token_tree', array('token_types' => $token_set, 'recursion_limit' => 2, 'click_insert' => FALSE)),
-  );
 }
 
 function sb_social_email_admin_settings(&$form) {

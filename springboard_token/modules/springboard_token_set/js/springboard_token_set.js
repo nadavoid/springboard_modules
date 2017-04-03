@@ -4,7 +4,7 @@
       // Add token click handler to form elements with token set IDs:
       $.each(Drupal.settings['target_fields_tokens'], function (target_field_name, target_field_token_set_ids) {
         $("input, textarea").each(function() {
-          if ($(this).attr('name') == target_field_name) {
+          if ($(this).attr('name') == target_field_name && !$(this).hasClass('has-token-data')) {
             $(this).addClass("has-token-data");
             var targetElement = $(this);
             targetElement.after('<div class="sb-tokens-expander"><a href="#">+ View tokens</a></div>');
