@@ -195,38 +195,7 @@ function webform_confirmations_form_webform_email_edit_form_alter(&$form, $form_
     $form['#validate'][] = '_webform_confirmations_email_edit_validate';
   }
 
-  // Redo the token help element, adding the Drupal token set.
   unset($form['template']['tokens']);
-
-  $form['template']['tokens'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Available tokens'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-    '#weight' => 9,
-  );
-  $token_set = array('node');
-
-  // Then add any other token set as needed.
-  drupal_alter('webform_confirmations_token_info', $token_set, $node);
-
-  $form['template']['tokens']['tokens'] = array(
-    '#type' => 'item',
-    '#title' => t('Drupal tokens'),
-    '#description' => theme('token_tree', array('token_types' => $token_set, 'recursion_limit' => 2, 'click_insert' => FALSE)),
-    '#states' => array(
-      'visible' => array(
-        ':input[name="email_wrappers_email_template"]' => array('!value' => '0'),
-      ),
-    ),
-  );
-
-  // Add the webform tokens help message.
-  $form['template']['tokens']['webform_tokens'] = array(
-    '#type' => 'item',
-    '#title' => t('Webform tokens'),
-    '#description' => theme('webform_token_help', array()),
-  );
 }
 
 /**
@@ -245,31 +214,9 @@ function webform_confirmations_form_webform_configure_form_alter(&$form, &$form_
     '#weight' => 0,
     '#default_value' => isset($node->confirmation_page_title) ? $node->confirmation_page_title : '',
   );
-  $form['submission']['help'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Available tokens'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-  );
-  $token_set = array('node');
-  // Then add any other token set as needed. (Here is where donation, donation user etc get put in.)
-  drupal_alter('webform_confirmations_token_info', $token_set, $node);
-  $form['submission']['help']['tokens'] = array(
-    '#type' => 'item',
-    '#title' => t('Drupal tokens'),
-    '#description' => theme('token_tree', array('token_types' => $token_set, 'recursion_limit' => 2, 'click_insert' => FALSE)),
-  );
-  $webform_token_help = theme('webform_token_help', array());
-  $webform_token_help = str_replace('%post', '%value', $webform_token_help);
-  $webform_token_help = str_replace('POST ', '', $webform_token_help);
-  $form['submission']['help']['webform_tokens'] = array(
-    '#type' => 'item',
-    '#title' => t('Webform tokens'),
-    '#description' => $webform_token_help,
-  );
+
   // Tweak display messages.
-  $form['submission']['confirmation']['#description'] .= ' ' . t('The message supports Drupal tokens and Webform token replacements. ' .
-    '(See tokens below).');
+  $form['submission']['confirmation']['#description'] .= ' ' . t('The message supports Drupal tokens and Webform token replacements. ');
   $form['submission']['redirection']['#description'] = t('Choose where to redirect the user upon successful submission. The Custom URL ' .
     'option supports Webform token replacements. (See tokens below).');
   // Shuffle things to display later in the form, there may be a better way to reorg the array. Check later.
