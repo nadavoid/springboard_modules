@@ -28,7 +28,7 @@ function springboard_group_views_default_views() {
   $handler->display->display_options['title'] = 'Springboard Groups';
   $handler->display->display_options['use_more_always'] = FALSE;
   $handler->display->display_options['access']['type'] = 'perm';
-  $handler->display->display_options['access']['perm'] = 'configure springboard groups';
+  $handler->display->display_options['access']['perm'] = 'administer group';
   $handler->display->display_options['cache']['type'] = 'none';
   $handler->display->display_options['query']['type'] = 'views_query';
   $handler->display->display_options['exposed_form']['type'] = 'basic';
@@ -101,6 +101,11 @@ function springboard_group_views_default_views() {
       'empty_column' => 0,
     ),
   );
+  /* Header: Global: Unfiltered text */
+  $handler->display->display_options['header']['area_text_custom']['id'] = 'area_text_custom';
+  $handler->display->display_options['header']['area_text_custom']['table'] = 'views';
+  $handler->display->display_options['header']['area_text_custom']['field'] = 'area_text_custom';
+  $handler->display->display_options['header']['area_text_custom']['content'] = 'fsfdfdsfdsfs';
   /* Relationship: OG membership: OG membership from Node */
   $handler->display->display_options['relationships']['og_membership_rel']['id'] = 'og_membership_rel';
   $handler->display->display_options['relationships']['og_membership_rel']['table'] = 'node';
@@ -246,6 +251,7 @@ function springboard_group_views_default_views() {
    * My Groups view.
    */
   $view = new view();
+  $view = new view();
   $view->name = 'springboard_group_my_groups';
   $view->description = 'Show groups of a user.';
   $view->tag = 'Springboard OG';
@@ -269,10 +275,13 @@ function springboard_group_views_default_views() {
   $handler->display->display_options['style_options']['columns'] = array(
     'nid' => 'nid',
     'title' => 'title',
+    'created' => 'created',
     'field_sb_group_cname' => 'field_sb_group_cname',
     'field_sb_group_cemail' => 'field_sb_group_cname',
     'field_sb_group_address' => 'field_sb_group_address',
-    'created' => 'created',
+    'edit_node' => 'edit_node',
+    'view_node' => 'edit_node',
+    'nid_1' => 'edit_node',
   );
   $handler->display->display_options['style_options']['default'] = 'title';
   $handler->display->display_options['style_options']['info'] = array(
@@ -285,6 +294,13 @@ function springboard_group_views_default_views() {
     ),
     'title' => array(
       'sortable' => 1,
+      'default_sort_order' => 'asc',
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'created' => array(
+      'sortable' => 0,
       'default_sort_order' => 'asc',
       'align' => '',
       'separator' => '',
@@ -311,7 +327,17 @@ function springboard_group_views_default_views() {
       'separator' => '',
       'empty_column' => 0,
     ),
-    'created' => array(
+    'edit_node' => array(
+      'align' => '',
+      'separator' => ' | ',
+      'empty_column' => 0,
+    ),
+    'view_node' => array(
+      'align' => '',
+      'separator' => '',
+      'empty_column' => 0,
+    ),
+    'nid_1' => array(
       'sortable' => 0,
       'default_sort_order' => 'asc',
       'align' => '',
@@ -371,6 +397,27 @@ function springboard_group_views_default_views() {
       'address' => 'address',
     ),
   );
+  /* Field: Content: Edit link */
+  $handler->display->display_options['fields']['edit_node']['id'] = 'edit_node';
+  $handler->display->display_options['fields']['edit_node']['table'] = 'views_entity_node';
+  $handler->display->display_options['fields']['edit_node']['field'] = 'edit_node';
+  $handler->display->display_options['fields']['edit_node']['relationship'] = 'og_membership_related_node_group';
+  $handler->display->display_options['fields']['edit_node']['label'] = 'Actions';
+  $handler->display->display_options['fields']['edit_node']['text'] = 'Edit';
+  /* Field: Content: Link */
+  $handler->display->display_options['fields']['view_node']['id'] = 'view_node';
+  $handler->display->display_options['fields']['view_node']['table'] = 'views_entity_node';
+  $handler->display->display_options['fields']['view_node']['field'] = 'view_node';
+  $handler->display->display_options['fields']['view_node']['relationship'] = 'og_membership_related_node_group';
+  /* Field: Content: Nid */
+  $handler->display->display_options['fields']['nid_1']['id'] = 'nid_1';
+  $handler->display->display_options['fields']['nid_1']['table'] = 'node';
+  $handler->display->display_options['fields']['nid_1']['field'] = 'nid';
+  $handler->display->display_options['fields']['nid_1']['relationship'] = 'og_membership_related_node_group';
+  $handler->display->display_options['fields']['nid_1']['alter']['alter_text'] = TRUE;
+  $handler->display->display_options['fields']['nid_1']['alter']['text'] = 'Members';
+  $handler->display->display_options['fields']['nid_1']['alter']['make_link'] = TRUE;
+  $handler->display->display_options['fields']['nid_1']['alter']['path'] = 'node/[nid]/group';
   /* Sort criterion: Content: Title */
   $handler->display->display_options['sorts']['title']['id'] = 'title';
   $handler->display->display_options['sorts']['title']['table'] = 'node';
