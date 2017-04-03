@@ -2066,7 +2066,7 @@ function fundraiser_sustainers_form_fundraiser_admin_settings_alter(&$form, &$fo
     '#title' => t('Email body'),
     '#default_value' => variable_get('fundraiser_cc_exp_body',
       'Your card ending in [donation:card_number] is about to expire on [donation:card_expiration_month]/[donation:card_expiration_year].'),
-    '#description' => t('The body of the email. Available tokens are below.'),
+    '#description' => t('The body of the email.'),
   );
 
   // Auto-cancel options for sustainers whose payment are consistently declined.
