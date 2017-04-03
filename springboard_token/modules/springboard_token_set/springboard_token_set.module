@@ -1,0 +1,1211 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function springboard_token_set_menu() {
+  $items = array();
+  $items['admin/config/content/token-set-fields'] = array(
+    'title' => 'Springboard Token Fields',
+    'description' => 'Enable/disable tokens for a given form field.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('springboard_token_set_fields_admin_form'),
+    'access arguments' => array('administer springboard'),
+    'type' => MENU_NORMAL_ITEM,
+    'weight' => 0,
+  ); 
+  $items['admin/config/content/token-set-fields/revert'] = array(
+    'title' => 'Restore default token set to field mappings',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('springboard_token_set_fields_admin_revert_form'),
+    'access arguments' => array('administer springboard'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['admin/config/content/token-sets'] = array(
+    'title' => 'Springboard Token Sets',
+    'description' => 'Manage tokens within token sets.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('springboard_token_set_sets_admin_form'),
+    'access arguments' => array('administer springboard'),
+    'type' => MENU_NORMAL_ITEM,
+    'weight' => 0,
+  );
+  $items['admin/config/content/token-sets/add'] = array(
+    'title' => 'Create token set',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('springboard_token_set_add_token_set_admin_form'),
+    'access arguments' => array('administer springboard'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['admin/config/content/token-sets/rename'] = array(
+    'title' => 'Delete token set',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('springboard_token_set_rename_token_set_admin_form'),
+    'access arguments' => array('administer springboard'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['admin/config/content/token-sets/delete'] = array(
+    'title' => 'Delete token set',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('springboard_token_set_delete_token_set_admin_form'),
+    'access arguments' => array('administer springboard'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['admin/config/content/token-sets/revert'] = array(
+    'title' => 'Revert to default token set settings',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('springboard_token_set_sets_admin_revert_form'),
+    'access arguments' => array('administer springboard'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['sb-admin-token-add-ajax'] = array(
+    'page callback' => '_springboard_token_set_admin_add_token_ajax',
+    'access arguments' => array('administer springboard'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['sb-admin-token-delete-ajax'] = array(
+    'page callback' => '_springboard_token_set_admin_delete_token_ajax',
+    'access arguments' => array('administer springboard'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['sb-admin-token-fields-ajax'] = array(
+    'page callback' => '_springboard_token_set_token_field_manager_ajax',
+    'page arguments' => array(1),
+    'access arguments' => array('administer springboard'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['sb-admin-token-fields-remove-ajax'] = array(
+    'page callback' => '_springboard_token_set_token_field_manager_remove_ajax',
+    'page arguments' => array(1),
+    'access arguments' => array('administer springboard'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['sb-admin-token-update-ajax'] = array(
+    'page callback' => '_springboard_token_set_admin_update_ajax',
+    'page arguments' => array(1),
+    'access arguments' => array('administer springboard'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['sb-admin-token-set-update-ajax'] = array(
+    'page callback' => '_springboard_token_set_update_ajax',
+    'page arguments' => array(1),
+    'access arguments' => array('administer springboard'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['sb-token-set-ajax'] = array(
+    'page callback' => '_springboard_token_set_ajax_fetch',
+    'page arguments' => array(1),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Token set field manager form.
+ */
+function springboard_token_set_fields_admin_form($form, &$form_state) {
+  $form = array();
+
+  // Gather a list of form ids where tokens could be attached:
+  $forms_list = array('- Select a form -');
+  $token_fields_query = db_query("SELECT form_id, field_name, tsid FROM {springboard_token_set_field_map} ORDER BY form_id, field_name");
+  foreach ($token_fields_query as $token_fields_data) {
+    if (!in_array($token_fields_data->form_id, $forms_list)) {
+      $forms_list[$token_fields_data->form_id] = $token_fields_data->form_id;
+    }
+  }
+  $forms_list['___custom'] = '- New Form -';
+
+  $form['token-fields']['text-blurb'] = array(
+    '#type' => 'markup',
+    '#markup' => 'Add one or more token sets to a given field; remove all token sets from a field to disable the token selection widget.',
+  );
+  $form['token-fields']['add-mapping'] = array(
+    '#type' => 'container',
+  );
+  $form['token-fields']['add-mapping']['target_form_id'] = array(
+    '#type' => 'select',
+    '#title' => 'Target form',
+    '#options' => $forms_list,
+  );
+  $form['token-fields']['add-mapping']['custom_target_form_id'] = array(
+    '#type' => 'textfield',
+    '#title' => 'New form ID',
+    '#size' => 42,
+  );
+  $form['token-fields']['add-mapping']['field_key'] = array(
+    '#type' => 'select',
+    '#validated' => TRUE,
+    '#title' => 'Target field',
+    '#options' => array('- First, please select a target form. -'),
+  );
+  $form['token-fields']['add-mapping']['custom_field_key'] = array(
+    '#type' => 'textfield',
+    '#validated' => TRUE,
+    '#title' => 'New target field',
+    '#size' => 38,
+  );
+  $token_sets = array('- None -');
+  $token_sets_data = springboard_token_set_get_sets();
+  foreach ($token_sets_data as $token_set_data) {
+    if (isset($token_set_data->tsid) && is_numeric($token_set_data->tsid) && isset($token_set_data->name)) {
+      $token_sets[$token_set_data->tsid] = $token_set_data->name;
+    }
+  }
+  $form['token-fields']['add-mapping']['token_set'] = array(
+    '#type' => 'select',
+    '#title' => 'Token sets for this field',
+    '#options' => $token_sets,
+    '#multiple' => TRUE,
+    '#description' => t('Use control/command+click to add or remove token sets.'),
+  );
+  $form['token-fields']['add-mapping']['token_add'] = array(
+    '#type' => 'submit',
+    '#value' => 'Update',
+  );
+  $form['token-fields']['#suffix'] = _springboard_token_set_fields_form_table_render() .
+    l('Restore this form\'s default settings', 'admin/config/content/token-set-fields/revert', array(
+      'query' => array('destination' => 'admin/config/content/token-set-fields'),
+      'attributes' => array('class' => array('revert-link'))));
+  $form['#attached']['css'] = array(
+    'data' => drupal_get_path('module', 'springboard_token_set') . '/css/springboard_token_set_admin.css',
+    'type' => 'file',
+  );
+  $form['#attached']['js'] = array(
+    'data' => drupal_get_path('module', 'springboard_token_set') . '/js/springboard_token_set_admin.js',
+    'type' => 'file',
+  );
+  $form['#submit'][] = '_springboard_token_set_fields_admin_form_submit';
+  return $form;
+}
+/**
+ * Token set fields revert confirmation form.
+ */
+function springboard_token_set_fields_admin_revert_form($form, &$form_state) {
+  drupal_set_title(t('Are you sure you want to revert to default field token set settings?'));
+  $form['delete-token-set']['submit'] = array(
+    '#prefix' => '<div id="ts-field-delete-blurb">This action cannot be undone.</div><br />',
+    '#suffix' => l('Cancel', 'admin/config/content/token-set-fields'),
+    '#type' => 'submit',
+    '#value' => 'Revert',
+  );
+  return $form;
+}
+/**
+ * Token set fields revert confirmation form submission.
+ */
+function springboard_token_set_fields_admin_revert_form_submit($form, &$form_state) {
+  _springboard_token_set_restore_default_token_set_field_mappings();
+  drupal_set_message('Default token set field mappings have been restored.');
+}
+
+/*
+ * Restore to default token set to field mappings.
+ */
+function _springboard_token_set_restore_default_token_set_field_mappings() {
+  db_query("TRUNCATE {springboard_token_set_field_map}");
+  $default_settings = _springboard_fetch_default_token_set_field_mappings();
+  foreach ($default_settings as $target_form_id => $field_keys) {
+    foreach ($field_keys as $field_key => $tsids) {
+      foreach ($tsids as $tsid) {
+        db_query("INSERT INTO {springboard_token_set_field_map} (tsid, form_id, field_name) " .
+          "VALUES(:tsid, :form_id, :field_name)",
+          array(':tsid' => $tsid, ':form_id' => $target_form_id, ':field_name' => $field_key));
+      }
+    }
+  }  
+}
+
+/**
+ * Fetch default token set to field mappings:
+ */
+function _springboard_fetch_default_token_set_field_mappings() {
+  $data = array();
+  $module_path = drupal_get_path('module', 'springboard_token_set');
+  $default_settings = (array) json_decode(file_get_contents($module_path . '/data/field_token_sets_map.json'));
+  foreach ($default_settings as $form_id => $form_settings) {
+    foreach ($form_settings as $field_settings) {
+       foreach ($field_settings as $field_key => $tsid_names) {
+         foreach ($tsid_names as $tsid_name) {
+           $tsid = db_query("SELECT tsid FROM {springboard_token_sets} WHERE name = :name",
+             array(':name' => $tsid_name))->fetchField();
+           if ($tsid) {
+             $data[$form_id][$field_key][] = $tsid;
+           }
+         }
+       }
+    }
+  }
+  return $data;
+}
+
+
+/**
+ * Render the token fields form's table of current mappings:
+ */
+function _springboard_token_set_fields_form_table_render() {
+  $output = '';
+
+  $header = array('Form', 'Field', 'Enabled Token Sets', '&nbsp;');
+  $rows = array();
+
+  $token_sets_data = springboard_token_set_get_sets();
+  $token_fields_query = db_query("SELECT form_id, field_name, tsid FROM {springboard_token_set_field_map} ORDER BY form_id, field_name");
+  $last_field_name = '';
+  $odd_even = 'even';
+  foreach ($token_fields_query as $result) {
+    $row = array();
+    $tsid = $result->tsid;
+    $row['data'][] = array('class' => 'sb-form-id', 'data' => $result->form_id);
+    $row['data'][] = array('class' => 'sb-field-name', 'data' => $result->field_name);
+    $token_set_label = t('Undefined Token Set');
+    foreach ($token_sets_data as $token_set_data) {
+      if (isset($token_set_data->tsid) && $token_set_data->tsid == $tsid && isset($token_set_data->name)) {
+        $token_set_label = $token_set_data->name;
+        break;
+      }
+    }
+    $row['data'][] = array('class' => 'sb-token-set', 'data' => $token_set_label);
+    $row['data'][] = array('class' => 'sb-token-set-remove', 'data' => 
+      '<a href="#" class="sb-tsid-remove" form_id="' . $result->form_id . '" field_name="' . $result->field_name . '" tsid="' . $tsid . '">remove</a>');
+
+    // Alternate zebra stripes each time the target field changes:
+    if ($last_field_name != $result->field_name) {
+      $last_field_name = $result->field_name;
+      $odd_even = ($odd_even == 'even' ? 'odd' : 'even');
+    }
+    $row['class'] = array($odd_even);
+    $row['no_striping'] = TRUE;
+    $rows[] = $row;
+  }
+  return theme('table', array(
+    'header' => $header,
+    'rows' => $rows,
+    'attributes' => array('id' => 'sb-token-fields-list'),
+  ));
+}
+
+/**
+ * Submit function for the token fields form:
+ */
+function _springboard_token_set_fields_admin_form_submit($form, &$form_state) {
+  $vals = $form_state['values'];
+  if (isset($vals['target_form_id'])) {
+    if ($vals['target_form_id'] != '___custom') {
+      $target_form_id = $vals['target_form_id'];
+    }
+    elseif (isset($vals['custom_target_form_id'])) {
+      $target_form_id = $vals['custom_target_form_id'];
+    }
+    else {
+      drupal_set_message('This form failed to submit target form_id value correctly.', 'error');
+    }
+  }
+
+  if (isset($vals['custom_field_key']) &&
+    ($vals['target_form_id'] == '___custom' || (isset($vals['field_key']) && $vals['field_key'] == '__custom_field'))) {
+    $target_field_key = $vals['custom_field_key'];
+  }
+  elseif (isset($vals['field_key'])) {
+    $target_field_key = $vals['field_key'];
+  }
+  else {
+    drupal_set_message('This form failed to submit target field value correctly.', 'error');
+  }
+
+  if (!isset($vals['token_set']) || !is_array($vals['token_set'])) {
+    drupal_set_message('This form failed to submit its target token set correctly.');
+    return;
+  }
+  $target_tsids = $vals['token_set'];
+  $token_sets_data = springboard_token_set_get_sets();
+
+  // Remove any previous token sets associated with this field:
+  db_query("DELETE FROM {springboard_token_set_field_map} WHERE form_id = :form_id AND field_name = :field_key",
+    array(':form_id' => $target_form_id, ':field_key' => $target_field_key));
+
+  // Insert the new settings:
+  foreach ($target_tsids as $tsid) {
+    if ($tsid > 0) {
+      db_query("INSERT INTO {springboard_token_set_field_map} (tsid, form_id, field_name) VALUES (:tsid, :form_id, :field_name)",
+        array(':tsid' => $tsid, ':form_id' => $target_form_id, ':field_name' => $target_field_key));
+    }
+  }
+  drupal_set_message('Updating enabled token sets for form_id "' . $target_form_id . '", field "' . $target_field_key . '".');
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter()
+ */
+function springboard_token_set_form_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id) {
+  $entity_type = $form['#instance']['entity_type'];
+  $bundle = $form['#instance']['bundle'];
+  $field_name = $form['#instance']['field_name'];
+
+  $token_sets = springboard_token_set_get_sets();
+
+  $token_set_options = array(
+    0 => 'None',
+  );
+  foreach ($token_sets as $token_set) {
+    $token_set_options[$token_set->tsid] = $token_set->name;
+  }
+
+  $form['token_set'] = array(
+    '#title' => t('Manage Token Set'),
+    '#type' => 'fieldset',
+    '#collapsible' => FALSE,
+  );
+
+  $form['token_set']['token_set_id'] = array(
+    '#type' => 'select',
+    '#title' => t('Use token set'),
+    '#description' => t('Please select the token set available to this field; setting this to "None" removes the tokens widget from this field.'),
+    '#options' => $token_set_options,
+    '#default_value' => springboard_token_set_get_token_set($entity_type, $bundle, $field_name) ,
+  );
+
+  $form['#submit'][] = 'springboard_token_set_save_field';
+}
+
+/**
+ * Submit handler for field token set ID.
+ */
+function springboard_token_set_save_field($form, &$form_state) {
+  $entity_type = $form['#instance']['entity_type'];
+  $bundle = $form['#instance']['bundle'];
+  $field_name = $form['#instance']['field_name'];
+  $tsid = $form_state['values']['token_set_id'];
+
+  // Insert this token set if it does not exist; otherwise update it:
+  $exists_query = db_query("SELECT tsid FROM {springboard_token_set_entity_fields} " .
+    "WHERE entity_type = :entity_type AND bundle = :bundle AND field_name = :field_name",
+    array(':entity_type' => $entity_type, ':bundle' => $bundle, ':field_name' => $field_name));
+  foreach ($exists_query as $exists) {
+    db_query("UPDATE {springboard_token_set_entity_fields} SET tsid = :tsid " .
+      "WHERE entity_type = :entity_type AND bundle = :bundle AND field_name = :field_name",
+      array(':entity_type' => $entity_type, ':bundle' => $bundle, ':field_name' => $field_name, ':tsid' => $tsid));
+    return; 
+  }
+  db_query("INSERT INTO {springboard_token_set_entity_fields} (tsid, entity_type, bundle, field_name) " .
+    "VALUES(:tsid, :entity_type, :bundle, :field_name)",
+    array(':entity_type' => $entity_type, ':bundle' => $bundle, ':field_name' => $field_name, ':tsid' => $tsid));
+}
+
+/**
+ * Implements hook_form_alter().
+ *
+ * - Adds the sb_tokenui_debug parameter support.
+ * - Attaches the tokenUI to target fields via recursive form function.
+ */
+function springboard_token_set_form_alter(&$form, &$form_state, $form_id) {
+  $module_path = drupal_get_path('module', 'springboard_token_set');
+
+  // Add a tool for determining form_id and field key for a given field:
+  global $user;
+  if ($user->uid == 1 && isset($_GET['tokenui_debug'])) {
+    $form['#attached']['js'][] = array(
+      'data' => $module_path . '/js/springboard_token_set_admin.js', 'type' => 'file');
+    $form['#attached']['js'][] = array( 
+      'data' => array('tokenui_debug_form_id' => $form_id), 'type' => 'setting'); 
+  }
+
+  // Attach the token UI as needed:
+  $token_set_names = array();
+  $form_token_settings = db_query("SELECT f.tsid, f.field_name, t.name token_set_name " .
+    "FROM {springboard_token_set_field_map} f, {springboard_token_sets} t " .
+    "WHERE f.tsid = t.tsid AND f.form_id = :form_id ORDER BY f.field_name, f.tsid",
+    array(':form_id' => $form_id));
+  $target_fields_tokens = array();
+  foreach ($form_token_settings as $result) {
+    if (!in_array($result->tsid, $token_set_names)) {
+      $token_set_names[$result->tsid] = $result->token_set_name;
+    }
+    $target_fields_tokens[$result->field_name][] = $result->tsid;
+  }
+  if (!empty($target_fields_tokens)) {
+    $form['#attached']['css'][] = array(
+      'data' => $module_path . '/css/springboard_token_set.css', 'type' => 'file');
+    $form['#attached']['js'][] = array(
+      'data' => $module_path . '/js/springboard_token_set.js', 'type' => 'file'); 
+    $data_for_jquery = array(
+      'token_set_names' => $token_set_names,
+      'target_fields_tokens' => $target_fields_tokens, 
+    );
+    $form['#attached']['js'][] = array('data' => $data_for_jquery, 'type' => 'setting');
+  }
+  return;
+}
+
+/**
+ * Page callback for token sets admin form.
+ */
+function springboard_token_set_sets_admin_form($form, &$form_state) {
+  $token_sets = springboard_token_set_get_sets();
+
+  $form = array();
+
+  $form['add-token-set'] = array(
+    '#markup' => l('+ Add token set', 'admin/config/content/token-sets/add', array(
+      'query' => array('destination' => 'admin/config/content/token-sets'),
+      'attributes' => array('class' => array('add-token-set')))
+    ),
+  );
+
+  $form['token-sets'] = array(
+    '#type' => 'container',
+    '#tree' => TRUE,
+  );
+
+  foreach ($token_sets as $token_set) {
+    $form['token-sets']['token-set-' . $token_set->tsid] = array(
+      '#type' => 'fieldset',
+      '#title' => $token_set->name,
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+
+    $tokens = springboard_token_set_get_tokens($token_set->tsid);
+
+    // Column labels:
+    $form['token-sets']['token-set-' . $token_set->tsid]['labels'] = array(
+      '#markup' =>
+        '<div class="token-labels">' .
+          '<span class="token-label token-machine-label">Token</span>' .
+          '<span class="token-label token-descr-label">Token description</span>' .
+        '</div>',
+    );
+
+    foreach ($tokens as $token) {
+      $form['token-sets']['token-set-' . $token_set->tsid][$token->token] = array(
+        '#type' => 'container',
+      );
+      $form['token-sets']['token-set-' . $token_set->tsid][$token->token]['token'] = array(
+        '#type' => 'textfield',
+        '#disabled' => TRUE,
+        '#default_value' => $token->token,
+        '#attributes' => array('class' => array('sb-token-machine')),
+      );
+      $form['token-sets']['token-set-' . $token_set->tsid][$token->token]['token_description'] = array(
+        '#type' => 'textfield',
+        '#default_value' => $token->token_description,
+        '#attributes' => array('class' => array('sb-token-descr')),
+      );
+      $form['token-sets']['token-set-' . $token_set->tsid][$token->token]['update'] = array(
+        '#markup' => '<a href="#" class="update-token-link" style="display: none;" tsid="' . $token_set->tsid . '" tid="' . $token->tid . '">Update token</a>',
+      );
+      $form['token-sets']['token-set-' . $token_set->tsid][$token->token]['delete'] = array(
+        '#markup' => '<a href="#" class="remove-token-link" tsid="' . $token_set->tsid . '" tid="' . $token->tid . '">Remove token</a>',
+      );
+    }
+
+    // Add tokens to a token set via AJAX submit:
+    $form['token-sets']['token-set-' . $token_set->tsid]['add-token'] = array(
+      '#type' => 'container',
+    );
+    $form['token-sets']['token-set-' . $token_set->tsid]['add-token']['new_token'] = array(
+      '#type' => 'textfield',
+      '#attributes' => array('class' => array('token-machine'), 'tsid' => $token_set->tsid),
+    );
+    $form['token-sets']['token-set-' . $token_set->tsid]['add-token']['new_token_description'] = array(
+      '#type' => 'textfield',
+      '#attributes' => array('class' => array('token-description'), 'tsid' => $token_set->tsid),
+    );
+    $form['token-sets']['token-set-' . $token_set->tsid]['add-token']['add-button'] = array(
+      '#type' => 'button',
+      '#attributes' => array('class' => array('add-token-button'), 'tsid' => $token_set->tsid),
+      '#value' => 'Add token',
+    );
+
+    // Token set deletion:
+    $token_set_links = l('Rename token set', 'admin/config/content/token-sets/rename/' . $token_set->tsid, array(
+      'query' => array('destination' => 'admin/config/content/token-sets'),
+      'attributes' => array('class' => array('rename-token-set')))
+    ) . ' | ';
+    $token_set_links .= l('Delete token set', 'admin/config/content/token-sets/delete/' . $token_set->tsid, array(
+      'query' => array('destination' => 'admin/config/content/token-sets'),
+      'attributes' => array('class' => array('delete-token-set')))
+    );
+    $form['token-sets']['token-set-' . $token_set->tsid]['token-set-links'] = array('#markup' =>
+      '<div class="token-set-links">' . $token_set_links . '</div>');
+  }
+  $form['revert-token-sets'] = array(
+    '#markup' => l('Restore this form\'s default settings', 'admin/config/content/token-sets/revert', array(
+      'query' => array('destination' => 'admin/config/content/token-sets'),
+      'attributes' => array('class' => array('revert-token-sets')))
+    ),
+  );
+
+  $form['#attached']['css'] = array(
+    'data' => drupal_get_path('module', 'springboard_token_set') . '/css/springboard_token_set_admin.css',
+    'type' => 'file',
+  );
+  $form['#attached']['js'] = array(
+    'data' => drupal_get_path('module', 'springboard_token_set') . '/js/springboard_token_set_admin.js',
+    'type' => 'file',
+  );
+  return $form;
+}
+
+/**
+ * Page callback for "add token set" admin form.
+ */
+function springboard_token_set_add_token_set_admin_form($form, &$form_state) {
+  $form['add-token-set'] = array(
+    '#type' => 'fieldset',
+  );
+  $form['add-token-set']['token-set-name'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Token set name',
+    '#description' => 'Please enter a human-readable name for this token set.',
+    '#maxlength' => '64',
+    '#required' => TRUE,
+  );
+  $form['add-token-set']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Save token set',
+    '#suffix' => l('Cancel', 'admin/config/content/token-sets'),
+  );
+  return $form;
+}
+
+/**
+ * Form validation handler for "add token set" admin form.
+ */
+function springboard_token_set_add_token_set_admin_form_validate($form, &$form_state) {
+  // Make sure the new token set's name is unused:
+  $new_name = trim($form_state['values']['token-set-name']);
+  $name_query = db_query("SELECT name FROM {springboard_token_sets} WHERE name LIKE :name",
+    array(':name' => $new_name));
+  foreach ($name_query as $result) {
+    form_set_error('token-set-name', t('A token set called ":name" already exists! Please enter an unused name for this token set.', array(':name' => $result->name)));
+  }
+}
+
+/**
+ * Form submit handler for "Add token set" admin form.
+ */
+function springboard_token_set_add_token_set_admin_form_submit($form, &$form_state) {
+  $new_name = trim($form_state['values']['token-set-name']);
+  db_query("INSERT INTO {springboard_token_sets} (name) VALUES(:name)", array(':name' => $new_name));
+  drupal_set_message('Token set "' . $new_name . '" has been created!');
+}
+
+/**
+ * Page callback for "Delete token set" admin form.
+ */
+function springboard_token_set_delete_token_set_admin_form($form, &$form_state) {
+  $arg5 = arg(5);
+  if (!is_numeric($arg5)) {
+    drupal_set_message('The token set ID is expected but not present in the URL.');
+    return array();
+  }
+  $tsid = $arg5;
+  $token_set_name = db_query("SELECT name FROM {springboard_token_sets} WHERE tsid = :tsid", array(':tsid' => $tsid))
+    ->fetchField();
+  drupal_set_title(t('Are you sure you want to delete token set "' . $token_set_name . '"?'));
+  $form['delete-token-set']['submit'] = array(
+    '#prefix' => '<div id="ts-delete-blurb">This action cannot be undone.</div><br />',
+    '#suffix' => l('Cancel', 'admin/config/content/token-sets'),
+    '#type' => 'submit',
+    '#value' => 'Delete',
+  );
+  return $form;
+}
+
+/**
+ * Form submit for the token set deletion form:
+ */
+function springboard_token_set_delete_token_set_admin_form_submit($form, &$form_state) {
+  $arg5 = arg(5);
+  if (!is_numeric($arg5)) {
+    drupal_set_message('The token set ID is expected but not present in the URL.');
+    return array();
+  }
+  $tsid = $arg5;
+
+  $token_set_name = db_query("SELECT name FROM {springboard_token_sets} WHERE tsid = :tsid", array(':tsid' => $tsid))
+    ->fetchField();
+
+  // Delete any tokens associated with this token set:
+  db_query("DELETE FROM {springboard_tokens} WHERE tsid = :tsid", array(':tsid' => $tsid));
+
+  // Finally, delete the token set itself:
+  db_query("DELETE FROM {springboard_token_sets} WHERE tsid = :tsid LIMIT 1", array(':tsid' => $tsid));
+
+  drupal_set_message('Token set "' . $token_set_name . '" has been deleted!');
+}
+
+/**
+ * Page callback for "Rename token set" admin form.
+ */
+function springboard_token_set_rename_token_set_admin_form($form, &$form_state) {
+  $arg5 = arg(5);
+  if (!is_numeric($arg5)) {
+    drupal_set_message('The token set ID is expected but not present in the URL.');
+    return array();
+  }
+  $tsid = $arg5;
+  $token_set_name = db_query("SELECT name FROM {springboard_token_sets} WHERE tsid = :tsid", array(':tsid' => $tsid))
+    ->fetchField();
+  drupal_set_title(t('Rename token set "' . $token_set_name . '"'));
+  $form['rename-token-set']['new_token_set_name'] = array(
+    '#title' => 'New token set name',
+    '#type' => 'textfield',
+    '#required' => TRUE,
+    '#default_value' => (isset($token_set_name) && $token_set_name != FALSE) ? $token_set_name : '',
+    '#description' => 'Please enter a new name for token set "' . $token_set_name . '".',
+  );
+  $form['rename-token-set']['submit'] = array(
+    '#suffix' => l('Cancel', 'admin/config/content/token-sets'),
+    '#type' => 'submit',
+    '#value' => 'Rename',
+  );
+  return $form;
+}
+
+/**
+ * Fom validation for the token set rename form:
+ */
+function springboard_token_set_rename_token_set_admin_form_validate($form, &$form_state) {
+  $arg5 = arg(5);
+  if (!is_numeric($arg5)) {
+    drupal_set_message('The token set ID is expected but not present in the URL.');
+    return array();
+  }
+  $tsid = $arg5;
+
+  // Make sure the newly entered name is unique:
+  if (isset($form_state['values']['new_token_set_name'])) {
+    $new_name = $form_state['values']['new_token_set_name'];
+    
+    $duplicate_tsid = db_query("SELECT tsid FROM {springboard_token_sets} WHERE name = :new_name",
+      array(':new_name' => $new_name))
+      ->fetchField();
+    if ($duplicate_tsid !== FALSE) {
+      form_set_error('new_token_set_name',
+        t('The name ":new_name" is already being used by :same_diff token set; please choose another name.',
+          array(
+            ':new_name' => $new_name,
+            ':same_diff' => ($duplicate_tsid != $tsid ? 'a different' : 'this'),
+          )
+        )
+      );
+    }
+  }
+}
+
+/**
+ * Form submit for the token set rename form:
+ */
+function springboard_token_set_rename_token_set_admin_form_submit($form, &$form_state) {
+  $arg5 = arg(5);
+  if (!is_numeric($arg5)) {
+    drupal_set_message('The token set ID is expected but not present in the URL.');
+    return array();
+  }
+  $tsid = $arg5;
+
+  $token_set_name = db_query("SELECT name FROM {springboard_token_sets} WHERE tsid = :tsid", array(':tsid' => $tsid))
+    ->fetchField();
+
+  if (isset($form_state['values']['new_token_set_name'])) {
+    $new_token_set_name = $form_state['values']['new_token_set_name'];
+    // Update the token set name:
+    db_query("UPDATE {springboard_token_sets} SET name = :name WHERE tsid = :tsid LIMIT 1",
+      array(':name' => $new_token_set_name, ':tsid' => $tsid));
+    drupal_set_message('Token set "' . $token_set_name . '" has been renamed "' . $new_token_set_name . '".');
+  }
+  else {
+    drupal_set_message('There was a problem with renaming token set "' . $token_set_name . '"', 'error');
+  }
+}
+
+/**
+ * Token sets revert confirmation form.
+ */
+function springboard_token_set_sets_admin_revert_form($form, &$form_state) {
+  drupal_set_title(t('Are you sure you want to revert to default token set settings?'));
+  $form['delete-token-set']['submit'] = array(
+    '#prefix' => '<div id="ts-field-delete-blurb">Any fields mapped to non-default token sets will need to be remapped. This action cannot be undone.</div><br />',
+    '#suffix' => l('Cancel', 'admin/config/content/token-sets'),
+    '#type' => 'submit',
+    '#value' => 'Revert',
+  );
+  return $form;
+}
+
+/**
+ * Token sets revert confirmation form submit.
+ */
+function springboard_token_set_sets_admin_revert_form_submit($form, &$form_state) {
+  $default_token_data = json_decode(file_get_contents(drupal_get_path('module', 'springboard_token_set') . '/data/token_sets.json'));
+
+  // Delete all token to token set mappings:
+  db_query("TRUNCATE {springboard_tokens}");
+
+  // Delete all token sets that are not part of the defaults as defined in the JSON:
+  $current_token_sets_query = db_query("SELECT tsid, name FROM {springboard_token_sets}");
+  foreach ($current_token_sets_query as $current_token_set) {
+    $token_set_is_default = FALSE;
+    foreach ($default_token_data->token_sets as $default_token_set) {
+      if ($default_token_set->name == $current_token_set->name) {
+        $token_set_is_default = TRUE;
+        break;
+      }
+    }
+    if (!$token_set_is_default) {
+      db_query("DELETE FROM {springboard_token_sets} WHERE tsid = :tsid", array(':tsid' => $current_token_set->tsid));
+    }
+  }
+
+  // Restore default token sets and their default tokens:
+  _springboard_token_set_insert_default_token_sets($default_token_data);
+
+  drupal_set_message('Default token sets have been restored.');
+}
+
+/**
+ * Creates default token sets if they don't exist and populates them with default tokens.
+ */
+function _springboard_token_set_insert_default_token_sets($token_data) {
+  // Add default token sets and their tokens:
+  foreach ($token_data->token_sets as $token_set) {
+    // Get the token set ID for this token set if it already exists; otherwise, add the new set and get its ID:
+    $tsid = db_query("SELECT tsid FROM {springboard_token_sets} WHERE name = :name", array(':name' => $token_set->name))->fetchField();
+    if (!$tsid) {
+      $tsid = springboard_token_set_add_set($token_set->name);
+    }
+    foreach ($token_set->tokens as $token_machine) {
+      // Add default tokens.
+      foreach ($token_data->tokens as $token) { 
+        if ($token_machine != $token[1]) {
+          continue;
+        }
+        if (isset($tsid) && isset($token[0]) && isset($token[1]) && isset($token[2])) {
+          springboard_token_set_add_token($tsid, $token[0], $token[1], $token[2]);
+        }
+      }
+    }
+  }
+}
+
+
+/**
+ * Gets an array of field types that can be used with tokens.
+ *
+ * @return array
+ *   Array of tokenable field types.
+ */
+function springboard_token_get_field_types() {
+  return array(
+    'textarea',
+    'textfield',
+  );
+}
+
+/**
+ * Adds a new token set.
+ *
+ * @param string $name
+ *   The name of the token set.
+ *
+ * @return int
+ *   The ID of the new token set.
+ */
+function springboard_token_set_add_set($name) {
+  $tsid = db_insert('springboard_token_sets')
+    ->fields(array('name' => $name))
+    ->execute();
+
+  return $tsid;
+}
+
+/**
+ * Adds a new token.
+ *
+ * @param string $token_type
+ *   The token type.
+ * @param string $token
+ *   The token.
+ * @param string $token_description
+ *   The token description.
+ */
+function springboard_token_set_add_token($tsid, $token_type, $token, $token_description) {
+  $tid = db_insert('springboard_tokens')
+    ->fields(array(
+      'tsid' => $tsid,
+      'token_type' => $token_type,
+      'token' => $token,
+      'token_description' => $token_description,
+    ))
+    ->execute();
+
+  return $tid;
+}
+
+/**
+ * Add the label for a new token type.
+ *
+ * @param $token_type
+ *   The machine name of the token type.
+ * @param $label
+ *   The human-readable label of the token type.
+ */
+function springboard_token_set_add_token_type($token_type, $label) {
+  db_insert('springboard_token_types')
+    ->fields(array(
+      'token_type' => $token_type,
+      'label' => $label,
+    ))
+    ->execute();
+}
+
+/**
+ * Updates an existing token.
+ *
+ * @param int $tid
+ *   The token ID.
+ * @param string $token
+ *   The token.
+ * @param string $token_description
+ *   The token description.
+ */
+function springboard_token_set_update_token($tid, $token, $token_description) {
+  if (empty($token)) {
+    return;
+  }
+
+  $token_parts = explode(':', str_replace('[', '', str_replace(']', '', $token)));
+
+  db_update('springboard_tokens')
+    ->fields(array(
+      'token_type' => $token_parts[0],
+      'token' => $token,
+      'token_description' => $token_description,
+    ))
+    ->condition('tid', $tid)
+    ->execute();
+}
+
+/**
+ * Removes a token from a token set.
+ *
+ * @param int $tsid
+ *   The ID of the token set.
+ * @param int $tid
+ *   The ID of the token.
+ */
+function springboard_token_set_remove_token_from_set($tsid, $tid) {
+  db_delete('springboard_tokens')
+    ->condition('tsid', $tsid)
+    ->condition('tid', $tid)
+    ->execute();
+}
+
+/**
+ * Gets all token sets.
+ *
+ * @return array
+ *   Array of token sets.
+ */
+function springboard_token_set_get_sets() {
+  $token_sets = db_select('springboard_token_sets', 'ts')
+    ->fields('ts', array('tsid', 'name'))
+    ->execute()
+    ->fetchAll();
+
+  return $token_sets;
+}
+
+/**
+ * Gets a token set by ID.
+ *
+ * @param int $tsid
+ *   The ID of the token set.
+ *
+ * @return object
+ *   The token set.
+ */
+function springboard_token_set_get_set($tsid) {
+  $token_set = db_select('springboard_token_sets', 'ts')
+    ->fields('ts', array('tsid', 'name'))
+    ->condition('tsid', $tsid, '=')
+    ->execute()
+    ->fetchObject();
+
+  return $token_set;
+}
+
+/**
+ * Gets tokens for a given token set ID, or all tokens if $tsid is empty.
+ *
+ * @param int $tsid
+ *   The ID of the token set. Optional.
+ *
+ * @return array
+ *   Array of tokens.
+ */
+function springboard_token_set_get_tokens($tsid = NULL) {
+  $query = db_select('springboard_tokens', 't');
+  $query->join('springboard_token_types', 'ttype', 't.token_type = ttype.token_type');
+  $query->fields('t', array('tid', 'token', 'token_description'));
+  $query->addField('ttype', 'label', 'token_type');
+
+  if (!empty($tsid)) {
+    $query->condition('t.tsid', $tsid, '=');
+  }
+
+  $query->orderBy('t.token_type', 'ASC');
+
+  $result = $query->execute();
+
+  return $result->fetchAll();
+}
+
+/**
+ * Deletes a token and any references from token sets.
+ *
+ * @param string $tid
+ *   The ID of the token.
+ */
+function springboard_token_set_delete_token($tid) {
+  // Delete the token.
+  db_delete('springboard_tokens')
+    ->condition('tid', $tid)
+    ->execute();
+}
+
+/**
+ * Gets the token set ID associaed with a given entity field.
+ * 0 is returned if no token set is associated with the target field.
+ *
+ * @param $entity_type
+ *   The target field's entity type.
+ * @param $bundle
+ *   The target field's entity bundle.
+ * @param $field_name
+ *   The target field's machine name.
+ */
+function springboard_token_set_get_token_set($entity_type, $bundle, $field_name) {
+  $tsid_query = db_query("SELECT tsid FROM {springboard_token_set_entity_fields} WHERE " .
+    "entity_type = :entity_type AND bundle = :bundle AND field_name = :field_name",
+    array(':entity_type' => $entity_type, ':bundle' => $bundle, ':field_name' => $field_name));
+  foreach ($tsid_query as $tsid_data) {
+    return $tsid_data->tsid;
+  }
+  return 0;
+}
+
+/**
+ * Returns an array of all available token sets and their IDs, ordered alphabetically.
+ */
+function springboard_token_set_get_token_sets_list() {
+  $token_set_query = db_query("SELECT tsid, name FROM {springboard_token_sets} ORDER BY name");
+  $token_set_data = array();
+  foreach ($token_set_query as $result) {
+    $token_set_data[$result->tsid] = $result->name;
+  }
+  return $token_set_data;
+}
+
+/**
+ * AJAX callback for fetching a token set's data.
+ *
+ * @param $tsid
+ *   The ID of the token set data to return.
+ */
+function _springboard_token_set_ajax_fetch($tsid) {
+  $output_data = array();
+  if (!empty($tsid)) {
+    $token_set_data = springboard_token_set_get_tokens($tsid != 'all' ? $tsid : NULL);
+    foreach ($token_set_data as $token_data) {
+      $output_data[] = (array) $token_data;
+    }
+  }
+  drupal_json_output($output_data);
+}
+
+/**
+ * AJAX callback for removing a token from a token set on the token set manager form.
+ * The token's record will also be deleted if it is not used in any other token sets.
+ */
+function _springboard_token_set_admin_delete_token_ajax() {
+  // Ensure required data is present:
+  if (!isset($_POST['tsid']) || !is_numeric($_POST['tsid']) || !isset($_POST['tid']) || !is_numeric($_POST['tid'])) {
+    echo 'There was a problem with the removal of this token!';
+    return;
+  }
+  $tid = $_POST['tid']; $tsid = $_POST['tsid'];
+  // Remove this token from its token set:
+  db_query("DELETE FROM {springboard_tokens} WHERE tid = :tid AND tsid = :tsid",
+    array(':tid' => $tid, ':tsid' => $tsid));
+
+  // Tell jQuery the operation was successful:
+  echo 'success';
+}
+
+/**
+ * AJAX callback for adding a new token to a token set on the token set manager form.
+ */
+function _springboard_token_set_admin_add_token_ajax() {
+  // Ensure required data is present:
+  if (!isset($_POST['tsid']) || !is_numeric($_POST['tsid'])) {
+    echo 'There was a problem with creating this token!';
+    return;
+  }
+  else if (!isset($_POST['token_machine']) || empty($_POST['token_machine'])) {
+    echo 'Please enter the token, for example: [donation:foo]';
+    return;
+  } 
+  else if (!isset($_POST['token_descr']) || empty($_POST['token_descr'])) {
+    echo 'Please enter a description for this token.';
+    return;
+  }
+  $tsid = $_POST['tsid'];
+  $token_machine = check_plain($_POST['token_machine']); $token_machine = trim($token_machine);
+  $token_descr = check_plain($_POST['token_descr']); $token_descr = trim($token_descr);
+  $token_descr = str_replace('&#039;', "'", $token_descr);
+
+  // Validate token format:
+  if (strpos($token_machine, ':') === FALSE
+    || strpos($token_machine, '[') !== 0
+    || strpos($token_machine, ']') !== (strlen($token_machine) - 1)
+  ) {
+    echo 'Please ensure the token format is correct; for example: [foo:bar]';
+    return;
+  }
+
+  // Get the token type:
+  $token_type_data = str_replace(array('[', ']'), '', $token_machine);
+  $token_data = explode(':', $token_type_data);
+  if (!is_array($token_data) || !isset($token_data[0]) || empty($token_data[0]) || strpos($token_data[0], ':') !== FALSE) {
+    echo 'Please ensure the token format is correct; for example: [foo:bar]';
+    return;
+  }
+  $token_type = strtolower($token_data[0]);
+
+  // Make sure this token type exists:
+  $type_query = db_query("SELECT token_type FROM {springboard_token_types} WHERE token_type = :token_type",
+    array(':token_type' => $token_type));
+  $type_exists = FALSE;
+  foreach ($type_query as $result) {
+    $type_exists = TRUE;
+  }
+  if (!$type_exists) {
+    echo 'Please enter a valid token type; for example, "donation" is the token type for [donation:foo]';
+    return;
+  }
+
+  // Check if this token is already associated with the target token set:
+  $token_exists_in_this_tsid = db_query("SELECT tid FROM {springboard_tokens} WHERE token = :token_machine AND tsid = :tsid",
+    array(':token_machine' => $token_machine, ':tsid' => $tsid))
+    ->fetchField();
+  if ($token_exists_in_this_tsid !== FALSE) {
+    echo 'Token ' . $token_machine . ' already belongs to this token set!';
+    return;
+  }
+
+  // Create the token:
+  db_query("INSERT INTO {springboard_tokens} (tsid, token_type, token, token_description) " .
+    "VALUES(:token_set_id, :token_type, :token_machine, :token_descr)", array(
+      ':token_set_id' => $tsid,
+      ':token_type' => $token_type, 
+      ':token_machine' => $token_machine,
+      ':token_descr' => $token_descr,
+    )
+  );
+
+  // Tell jQuery the tid of the newly added token row:
+  $tid = db_query("SELECT tid FROM {springboard_tokens} ORDER BY tid DESC LIMIT 1")
+    ->fetchField();
+  if (!is_numeric($tid)) {
+    echo 'There was a problem fetching new token data.';
+    return;
+  }
+  echo $tid;
+}
+
+/**
+ * AJAX callback for removal of rows in he token field manager.
+ */
+function _springboard_token_set_token_field_manager_remove_ajax() {
+  // Ensure required data is present:
+  if (!isset($_POST['tsid']) || !is_numeric($_POST['tsid'])
+    || !isset($_POST['form_id']) || !isset($_POST['field_name'])) {
+    echo 'There was a problem with the removal of this mapping!';
+    return;
+  }
+  db_query("DELETE FROM {springboard_token_set_field_map} WHERE form_id = :form_id AND field_name = :field_name AND tsid = :tsid",
+    array(':form_id' => $_POST['form_id'], ':field_name' => $_POST['field_name'], ':tsid' => $_POST['tsid']));
+  // Tell jQuery the operation was successful:
+  echo 'success';
+}
+
+/**
+ * AJAX callback for the token field manager, accepting a form ID and returning a list of
+ * form keys to which the token UI can be attached.
+ *
+ * @param $form_id
+ *   The form ID from which tokenizable form field keys should be returned.
+ */
+function _springboard_token_set_token_field_manager_ajax($form_id) {
+  $data = array();
+
+  $form_fields_query = db_query("SELECT field_name, tsid FROM {springboard_token_set_field_map} " .
+    "WHERE form_id = :form_id ORDER BY field_name", array(':form_id' => $form_id));
+  foreach ($form_fields_query as $form_fields_data) {
+    $data[$form_fields_data->field_name][] = $form_fields_data->tsid;
+  }
+  echo  drupal_json_output($data);
+}
+
+/**
+ * AJAX callback for updating token-specific data:
+ */
+function _springboard_token_set_admin_update_ajax() {
+  // Ensure required data is present:
+  if (!isset($_POST['tid']) || !is_numeric($_POST['tid']) || !isset($_POST['descr'])) {
+    echo 'There was a problem updating this token!';
+    return;
+  }
+  $tid = $_POST['tid']; $new_description = $_POST['descr'];
+
+  // Update this token's record:
+  db_query("UPDATE {springboard_tokens} SET token_description = :descr WHERE tid = :tid LIMIT 1",
+    array(
+      ':tid' => $tid,
+      ':descr' => $new_description,
+    )
+  );
+
+  // Tell jQuery the operation was successful:
+  echo 'success';
+}
+
+
+/**
+ * AJAX callback for updating token set-specific data:
+ */
+function _springboard_token_set_update_ajax() {
+
+}
+
+/**
+ * Returns all tokenizable fields, groups by form ID.
+ */
+function _springboard_token_set_get_tokenizable_form_data() {
+  return array(
+    'fundraiser_admin_settings' => array(
+//      'fundraiser_cc_exp_subject' => 'Email subject',
+      'fundraiser_cc_exp_body' => 'Email body'),
+    'webform_configure_form' => array(
+//      'confirmation_page_title' => 'Confirmation page title',
+      'confirmation' => 'Confirmation message',
+      'submit_description' => 'Submit button help text'),
+    'webform_email_edit_form' => array(
+      'template' => 'E-mail template',
+    ),
+  );
+}
