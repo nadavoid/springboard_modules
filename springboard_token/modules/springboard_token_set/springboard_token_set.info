@@ -1,0 +1,5 @@
+name = Springboard Token Set
+description = Groups tokens into sets that can be attached to fields.
+package = Jackson River Springboard - extras
+dependencies[] = token
+core = 7.x

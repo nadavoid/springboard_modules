@@ -1,0 +1,90 @@
+{   
+  "webform_configure_form": [
+    {"confirmation": [
+        "Donation"
+      ]
+    },
+    {"redirect_url": [
+        "Donation"
+      ]
+    },
+    {"submit_description": [
+        "Donation"
+      ]
+    }
+  ],
+  "webform_email_edit_form": [
+    {"template": [
+       "Donation"
+     ]
+    }
+  ],
+  "donation_form_node_form": [
+    {"fundraiser_upsell|content": [
+       "Form Specific Upsell"
+     ]
+    },
+    {"fundraiser_upsell|thankyou": [
+       "Upsell"
+     ]
+    },
+    {"fundraiser_upsell|email_wrappers|message|html_body": [
+       "Upsell"
+     ]
+    },
+    {"fundraiser_upsell|email_wrappers|message|text_body": [
+       "Upsell"
+     ]
+    },
+    {"webform_goals_quick_starter_message": [
+       "Goal"
+     ]
+    }
+  ],
+  "fundraiser_admin_settings": [
+    {"fundraiser_cc_exp_body": [
+      "Donation"
+     ]
+    }
+  ],
+  "sba_message_edit_form": [
+    {"field_sba_signature|LANGUAGE|0|value": [
+       "Message Actions Signature"
+     ]
+    }
+  ],
+  "sb_social_node_settings": [
+    {"fb_description": [
+       "Social Share"
+     ]
+    },
+    {"email_subject": [
+       "Social Share"
+     ]
+    },
+    {"email_message": [
+       "Social Share"
+     ]
+    },
+    {"twitter_message": [
+      "Social Share"
+     ]
+    }
+  ],
+  "ctools_export_ui_edit_item_form": [
+    {"tag": [
+       "Springboard Tag"
+     ]
+    }
+  ],
+  "webform_goals_add": [
+    {"starter_message": [
+       "Goal"
+     ]
+    },
+    {"template": [
+       "Goal"
+     ]
+    }
+  ]
+}
