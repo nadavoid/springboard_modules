@@ -236,3 +236,13 @@ function springboard_group_views_pre_view(&$view, &$display_id, &$args) {
     }
   }
 }
+
+function springboard_group_views_pre_render(&$view) {
+  if ($view->name == 'springboard_group_my_groups' && $view->current_display == 'page_1') {
+    foreach($view->result as $index => &$result) {
+      if (!user_access('administer group')
+        && !og_user_access('node', $result->node_og_membership_nid, 'manage members'))
+        unset($result->node_og_membership_nid);
+    }
+  }
+}
