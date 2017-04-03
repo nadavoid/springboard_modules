@@ -21,19 +21,6 @@ function fundraiser_upsell_admin_thank_you_settings() {
     '#default_value' => $thank_you_content,
     '#weight' => -20,
   );
-  $form['fundraiser_upsell_thank_you_content_tokens'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Available thank you message tokens'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-    '#weight' => -19,
-  );
-  $form['fundraiser_upsell_thank_you_content_tokens']['help'] = array(
-    '#theme' => 'token_tree',
-    '#token_types' => array('all', 'donation'),
-    '#global_types' => TRUE,
-    '#click_insert' => TRUE,
-  );
   $form['email_title'] = array(
     '#type' => 'item',
     '#title' => t('E-mail settings'),
@@ -89,19 +76,7 @@ function fundraiser_upsell_admin_thank_you_settings() {
   if (empty($form['email']['message']['subject']['#default_value'])) {
     $form['email']['message']['subject']['#default_value'] = "Thank you for becoming a sustaining partner.";
   }
-  $form['email']['message']['tokens'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Available email message tokens'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-    '#weight' => 19,
-  );
-  $form['email']['message']['tokens']['help'] = array(
-    '#theme' => 'token_tree',
-    '#token_types' => array('all', 'donation'),
-    '#global_types' => TRUE,
-    '#click_insert' => TRUE,
-  );
+
   // Move the button and validation.
   $form['save'] = $form['email']['save'];
   $form['#validate'] = $form['email']['#validate'];
