@@ -1857,6 +1857,8 @@ function fundraiser_commerce_fundraiser_donation_update($donation) {
   $credit_payment_method_valid = FALSE;
   $is_bank_method = $payment_method == 'bank account';
   $is_credit_method = $payment_method == 'credit';
+  // To support Braintree payment and billing updates, check for the value of
+  // the "nonce" element.
   $nonce_set = isset($donation->donation['payment_fields'][$payment_method]['nonce']);
 
   if (!$nonce_set && $is_bank_method) {
