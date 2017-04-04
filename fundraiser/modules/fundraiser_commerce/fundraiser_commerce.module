@@ -1853,8 +1853,8 @@ function fundraiser_commerce_fundraiser_donation_update($donation) {
   // Update the payment information.
   $failed_payment_update_donations = &drupal_static(__FUNCTION__ . '_failed_payment_update', array());
   $payment_method = $donation->data['payment_method'];
-  $bank_payment_method_valid = $payment_method == 'bank account' && !empty($donation->donation['payment_fields'][$payment_method]['routing_number']) && !empty($donation->donation['payment_fields'][$payment_method]['account_number']);
-  $credit_payment_method_valid = $payment_method == 'credit' && !empty($donation->donation['payment_fields'][$payment_method]['card_number']) && !empty($donation->donation['payment_fields'][$payment_method]['card_cvv']);
+  $bank_payment_method_valid = $payment_method == 'bank account' && ((!empty($donation->donation['payment_fields'][$payment_method]['routing_number']) && !empty($donation->donation['payment_fields'][$payment_method]['account_number'])) || isset($donation->donation['payment_fields'][$payment_method]['nonce']));
+  $credit_payment_method_valid = $payment_method == 'credit' && ((!empty($donation->donation['payment_fields'][$payment_method]['card_number']) && !empty($donation->donation['payment_fields'][$payment_method]['card_cvv'])) || isset($donation->donation['payment_fields'][$payment_method]['nonce']));
   if (
     !empty($donation->update_payment)
     && (
