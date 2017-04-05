@@ -245,7 +245,7 @@ function _springboard_token_set_fields_form_table_render() {
   $rows = array();
 
   $token_sets_data = springboard_token_set_get_sets();
-  $token_fields_query = db_query("SELECT form_id, field_name, tsid FROM {springboard_token_set_field_map} ORDER BY form_id, field_name");
+  $token_fields_query = db_query("SELECT form_id, field_name, tsid FROM {springboard_token_set_field_map} ORDER BY form_id");
   $last_field_name = '';
   $odd_even = 'even';
   foreach ($token_fields_query as $result) {
