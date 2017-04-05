@@ -1238,6 +1238,31 @@ function fundraiser_sustainers_upgrade_form_webform_configure_form_alter(&$form,
  */
 function fundraiser_sustainers_upgrade_form_sustainers_upgrade_form_node_form_alter(&$form, &$form_state) {
   $form['field_sustainers_auto_upgrade']['#access'] = FALSE;
+
+  if (!module_exists('springboard_token_set')) {
+    // Create the token fieldset.
+    $form['fsu_tokens'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Available tokens'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#weight' => !empty($form['#groups']['group_sustainers_upgrade_options']->weight) ? $form['#groups']['group_sustainers_upgrade_options']->weight + 1 : 34,
+    );
+
+    // Get the node tokens.
+    $token_set = array('donation', 'sustainer_upgrade');
+
+    $form['fsu_tokens']['tokens'] = array(
+      '#type' => 'item',
+      '#title' => t('Drupal tokens'),
+      '#description' => theme('token_tree', array(
+        'token_types' => $token_set,
+        'global_types' => FALSE,
+        'recursion_limit' => 2,
+        'click_insert' => FALSE,
+      )),
+    );
+  }
 }
 
 /**
