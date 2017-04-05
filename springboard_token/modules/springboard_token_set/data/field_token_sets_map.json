@@ -1,90 +1,34 @@
 {   
-  "webform_configure_form": [
-    {"confirmation": [
-        "Donation"
-      ]
-    },
-    {"redirect_url": [
-        "Donation"
-      ]
-    },
-    {"submit_description": [
-        "Donation"
-      ]
-    }
-  ],
-  "webform_email_edit_form": [
-    {"template": [
-       "Donation"
-     ]
-    }
+  "ctools_export_ui_edit_item_form": [
+    {"tag": ["Springboard Tag"]}
   ],
   "donation_form_node_form": [
-    {"fundraiser_upsell|content": [
-       "Form Specific Upsell"
-     ]
-    },
-    {"fundraiser_upsell|thankyou": [
-       "Upsell"
-     ]
-    },
-    {"fundraiser_upsell|email_wrappers|message|html_body": [
-       "Upsell"
-     ]
-    },
-    {"fundraiser_upsell|email_wrappers|message|text_body": [
-       "Upsell"
-     ]
-    },
-    {"webform_goals_quick_starter_message": [
-       "Goal"
-     ]
-    }
+    {"fundraiser_upsell[content]": ["Donation"]},
+    {"fundraiser_upsell[email_wrappers][message][html_body][value]": ["Donation", "Social"]},
+    {"fundraiser_upsell[email_wrappers][message][text_body]": ["Donation", "Social"]},
+    {"fundraiser_upsell[thankyou]": ["Donation", "Social"]},
+    {"webform_goals_quick_starter_message": ["Goals"]}
   ],
-  "fundraiser_admin_settings": [
-    {"fundraiser_cc_exp_body": [
-      "Donation"
-     ]
-    }
-  ],
-  "sba_message_edit_form": [
-    {"field_sba_signature|LANGUAGE|0|value": [
-       "Message Actions Signature"
-     ]
-    }
+  "email_wrapper_node_form": [
+    {"email_wrapper_html_message[und][0][value]": ["Advocacy", "Date/Time", "Donation", "Social", "Website"]},
+    {"email_wrapper_text_message[und][0][value]": ["Date/Time", "Donation", "Social", "Website"]}
   ],
   "sb_social_node_settings": [
-    {"fb_description": [
-       "Social Share"
-     ]
-    },
-    {"email_subject": [
-       "Social Share"
-     ]
-    },
-    {"email_message": [
-       "Social Share"
-     ]
-    },
-    {"twitter_message": [
-      "Social Share"
-     ]
-    }
+    {"email_subject": ["Donation", "Website"]},
+    {"email_message": ["Advocacy", "Donation", "Website"]},
+    {"fb_description": ["Advocacy", "Donation", "Website"]},
+    {"twitter_message": ["Advocacy", "Donation", "Website"]}
   ],
-  "ctools_export_ui_edit_item_form": [
-    {"tag": [
-       "Springboard Tag"
-     ]
-    }
+  "webform_configure_form": [
+    {"confirmation[value]": ["Advocacy", "Date/Time", "Donation", "Social", "Website"]},
+    {"redirect_url": ["Advocacy", "Date/Time", "Donation", "Social", "Website"]}
+  ],
+  "webform_email_edit_form": [
+    {"email_wrappers_html_message": ["Advocacy", "Date/Time", "Donation", "Social", "Website"]},
+    {"email_wrappers_text_message": ["Advocacy", "Date/Time", "Donation", "Social", "Website"]}
   ],
   "webform_goals_add": [
-    {"starter_message": [
-       "Goal"
-     ]
-    },
-    {"template": [
-       "Goal"
-     ]
-    }
+    {"starter_message": ["Goals"]},
+    {"template": ["Goals"]}
   ]
 }
