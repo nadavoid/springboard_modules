@@ -1,5 +1,17 @@
 {
   "tokens": [
+    ["%value[mail]", "Advocate's email address"],
+    ["%value[sbp_address]", "Advocate's street address, line 1"],
+    ["%value[sbp_address_line_2]", "Advocate's street address, line 2"],
+    ["%value[sbp_city]", "Advocate's city"],
+    ["%value[sbp_first_name]", "Advocate's first name"],
+    ["%value[sbp_last_name]", "Advocate's last name"],
+    ["%value[sbp_phone]", "Advocate's phone number"],
+    ["%value[sbp_salutation]", "Advocate's salutation (Mr, Ms, etc)"],
+    ["%value[sbp_state]", "Advocate's state (2-letter code)"],
+    ["%value[sbp_zip]", "Advocate's 5-digit zip code"],
+    ["%value[sbp_zip_plus_four]", "Advocate's 9-digit zip code"],
+ 
     ["[donation:address]", "Donor address"],
     ["[donation:address_line_2]", "Donor address line 2"],
     ["[donation:city]", "Donor city"],
@@ -80,15 +92,20 @@
     {
       "name": "Advocacy",
       "tokens": [
+        "%value[mail]",
+        "%value[sbp_address]",
+        "%value[sbp_address_line_2]",
+        "%value[sbp_city]",
+        "%value[sbp_first_name]",
+        "%value[sbp_last_name]",
+        "%value[sbp_phone]",
+        "%value[sbp_salutation]",
+        "%value[sbp_state]",
+        "%value[sbp_zip]",
+        "%value[sbp_zip_plus_four]",
         "[action:all_messages]",
         "[action:delivered_messages]",
-        "[action:undelivered_messages]",
-        "[contact:first_name]",
-        "[contact:address]",
-        "[contact:last_name]",
-        "[target:salutation]",
-        "[target:first_name]",
-        "[target:last_name]"
+        "[action:undelivered_messages]"
       ]
     },
     {
@@ -105,51 +122,51 @@
       "tokens": [
         "[donation:address]",
         "[donation:address_line_2]",
-        "[donation:city]",
-        "[donation:country]",
-        "[donation:user]",
         "[donation:amount]",
+        "[donation:amount_formatted]",
         "[donation:card_expiration_month]",
         "[donation:card_expiration_year]",
+        "[donation:card_number]",
         "[donation:card_type]",
+        "[donation:city]",
+        "[donation:country]",
         "[donation:currency:code]",
         "[donation:currency:name]",
         "[donation:currency:symbol]",
         "[donation:did]",
+        "[donation:first_name]",
+        "[donation:frequency]",
+        "[donation:last_name]",
+        "[donation:mail]",
+        "[donation:order:commerce-line-items:1]",
+        "[donation:order:commerce-line-items:2]",
+        "[donation:order:commerce-line-items:3]",
+        "[donation:order:commerce-line-items]",
         "[donation:order:commerce_customer_billing]",
-        "[donation:order:created]",
         "[donation:order:created:custom:?]",
         "[donation:order:created:long]",
         "[donation:order:created:medium]",
         "[donation:order:created:short]",
-        "[donation:order:commerce-line-items]",
-        "[donation:order:commerce-line-items:1]",
-        "[donation:order:commerce-line-items:2]",
-        "[donation:order:commerce-line-items:3]",
+        "[donation:order:created]",
         "[donation:order:status-title]",
         "[donation:payment-transaction:remote-id]",
         "[donation:payment-transaction:remote-status]",
         "[donation:payment-transaction:status]",
         "[donation:payment-transaction:transaction-id]",
-        "[donation:mail]",
-        "[donation:first_name]",
-        "[donation:amount_formatted]",
-        "[donation:card_number]",
-        "[donation:last_name]",
         "[donation:payment_method]",
-        "[donation:frequency]",
         "[donation:recurs_monthly]",
         "[donation:state]",
+        "[donation:user]",
         "[donation:zip]"
       ]
     },
     {
       "name": "Goals",
       "tokens": [
+        "[goal:progress-percent]",
         "[goal:progress-starter]",
         "[goal:target]",
-        "[goal:total]",
-        "[goal:progress-percent]"
+        "[goal:total]"
       ]
     },
     {
@@ -158,13 +175,13 @@
         "[sb_social:email_message]",
         "[sb_social:email_share_link]",
         "[sb_social:email_subject]",
-        "[sb_social:facebook_share_link]",
         "[sb_social:facebook_description]",
         "[sb_social:facebook_image]",
+        "[sb_social:facebook_share_link]",
         "[sb_social:facebook_title]",
         "[sb_social:share_links]",
-        "[sb_social:twitter_share_link]",
-        "[sb_social:twitter_message]"
+        "[sb_social:twitter_message]",
+        "[sb_social:twitter_share_link]"
       ]
     },
     {
@@ -174,20 +191,20 @@
         "[donation:currency:code]",
         "[donation:did]",
         "[donation:frequency]",
-        "[donation:node:title]",
         "[donation:node:sid]",
+        "[donation:node:title]",
         "[donation:webform-tokens:?]" 
       ]
     },
     {
       "name": "Website",
       "tokens": [
-        "[site:mail]",
         "[site:login-url]",
+        "[site:mail]",
         "[site:name]",
         "[site:slogan]",
-        "[site:url]",
-        "[site:url-brief]"
+        "[site:url-brief]",
+        "[site:url]"
       ]
     }
   ]
