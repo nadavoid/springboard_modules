@@ -485,7 +485,6 @@ function springboard_dw_queue_legacy_message($messages, $operation_details, $idl
       springboard_dw_log_queue_item($message_item);
       springboard_dw_track_item_warehouse_queued('advocacy message', $message['_id']['$id']);
       // Mark message as tracked in Advocacy.
-      // Endpoint messages/{messageId}/warehouse/track.
       $metrics = springboard_dw_queue_legacy_get_endpoint($message['_id']['$id'], 'warehouse/track');
     }
     else {
@@ -544,24 +543,26 @@ function springboard_dw_queue_legacy_build_action($submission) {
  *   Array of all message values or an empty array.
  */
 function springboard_dw_queue_legacy_get_advocacy_messages($limit = FALSE) {
-  drush_log('Getting messages...', 'ok');
   // Get nids of all sba_message_action nodes.
   $advocacy_action_records = db_query("SELECT nid FROM {node} WHERE type = 'sba_message_action' OR type = 'sba_social_action' ORDER BY created ASC", array(), array('target' => 'slave'))->fetchAll();
   $messages = array();
   foreach ($advocacy_action_records as $advocacy_action_record) {
     $node = node_load($advocacy_action_record->nid);
-    // Get count of remaining messages for this advocacy_id. (eg Master-Example-Me-557b2473eda5f)
-    // Endpoint messages/{actionId}/warehouse/metrics.
+    // Get count of remaining messages for this advocacy_id.
     $metrics = springboard_dw_queue_legacy_get_endpoint($node->advocacy_id, 'warehouse/metrics');
-    drush_log($metrics['message'], 'ok');
-    // If count of warehosued messages is less than total messages.
-    if ($metrics['warehousedMessages'] < $metrics['totalCount']) {
-      // Endpoint messages/{actionId}/warehouse/untracked.
-      $api_params = ($limit !== FALSE) ? array('limit' => $limit) : array();
-      $messages = springboard_dw_queue_legacy_get_endpoint($node->advocacy_id, 'warehouse/untracked', $api_params);
-      // We found messages to queue, so break out of this foreach. To get the
-      // rest of the messages, keep running this drush commend.
-      break;
+    if (!isset($metrics['message'])) {
+      drush_log(dt('There was a problem retrieving message count for action: @action_id', array('@action_id' => $node->advocacy_id)), 'error');
+    }
+    else {
+      drush_log($metrics['message'], 'ok');
+      // If count of warehosued messages is less than total messages.
+      if ($metrics['warehousedMessages'] < $metrics['totalCount']) {
+        $api_params = ($limit !== FALSE) ? array('limit' => $limit) : array();
+        $messages = springboard_dw_queue_legacy_get_endpoint($node->advocacy_id, 'warehouse/untracked', $api_params);
+        // We found messages to queue, so break out of this foreach. To get the
+        // rest of the messages, keep running this drush commend.
+        break;
+      }
     }
   }
   return isset($messages) ? $messages : array();
