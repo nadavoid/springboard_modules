@@ -735,7 +735,7 @@ function _fundraiser_donation_settings_form(&$form, &$form_state) {
     '#title' => t('Minimum donation amount'),
     '#description' => t('The minimum acceptable donation amount.'),
     '#default_value' => isset($node->minimum_donation_amount) ?
-      number_format($node->minimum_donation_amount, 2) : variable_get('fundraiser_default_minimum', 10.00),
+      number_format($node->minimum_donation_amount, 2, '.', "") : variable_get('fundraiser_default_minimum', 10.00),
   );
 
   $form['#validate'][] = '_fundraiser_form_amounts_validate';
