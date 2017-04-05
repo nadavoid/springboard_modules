@@ -312,12 +312,10 @@ function springboard_group_advocacy_action_targets_form__alter(&$form, &$form_st
       $count = count($targets_to_delete);
       $count_messages = count($messages_with_targets_to_delete);
       $format = format_plural($count, 'target', 'targets');
-      $format_messages = format_plural($count_messages, 'message', 'messages');
-      $form_state['group_ajax_messages'][] = t('@count @format in @count_messages @format_messages will be removed when this form is saved. Please update your targets after saving.', array(
-        '@count' => $count,
+      $article = format_plural($count, 'The', 'All');
+      $form_state['group_ajax_messages'][] = t('@article @format for this action will be removed when this form is saved. Please update your @format after saving.', array(
+        '@article' => $article,
         '@format' => $format,
-        '@count_messages' => $count_messages,
-        '@format_messages' => $format_messages,
       ));
     }
   }
