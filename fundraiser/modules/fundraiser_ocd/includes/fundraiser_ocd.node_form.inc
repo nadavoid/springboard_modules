@@ -24,6 +24,9 @@ function fundraiser_ocd_form_node_form_alter(&$form, &$form_state, $form_id) {
     '#title' => t('Enable One Click Donate on this form?'),
     '#description' => t('Enabling One Click Donate will allow users to save their payment information for future use, login and use their saved card if they have one, and makes the form compatible with secure One Click Donate links.'),
     '#default_value' => isset($form['#node']->ocd) ? $form['#node']->ocd : FALSE,
+    '#attributes' => array(
+      'class' => array('ocd'),
+    ),
   );
 
   if (empty(variable_get(FUNDRAISER_OCD_DEFAULT_FORM_PREFIX . 'default', array()))) {
@@ -95,6 +98,9 @@ function fundraiser_ocd_form_node_form_alter(&$form, &$form_state, $form_id) {
           ':input[name="ocd"]' => array('checked' => TRUE),
         ),
       ),
+      '#attributes' => array(
+        'class' => array('ocd'),
+      ),
     );
 
     // Because a bug exists in D7 where the input filter help information
@@ -109,6 +115,9 @@ function fundraiser_ocd_form_node_form_alter(&$form, &$form_state, $form_id) {
           ':input[name="ocd"]' => array('checked' => TRUE),
         ),
       ),
+      '#attributes' => array(
+        'class' => array('ocd'),
+      ),
     );
     $form['payment_methods']['ocd_help_container_new_user']['ocd_help_message_new_user'] = array(
       '#type' => 'text_format',
@@ -116,6 +125,9 @@ function fundraiser_ocd_form_node_form_alter(&$form, &$form_state, $form_id) {
       '#description' => t('This message will be shown to users to provide information about one-click donations. Use !type to print the type of payment method, which will be either credit or bank account.<br/><br/>', array('!type' => '<strong>@type</strong>')),
       '#default_value' => isset($form['#node']->ocd_help_message_new_user) ? $form['#node']->ocd_help_message_new_user : variable_get('fundraiser_ocd_default_help_message_new_user', t('Save your @type details and donate faster next time. We may email you from time to time with one-click donate opportunities. You can update your @type details or cancel your enrollment at any time.')),
       '#format' => isset($form['#node']->ocd_help_message_new_user_format) ? $form['#node']->ocd_help_message_new_user_format : variable_get('fundraiser_ocd_default_help_message_new_user_format', 'plain_text'),
+      '#attributes' => array(
+        'class' => array('ocd'),
+      ),
     );
 
     // Help text for existing users.
@@ -129,6 +141,9 @@ function fundraiser_ocd_form_node_form_alter(&$form, &$form_state, $form_id) {
           ':input[name="ocd"]' => array('checked' => TRUE),
         ),
       ),
+      '#attributes' => array(
+        'class' => array('ocd'),
+      ),
     );
 
     $form['payment_methods']['ocd_help_container_existing_user'] = array(
@@ -138,6 +153,9 @@ function fundraiser_ocd_form_node_form_alter(&$form, &$form_state, $form_id) {
           ':input[name="ocd"]' => array('checked' => TRUE),
         ),
       ),
+      '#attributes' => array(
+        'class' => array('ocd'),
+      ),
     );
     $form['payment_methods']['ocd_help_container_existing_user']['ocd_help_message_existing_user'] = array(
       '#type' => 'text_format',
@@ -145,6 +163,9 @@ function fundraiser_ocd_form_node_form_alter(&$form, &$form_state, $form_id) {
       '#description' => t('This message will be shown to users to provide information about one-click donations. Use !type to print the type of payment method, which will be either credit or bank account.<br/><br/>', array('!type' => '<strong>@type</strong>')),
       '#default_value' => isset($form['#node']->ocd_help_message_existing_user) ? $form['#node']->ocd_help_message_existing_user : variable_get('fundraiser_ocd_default_help_message_existing_user', t('Check this box if you want to make this new @type your default for future donations.')),
       '#format' => isset($form['#node']->ocd_help_message_existing_user_format) ? $form['#node']->ocd_help_message_existing_user_format : variable_get('fundraiser_ocd_default_help_message_existing_user_format', 'plain_text'),
+      '#attributes' => array(
+        'class' => array('ocd'),
+      ),
     );
 
     $form['payment_methods']['ocd_login_message'] = array(
@@ -157,6 +178,9 @@ function fundraiser_ocd_form_node_form_alter(&$form, &$form_state, $form_id) {
           ':input[name="ocd"]' => array('checked' => TRUE),
         ),
       ),
+      '#attributes' => array(
+        'class' => array('ocd'),
+      ),
     );
 
     $form['payment_methods']['ocd_login_link_message'] = array(
@@ -168,6 +192,9 @@ function fundraiser_ocd_form_node_form_alter(&$form, &$form_state, $form_id) {
         'visible' => array(
           ':input[name="ocd"]' => array('checked' => TRUE),
         ),
+      ),
+      '#attributes' => array(
+        'class' => array('ocd'),
       ),
     );
   }

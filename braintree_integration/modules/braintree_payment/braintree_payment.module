@@ -177,3 +177,47 @@ function braintree_hostedfields_styles() {
   drupal_alter('braintree_hostedfields_styles', $styles);
   return $styles;
 }
+
+/**
+ * Helper function get children of webform components.
+ */
+function _braintree_payment_webform_components_find_parent_children($pid, $components) {
+  $children = array();
+  foreach ($components as $cid => $component) {
+    if ($component['pid'] == $pid) {
+      $children[] = $component['cid'];
+    }
+  }
+  return $children;
+}
+
+/**
+ * Helper function get a webform component's info by $nid,$cid.
+ */
+function _braintree_payment_webform_get_component_by_cid($nid, $cid) {
+  $query = db_select('webform_component', 'c')
+    ->fields('c', array('form_key', 'type', 'pid', 'cid', 'weight'))
+    ->condition('nid', $nid)
+    ->condition('cid', $cid);
+  return $query->execute()->fetch();
+}
+
+/**
+ * Helper function.
+ *
+ * Get standard default field keys for fundraiser webform components.
+ */
+function _braintree_payment_default_fundraiser_fields() {
+  return array(
+    'first_name',
+    'last_name',
+    'mail',
+    'address',
+    'address_line_2',
+    'city',
+    'zip',
+    'country',
+    'state',
+    'sbp_phone',
+  );
+}
