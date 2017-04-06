@@ -2072,6 +2072,16 @@ function fundraiser_sustainers_form_fundraiser_admin_settings_alter(&$form, &$fo
     '#description' => t('The body of the email.'),
   );
 
+  if (!module_exists('springboard_token_set')) {
+    $form['fundraiser_sustainers']['fundraiser_cc_expiration_message']['tokens'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Donor replacement tokens'),
+      '#description' => t('The following tokens are available for sustainer emails.'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+  }
+
   // Auto-cancel options for sustainers whose payment are consistently declined.
   $form['fundraiser_sustainers']['fundraiser_recurring_auto_cancel'] = array (
     '#type' => 'fieldset',
@@ -2091,6 +2101,16 @@ function fundraiser_sustainers_form_fundraiser_admin_settings_alter(&$form, &$fo
     '#description' => t('How many consecutive donation failures after which a permanent cancellation should occur. Please enter a value greater than 3.'),
     '#default_value' => variable_get('fundraiser_recurring_autocancel_threshold', 3),
   );
+
+  if (!module_exists('springboard_token_set')) {
+    $token_set = array('donation', 'user', 'node');
+    $form['fundraiser_sustainers']['fundraiser_cc_expiration_message']['tokens']['token_help'] = array(
+      '#type' => 'item',
+      '#title' => t('Drupal tokens'),
+      '#description' => theme('token_tree', array('token_types' => $token_set, 'recursion_limit' => 2, 'click_insert' => FALSE)),
+    );
+  }
+
   $form['#validate'][] = 'fundraiser_sustainers_settings_form_validate';
   $form['#submit'][] = 'fundraiser_update_cron_settings';
 }

@@ -48,12 +48,6 @@ function springboard_token_set_schema() {
         'unsigned' => TRUE,
         'not null' => TRUE,
       ),
-      'token_type' => array(
-        'description' => 'Type of token (node, user, etc.)',
-        'type' => 'varchar',
-        'length' => '255',
-        'not null' => FALSE,
-      ),
       'token' => array(
         'description' => 'The token ([node:title], [user:mail], etc.)',
         'type' => 'varchar',
@@ -68,55 +62,6 @@ function springboard_token_set_schema() {
       ),
     ),
     'primary key' => array('tid'),
-  );
-
-  $schema['springboard_token_types'] = array(
-    'description' => 'Provides labels for token types.',
-    'fields' => array(
-      'token_type' => array(
-        'description' => 'The machine name for each type of token.',
-        'type' => 'varchar',
-        'length' => '32',
-        'not null' => TRUE,
-      ),
-      'label' => array(
-        'description' => 'The human-readable label for each type of token.',
-        'type' => 'varchar',
-        'length' => '32',
-        'not null' => TRUE,
-      ),
-    ),
-    'primary key' => array('token_type'),
-  );
-
-  $schema['springboard_token_set_entity_fields'] = array(
-    'description' => 'Maps token sets to entity fields.',
-    'fields' => array(
-      'tsid' => array(
-        'description' => 'Unique ID of the token set.',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-      ),
-      'entity_type' => array(
-        'description' => 'The entity type of the target field.',
-        'type' => 'varchar',
-        'length' => '32',
-        'not null' => TRUE,
-      ),
-      'bundle' => array(
-        'description' => 'The bundle of the target field.',
-        'type' => 'varchar',
-        'length' => '32',
-        'not null' => TRUE,
-      ),
-      'field_name' => array(
-        'description' => 'The machine name of the target field.',
-        'type' => 'varchar',
-        'length' => '32',
-        'not null' => TRUE,
-      ),
-    ),
   );
 
   $schema['springboard_token_set_field_map'] = array(
@@ -151,13 +96,6 @@ function springboard_token_set_schema() {
 function springboard_token_set_install() {
   $token_data = json_decode(file_get_contents(drupal_get_path('module', 'springboard_token_set') . '/data/token_sets.json'));
 
-  // Add default token type labels.
-  foreach ($token_data->token_types as $token_type) {
-    if (isset($token_type[0]) && isset($token_type[1])) {
-      springboard_token_set_add_token_type($token_type[0], $token_type[1]);
-    }
-  }
-
   // Add default token sets if they do not already exist (they shouldn't) and their tokens:
   _springboard_token_set_insert_default_token_sets($token_data);
 
@@ -170,7 +108,7 @@ function springboard_token_set_install() {
  */
 function springboard_token_set_enable() {
   // Ensure this module runs after other modules since those module may add form elements or data
-  // that will require the Token UI:
+  // that will receive the Token UI:
   db_update('system')
     ->fields(array('weight' => 500))
     ->condition('type', 'module')

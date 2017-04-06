@@ -86,12 +86,6 @@ function springboard_token_set_menu() {
     'access arguments' => array('administer springboard'),
     'type' => MENU_CALLBACK,
   );
-  $items['sb-admin-token-set-update-ajax'] = array(
-    'page callback' => '_springboard_token_set_update_ajax',
-    'page arguments' => array(1),
-    'access arguments' => array('administer springboard'),
-    'type' => MENU_CALLBACK,
-  );
   $items['sb-token-set-ajax'] = array(
     'page callback' => '_springboard_token_set_ajax_fetch',
     'page arguments' => array(1),
@@ -251,7 +245,7 @@ function _springboard_token_set_fields_form_table_render() {
   $rows = array();
 
   $token_sets_data = springboard_token_set_get_sets();
-  $token_fields_query = db_query("SELECT form_id, field_name, tsid FROM {springboard_token_set_field_map} ORDER BY form_id, field_name");
+  $token_fields_query = db_query("SELECT form_id, field_name, tsid FROM {springboard_token_set_field_map} ORDER BY form_id");
   $last_field_name = '';
   $odd_even = 'even';
   foreach ($token_fields_query as $result) {
@@ -780,11 +774,11 @@ function _springboard_token_set_insert_default_token_sets($token_data) {
     foreach ($token_set->tokens as $token_machine) {
       // Add default tokens.
       foreach ($token_data->tokens as $token) { 
-        if ($token_machine != $token[1]) {
+        if ($token_machine != $token[0]) {
           continue;
         }
-        if (isset($tsid) && isset($token[0]) && isset($token[1]) && isset($token[2])) {
-          springboard_token_set_add_token($tsid, $token[0], $token[1], $token[2]);
+        if (isset($tsid) && isset($token[0]) && isset($token[1])) {
+          springboard_token_set_add_token($tsid, $token[0], $token[1]);
         }
       }
     }
@@ -825,41 +819,23 @@ function springboard_token_set_add_set($name) {
 /**
  * Adds a new token.
  *
- * @param string $token_type
- *   The token type.
+ * @param int $tsd
+ *   The token set ID.
  * @param string $token
  *   The token.
  * @param string $token_description
  *   The token description.
  */
-function springboard_token_set_add_token($tsid, $token_type, $token, $token_description) {
+function springboard_token_set_add_token($tsid, $token, $token_description) {
   $tid = db_insert('springboard_tokens')
     ->fields(array(
       'tsid' => $tsid,
-      'token_type' => $token_type,
       'token' => $token,
       'token_description' => $token_description,
     ))
     ->execute();
 
   return $tid;
-}
-
-/**
- * Add the label for a new token type.
- *
- * @param $token_type
- *   The machine name of the token type.
- * @param $label
- *   The human-readable label of the token type.
- */
-function springboard_token_set_add_token_type($token_type, $label) {
-  db_insert('springboard_token_types')
-    ->fields(array(
-      'token_type' => $token_type,
-      'label' => $label,
-    ))
-    ->execute();
 }
 
 /**
@@ -877,11 +853,8 @@ function springboard_token_set_update_token($tid, $token, $token_description) {
     return;
   }
 
-  $token_parts = explode(':', str_replace('[', '', str_replace(']', '', $token)));
-
   db_update('springboard_tokens')
     ->fields(array(
-      'token_type' => $token_parts[0],
       'token' => $token,
       'token_description' => $token_description,
     ))
@@ -949,15 +922,13 @@ function springboard_token_set_get_set($tsid) {
  */
 function springboard_token_set_get_tokens($tsid = NULL) {
   $query = db_select('springboard_tokens', 't');
-  $query->join('springboard_token_types', 'ttype', 't.token_type = ttype.token_type');
   $query->fields('t', array('tid', 'token', 'token_description'));
-  $query->addField('ttype', 'label', 'token_type');
 
   if (!empty($tsid)) {
     $query->condition('t.tsid', $tsid, '=');
   }
 
-  $query->orderBy('t.token_type', 'ASC');
+  $query->orderBy('t.token', 'ASC');
 
   $result = $query->execute();
 
@@ -1068,36 +1039,6 @@ function _springboard_token_set_admin_add_token_ajax() {
   $token_descr = check_plain($_POST['token_descr']); $token_descr = trim($token_descr);
   $token_descr = str_replace('&#039;', "'", $token_descr);
 
-  // Validate token format:
-  if (strpos($token_machine, ':') === FALSE
-    || strpos($token_machine, '[') !== 0
-    || strpos($token_machine, ']') !== (strlen($token_machine) - 1)
-  ) {
-    echo 'Please ensure the token format is correct; for example: [foo:bar]';
-    return;
-  }
-
-  // Get the token type:
-  $token_type_data = str_replace(array('[', ']'), '', $token_machine);
-  $token_data = explode(':', $token_type_data);
-  if (!is_array($token_data) || !isset($token_data[0]) || empty($token_data[0]) || strpos($token_data[0], ':') !== FALSE) {
-    echo 'Please ensure the token format is correct; for example: [foo:bar]';
-    return;
-  }
-  $token_type = strtolower($token_data[0]);
-
-  // Make sure this token type exists:
-  $type_query = db_query("SELECT token_type FROM {springboard_token_types} WHERE token_type = :token_type",
-    array(':token_type' => $token_type));
-  $type_exists = FALSE;
-  foreach ($type_query as $result) {
-    $type_exists = TRUE;
-  }
-  if (!$type_exists) {
-    echo 'Please enter a valid token type; for example, "donation" is the token type for [donation:foo]';
-    return;
-  }
-
   // Check if this token is already associated with the target token set:
   $token_exists_in_this_tsid = db_query("SELECT tid FROM {springboard_tokens} WHERE token = :token_machine AND tsid = :tsid",
     array(':token_machine' => $token_machine, ':tsid' => $tsid))
@@ -1108,10 +1049,9 @@ function _springboard_token_set_admin_add_token_ajax() {
   }
 
   // Create the token:
-  db_query("INSERT INTO {springboard_tokens} (tsid, token_type, token, token_description) " .
-    "VALUES(:token_set_id, :token_type, :token_machine, :token_descr)", array(
+  db_query("INSERT INTO {springboard_tokens} (tsid, token, token_description) " .
+    "VALUES(:token_set_id, :token_machine, :token_descr)", array(
       ':token_set_id' => $tsid,
-      ':token_type' => $token_type, 
       ':token_machine' => $token_machine,
       ':token_descr' => $token_descr,
     )
@@ -1175,37 +1115,11 @@ function _springboard_token_set_admin_update_ajax() {
   // Update this token's record:
   db_query("UPDATE {springboard_tokens} SET token_description = :descr WHERE tid = :tid LIMIT 1",
     array(
-      ':tid' => $tid,
       ':descr' => $new_description,
+      ':tid' => $tid,
     )
   );
 
   // Tell jQuery the operation was successful:
   echo 'success';
-}
-
-
-/**
- * AJAX callback for updating token set-specific data:
- */
-function _springboard_token_set_update_ajax() {
-
-}
-
-/**
- * Returns all tokenizable fields, groups by form ID.
- */
-function _springboard_token_set_get_tokenizable_form_data() {
-  return array(
-    'fundraiser_admin_settings' => array(
-//      'fundraiser_cc_exp_subject' => 'Email subject',
-      'fundraiser_cc_exp_body' => 'Email body'),
-    'webform_configure_form' => array(
-//      'confirmation_page_title' => 'Confirmation page title',
-      'confirmation' => 'Confirmation message',
-      'submit_description' => 'Submit button help text'),
-    'webform_email_edit_form' => array(
-      'template' => 'E-mail template',
-    ),
-  );
 }

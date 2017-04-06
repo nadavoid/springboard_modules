@@ -110,7 +110,6 @@
         var tokenFieldKey = element.closest('.has-token-data').attr("token_key");
 
         // Generate tokens markup.
-        var last_token_type = '';
         var headerHTML = '';
         headerHTML += '<div class="token-ui-header">'; 
         var html = '<fieldset id="token-set-tokens" class="form-wrapper">';
@@ -159,7 +158,6 @@
               for (var i = 0; i < data.length; i++) {
                 token = {
                   token: data[i]['token'],
-                  token_type: data[i]['token_type'],
                   tsid: tsid,
                   token_description: data[i]['token_description']
                 };
@@ -226,7 +224,7 @@
 
 
       var renderToken = function (token) {
-        var html = '<div class="token-set-token-row token-set-token-type-' + token.token_type.replace(' ', '-') + '" ' +
+        var html = '<div class="token-set-token-row" ' +
           'tsid="' + token.tsid + '" data-token="' + token.token + '">';
         html += '<div class="token-col token-machine">' + token.token + '</div>';
         html += '<div class="token-col token-descr">' + token.token_description + '</div>';
