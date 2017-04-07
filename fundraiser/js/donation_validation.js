@@ -81,23 +81,25 @@
             }
           },
           onfocusout: function (element) {
-            // Callback for real-time onfocusout of form elements.
-            var isValid = $(element).valid();
+            setTimeout(function() {
+              // Callback for real-time onfocusout of form elements.
+              var isValid = $(element).valid();
 
-            if (typeof validateKeyCallback == 'undefined') {
-              return;
-            }
+              if (typeof validateKeyCallback == 'undefined') {
+                return;
+              }
 
-            if (isValid == 0) {
-              // Set status to 0.
-              validateKeyCallback.status = 0;
-              validateKeyCallback.error(element);
-            }
-            else if (isValid == 1) {
-              // Set status to 1.
-              validateKeyCallback.status = 1;
-              validateKeyCallback.success(element);
-            }
+              if (isValid == 0) {
+                // Set status to 0.
+                validateKeyCallback.status = 0;
+                validateKeyCallback.error(element);
+              }
+              else if (isValid == 1) {
+                // Set status to 1.
+                validateKeyCallback.status = 1;
+                validateKeyCallback.success(element);
+              }
+            }, 500);
           },
           highlight: function(element) {
             $element = $(element);
