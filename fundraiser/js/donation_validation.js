@@ -278,7 +278,6 @@
           }
         }
 
-        var $checkedAmounts = $('input[type="radio"][name$="[amount]"]:checked');
         // Other Amount
         var $other_amount = $('input[name*="other_amount"][type!="hidden"]');
         $($other_amount).blur(function () {
@@ -292,8 +291,7 @@
           $other_amount.each(function() {
             $(this).rules('add', {
               required: function(element) {
-                          return $('input[type="radio"][name$="[amount]"]:checked').length == 0 || $('input[type="radio"][name$="[amount]"][value="other"]:visible').is(":checked");
-
+                return $('input[type="radio"][name$="[amount]"]:checked').length == 0 || $('input[type="radio"][name$="[amount]"][value="other"]:visible').is(":checked");
               },
               amount: true,
               min: parseFloat(Drupal.settings.fundraiserWebform.minimum_donation_amount),
@@ -315,7 +313,7 @@
             var enableRecurringOtherRule = function() {
               $this.rules('add', {
                 required: function(element) {
-                            return $('input[type="radio"][name$="[recurring_amount]"]:checked').length == 0 || $('input[type="radio"][name$="[recurring_amount]"][value="other"]:visible').is(":checked");
+                    return $('input[type="radio"][name$="[recurring_amount]"]:checked').length == 0 || $('input[type="radio"][name$="[recurring_amount]"][value="other"]:visible').is(":checked");
                   },
                 amount: true,
                 min: parseFloat(Drupal.settings.fundraiserWebform.recurring_minimum_donation_amount),
@@ -421,7 +419,6 @@
             $('input[name*="[recurring_other_amount]"]').focus();
           }
           else {
-            console.log('clearele');
             clearElement($('input[name*="[recurring_other_amount]"]'));
           }
         });
