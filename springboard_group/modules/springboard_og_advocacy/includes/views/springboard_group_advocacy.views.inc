@@ -61,7 +61,12 @@ function springboard_group_springboard_advocacy_views_plugin_query_alter(&$query
     // If there's a group id, only return results for that group when searching
     // custom targets or custom groups.
     if (!empty($query->search_terms) && ($query->search_terms['class_name'][0] == 'Target' || $query->search_terms['class_name'][0] == 'Group')) {
-      $query->search_terms['affiliate_id'] = $gid;
+      if (!user_access('administer_group') && $gid == '_all' && !empty($_SESSION['springboard_group_context_multiple'])) {
+        $query->search_terms['affiliate_id'] = $_SESSION['springboard_group_context_multiple'];
+      }
+      else {
+        $query->search_terms['affiliate_id'] = $gid;
+      }
     }
   }
   else {
