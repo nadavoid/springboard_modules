@@ -516,7 +516,7 @@ function webform_user_webform_validate($form, &$form_state) {
   $mail = isset($fields['mail']) ? trim($fields['mail']) : '';
   $skip_user_check = isset($form_state['webform_user_skip_user_check']) ? $form_state['webform_user_skip_user_check'] : FALSE;
 
-  if (_webform_user_is_webform_user_node($node) && !_webform_user_validate_email($mail)) {
+  if (_webform_user_is_webform_user_node($node) && !springboard_validate_email($mail)) {
     form_set_error('mail', t('Please enter a valid email address.'));
   }
   // When user is logged in make sure email isn't updated to
@@ -1333,14 +1333,6 @@ function _webform_user_get_map($nid, $fields) {
   }
 
   return $user_map;
-}
-
-/**
- * Helper function, validate an e-mail address.
- */
-function _webform_user_validate_email($mail) {
-  // TODO - why are we not using valid_email_address() from D7?
-  return preg_match('/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/', $mail);
 }
 
 /**

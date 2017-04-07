@@ -194,7 +194,7 @@ function springboard_advocacy_url_validate($element, &$form_state) {
 
 function springboard_advocacy_email_validate($element, &$form_state) {
 
-  if (!valid_email_address($form_state['values']['springboard_advocacy_test_email'], TRUE)) {
+  if (!springboard_validate_email($form_state['values']['springboard_advocacy_test_email'], TRUE)) {
     form_error($element, t('You must enter a valid email address'));
   }
 

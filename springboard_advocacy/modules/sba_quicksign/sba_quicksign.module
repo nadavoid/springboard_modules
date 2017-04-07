@@ -99,7 +99,7 @@ function sba_quicksign_after_build($form, $form_state) {
     if (isset($parents['sba_quicksign'])) {
       $email_field = &_webform_user_find_field($form, $component_hierarchy['mail']);
       $email_value = $quicksign_field['children']['qsign']['quicksign_mail']['#value'];
-      if (valid_email_address($email_value)) {
+      if (springboard_validate_email($email_value)) {
         $email_field['#value'] = $quicksign_field['children']['qsign']['quicksign_mail']['#value'];
       }
     }
@@ -189,7 +189,7 @@ function sba_quicksign_form_validate(&$form, &$form_state) {
       return;
     }
 
-    if (!valid_email_address($mail)) {
+    if (!springboard_validate_email($mail)) {
       sba_quicksign_remove_required_attr($form, $form_state);
       $form_state['storage']['quicksign_validated'] = TRUE;
       return;
@@ -226,7 +226,7 @@ function sba_quicksign_form_validate(&$form, &$form_state) {
         }
         else {
           // Special handling for mail.
-          if (valid_email_address($mail)) {
+          if (springboard_validate_email($mail)) {
             $profile['mail'] = $mail;
           }
         }

@@ -4,6 +4,7 @@ core = 7.x
 package = Springboard Advocacy
 dependencies[] = libraries
 dependencies[] = views
+dependencies[] = springboard
 
 configure = 'admin/config/services/advocacy'
 

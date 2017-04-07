@@ -1417,7 +1417,7 @@ function _fundraiser_currency_field_display($form, $form_state, $field) {
  * Validation callback for field email. Called during form validation.
  */
 function _fundraiser_email_field_validate($form, $form_state, $submission_fields, $value) {
-  if (!_fundraiser_validate_email(trim($value))) {
+  if (!springboard_validate_email(trim($value))) {
     return array('mail' => t('You must enter a valid email address.'));
   }
 }
@@ -2829,15 +2829,6 @@ function _fundraiser_is_secure() {
 /**
  * Generic helper functions. These may need to go into a diff. module.
  */
-
-/**
- * Helper function, check if given string is an email format. Generically useful function.
- * Future plans: this may need to be moved to a toolkit module for use by all our modules.
- */
-function _fundraiser_validate_email($mail) {
-  // eregi is depr in PHP 5.3. Replaced with preg_match, adding lower case options.
-  return preg_match("/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,6}$/", $mail);
-}
 
 /**
  * DB functions.
