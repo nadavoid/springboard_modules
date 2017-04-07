@@ -81,23 +81,25 @@
             }
           },
           onfocusout: function (element) {
-            // Callback for real-time onfocusout of form elements.
-            var isValid = $(element).valid();
+            setTimeout(function() {
+              // Callback for real-time onfocusout of form elements.
+              var isValid = $(element).valid();
 
-            if (typeof validateKeyCallback == 'undefined') {
-              return;
-            }
+              if (typeof validateKeyCallback == 'undefined') {
+                return;
+              }
 
-            if (isValid == 0) {
-              // Set status to 0.
-              validateKeyCallback.status = 0;
-              validateKeyCallback.error(element);
-            }
-            else if (isValid == 1) {
-              // Set status to 1.
-              validateKeyCallback.status = 1;
-              validateKeyCallback.success(element);
-            }
+              if (isValid == 0) {
+                // Set status to 0.
+                validateKeyCallback.status = 0;
+                validateKeyCallback.error(element);
+              }
+              else if (isValid == 1) {
+                // Set status to 1.
+                validateKeyCallback.status = 1;
+                validateKeyCallback.success(element);
+              }
+            }, 500);
           },
           highlight: function(element) {
             $element = $(element);
@@ -276,6 +278,7 @@
           }
         }
 
+        var $checkedAmounts = $('input[type="radio"][name$="[amount]"]:checked');
         // Other Amount
         var $other_amount = $('input[name*="other_amount"][type!="hidden"]');
         $($other_amount).blur(function () {
@@ -289,7 +292,8 @@
           $other_amount.each(function() {
             $(this).rules('add', {
               required: function(element) {
-                return $('input[type="radio"][name$="[amount]"]:checked').length == 0 || $('input[type="radio"][name$="[amount]"][value="other"]:visible').is(":checked");
+                          return $('input[type="radio"][name$="[amount]"]:checked').length == 0 || $('input[type="radio"][name$="[amount]"][value="other"]:visible').is(":checked");
+
               },
               amount: true,
               min: parseFloat(Drupal.settings.fundraiserWebform.minimum_donation_amount),
@@ -311,8 +315,8 @@
             var enableRecurringOtherRule = function() {
               $this.rules('add', {
                 required: function(element) {
-                  return $('input[type="radio"][name$="[recurring_amount]"]:checked').length == 0 || $('input[type="radio"][name$="[recurring_amount]"][value="other"]:visible').is(":checked");
-                },
+                            return $('input[type="radio"][name$="[recurring_amount]"]:checked').length == 0 || $('input[type="radio"][name$="[recurring_amount]"][value="other"]:visible').is(":checked");
+                  },
                 amount: true,
                 min: parseFloat(Drupal.settings.fundraiserWebform.recurring_minimum_donation_amount),
                 messages: {
@@ -417,6 +421,7 @@
             $('input[name*="[recurring_other_amount]"]').focus();
           }
           else {
+            console.log('clearele');
             clearElement($('input[name*="[recurring_other_amount]"]'));
           }
         });
