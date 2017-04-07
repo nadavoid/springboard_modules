@@ -313,8 +313,8 @@
             var enableRecurringOtherRule = function() {
               $this.rules('add', {
                 required: function(element) {
-                    return $('input[type="radio"][name$="[recurring_amount]"]:checked').length == 0 || $('input[type="radio"][name$="[recurring_amount]"][value="other"]:visible').is(":checked");
-                  },
+                  return $('input[type="radio"][name$="[recurring_amount]"]:checked').length == 0 || $('input[type="radio"][name$="[recurring_amount]"][value="other"]:visible').is(":checked");
+                },
                 amount: true,
                 min: parseFloat(Drupal.settings.fundraiserWebform.recurring_minimum_donation_amount),
                 messages: {
