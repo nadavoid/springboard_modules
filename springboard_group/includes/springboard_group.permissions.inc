@@ -102,59 +102,64 @@ function springboard_group_og_user_access_alter(&$perm, $context) {
  */
 function springboard_group_preprocess_og_ui_admin_permissions(&$vars) {
 
-  if ($vars['form']['bundle']['#value'] != 'springboard_group') {
-    return;
+  if (!empty($vars['form']['group_type']) && $vars['form']['group_type']['#value'] == 'node') {
+    if (!empty($vars['form']['gid']['#value'])) {
+      $group = node_load($vars['form']['gid']['#value']);
+    }
   }
 
-  // Array of permissions we remove from the UI because we don't need them.
-  $omitted_perms = array(
-    'manage roles',
-    'manage permissions',
-    'administer group',
-    'subscribe',
-    'subscribe without approval',
-    'unsubscribe',
-    'approve and deny subscription',
-  );
+  if ($vars['form']['bundle']['#value'] == 'springboard_group' || (!empty($group->type) && $group->type == 'springboard_group')) {
 
-  $form = $vars['form'];
-  foreach (element_children($form['permission']) as $key) {
-    if (is_numeric($key)) {
-      // Rename the categories.
-      switch ($vars['form']['permission'][$key]['#id']) {
-        case 'og':
-          $vars['form']['permission'][$key]['#markup'] = t('Groups Content');
-          break;
+    // Array of permissions we remove from the UI because we don't need them.
+    $omitted_perms = array(
+      'manage roles',
+      'manage permissions',
+      'administer group',
+      'subscribe',
+      'subscribe without approval',
+      'unsubscribe',
+      'approve and deny subscription',
+    );
 
-        case 'og_ui':
-          $vars['form']['permission'][$key]['#markup'] = t('Groups Members');
-          break;
+    $form = $vars['form'];
+    foreach (element_children($form['permission']) as $key) {
+      if (is_numeric($key)) {
+        // Rename the categories.
+        switch ($vars['form']['permission'][$key]['#id']) {
+          case 'og':
+            $vars['form']['permission'][$key]['#markup'] = t('Groups Content');
+            break;
 
-        case 'publishcontent':
-          $vars['form']['permission'][$key]['#markup'] = t('Publication Status');
-          break;
+          case 'og_ui':
+            $vars['form']['permission'][$key]['#markup'] = t('Groups Members');
+            break;
 
-        case 'springboard_group':
-          $vars['form']['permission'][$key]['#markup'] = t('Other');
-          break;
+          case 'publishcontent':
+            $vars['form']['permission'][$key]['#markup'] = t('Publication Status');
+            break;
 
-        case 'springboard_group_advocacy':
-          $vars['form']['permission'][$key]['#markup'] = t('Advocacy');
-          break;
-      }
-    }
-    else {
-      // Remove unneeded perms.
-      if (in_array($key, $omitted_perms)) {
-        unset($vars['form']['permission'][$key]);
-      }
-      foreach (element_children($form['checkboxes']) as $rid) {
-        if (in_array($key, $omitted_perms)) {
-          unset($vars['form']['checkboxes'][$rid][$key]);
+          case 'springboard_group':
+            $vars['form']['permission'][$key]['#markup'] = t('Other');
+            break;
+
+          case 'springboard_group_advocacy':
+            $vars['form']['permission'][$key]['#markup'] = t('Advocacy');
+            break;
         }
       }
-      if ($key == 'update group') {
-        $vars['form']['permission'][$key]['#description'] = t('Edit the group title, address, contact info, etc.');
+      else {
+        // Remove unneeded perms.
+        if (in_array($key, $omitted_perms)) {
+          unset($vars['form']['permission'][$key]);
+        }
+        foreach (element_children($form['checkboxes']) as $rid) {
+          if (in_array($key, $omitted_perms)) {
+            unset($vars['form']['checkboxes'][$rid][$key]);
+          }
+        }
+        if ($key == 'update group') {
+          $vars['form']['permission'][$key]['#description'] = t('Edit the group title, address, contact info, etc.');
+        }
       }
     }
   }
@@ -304,6 +309,23 @@ function springboard_group_form_og_ui_admin_global_permissions_alter(&$form, &$f
 }
 
 /**
+ * Implements hook_form_alter().
+ */
+function springboard_group_form_og_ui_admin_permissions_alter(&$form, &$form_state, $form_id) {
+  if (arg(2) == 'group') {
+    $path = drupal_get_path('module', 'springboard_group') . '/js/springboard-groups-groups-permissions.js';
+    $form['#attached']['js'][] = $path;
+
+    $settings = array('sbaShowNonMember' => variable_get('springboard_group_show_non_member', 0));
+    $form['#attached']['js'][] = array(
+      'data' => $settings,
+      'type' => 'setting',
+    );
+  }
+}
+
+
+/**
  * Get the current users in group permissions.
  */
 function springboard_group_get_group_member_perms($gid, $account = NULL) {
@@ -312,7 +334,7 @@ function springboard_group_get_group_member_perms($gid, $account = NULL) {
     global $user;
     $account = $user;
   }
-  if ($gid != '_all' && $gid != '_none') {
+  if ($gid != '_all' && $gid != '_none' && strpos($gid, '_some|') !== FALSE) {
     $roles = og_get_user_roles('node', $gid, $account->uid, TRUE, TRUE);
     $perms = og_role_permissions($roles);
     // Users may have multiple roles in a group.
