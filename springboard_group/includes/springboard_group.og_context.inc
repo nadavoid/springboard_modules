@@ -49,6 +49,7 @@ function springboard_group_og_context_handler($item = NULL) {
       // If the user only belongs to one group, return it.
       if (count($groups) === 1) {
         $gid = reset($groups);
+        $_SESSION['springboard_group_context_multiple'] = NULL;
         $ret = array('node' => array($gid));
       }
       // If the user has multiple groups and there is not a currently selected
