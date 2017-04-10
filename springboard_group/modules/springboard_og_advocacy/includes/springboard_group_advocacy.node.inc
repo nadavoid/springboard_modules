@@ -52,8 +52,7 @@ function springboard_group_advocacy_node_load($nodes, $types) {
  *   The Springboard Group node.
  */
 function springboard_group_advocacy_save($node) {
-
-  if (user_access('administer springboard_advocacy') || user_access('administer advocacy group subscription')) {
+  if (user_access('administer springboard advocacy') || user_access('administer advocacy group subscription')) {
     // Is there an existing subscription record?
     $exists = db_query('select gid from {sb_og_advocacy} where gid = :gid', (array(':gid' => $node->nid)))->fetchField();
 
