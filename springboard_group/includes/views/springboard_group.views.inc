@@ -61,19 +61,29 @@ function springboard_group_views_query_alter(&$view, &$query) {
     }
     // Build the query.
     $condition = db_and();
+
     if (($context == '_none' || $context == '_all') && (user_access('administer group') || user_access('bypass node access'))) {
+      // Value is "none" or "all" and user is an admin.
       if ($context == '_none') {
         $condition->isNull('og_membership.gid');
       }
       else {
+        // If context is all, and user is an admin, show "none" along with "all"
         if ($context == '_all') {
+          $condition = db_or();
+          $and = db_and();
           $all_groups = springboard_group_get_all_springboard_groups();
-          $condition->condition('og_membership.gid', $all_groups, 'IN');
-          $condition->condition('og_membership.entity_type', 'node');
+          $and->condition('og_membership.gid', $all_groups, 'IN');
+          $and->condition('og_membership.entity_type', 'node');
+
+          $condition->isNull('og_membership.gid');
+          $condition->condition($and);
         }
       }
     }
     else {
+      // User is not an admin, only show user's group content when "all" is
+      // selected.
       if ($context == '_all') {
         $context = $_SESSION['springboard_group_context_multiple'];
       }
