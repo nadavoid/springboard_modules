@@ -1,0 +1,117 @@
+<?php
+
+/**
+ * @file
+ * Install hooks for the springboard_token module.
+ */
+
+/**
+ * Implements hook_schema()
+ */
+function springboard_token_set_schema() {
+  $schema = array();
+
+  $schema['springboard_token_sets'] = array(
+    'description' => 'Defines token sets.',
+    'fields' => array(
+      'tsid' => array(
+        'description' => 'Unique ID of the token set.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'description' => 'Name of the token set.',
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => FALSE,
+      ),
+    ),
+    'primary key' => array('tsid'),
+    'unique keys' => array(
+      'name' => array('name'),
+    ),
+  );
+
+  $schema['springboard_tokens'] = array(
+    'description' => 'Tokens that may be used in token sets.',
+    'fields' => array(
+      'tid' => array(
+        'description' => 'Unique ID of the token.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'tsid' => array(
+        'description' => 'The ID of the token set where this token is currently located.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'token' => array(
+        'description' => 'The token ([node:title], [user:mail], etc.)',
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => FALSE,
+      ),
+      'token_description' => array(
+        'description' => 'The human-readable description of the token.',
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => FALSE,
+      ),
+    ),
+    'primary key' => array('tid'),
+  );
+
+  $schema['springboard_token_set_field_map'] = array(
+    'description' => 'Maps token sets to form fields.',
+    'fields' => array(
+      'tsid' => array(
+        'description' => 'Unique ID of the token set.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'form_id' => array(
+        'description' => 'The target form.',
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => TRUE,
+      ),
+      'field_name' => array(
+        'description' => 'The machine name of the target field.',
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => TRUE,
+      ),
+    ),
+  );
+  return $schema;
+}
+
+/**
+ * Implements hook_install()
+ */
+function springboard_token_set_install() {
+  $token_data = json_decode(file_get_contents(drupal_get_path('module', 'springboard_token_set') . '/data/token_sets.json'));
+
+  // Add default token sets if they do not already exist (they shouldn't) and their tokens:
+  _springboard_token_set_insert_default_token_sets($token_data);
+
+  // Add default token set to field mappings:
+  _springboard_token_set_restore_default_token_set_field_mappings();
+}
+
+/**
+ * Implements hook_enable().
+ */
+function springboard_token_set_enable() {
+  // Ensure this module runs after other modules since those module may add form elements or data
+  // that will receive the Token UI:
+  db_update('system')
+    ->fields(array('weight' => 500))
+    ->condition('type', 'module')
+    ->condition('name', 'springboard_token_set')
+    ->execute();
+}

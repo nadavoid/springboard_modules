@@ -2,20 +2,16 @@
 
 /**
  * @file
- * commerce hooks
+ * Commerce hooks.
  */
 
 function commerce_offline_check_submit_form($payment_method, $pane_values) {
   $form = array();
-  // Merge in values from the order.
-  if (!empty($order->data['offline_check'])) {
-    $pane_values += $order->data['offline_check'];
-  }
-
+  
   // Merge in default values.
   $pane_values += array(
     'check_number' => '',
-    'message' => ''
+    'message' => '',
   );
 
   $form['check_number'] = array(
@@ -23,8 +19,7 @@ function commerce_offline_check_submit_form($payment_method, $pane_values) {
     '#title' => t('Check Number'),
     '#default_value' => $pane_values['check_number'],
     '#required' => FALSE,
-    '#maxlength'=> 14,
-
+    '#maxlength' => 14,
   );
 
   $form['message'] = array(
@@ -33,6 +28,7 @@ function commerce_offline_check_submit_form($payment_method, $pane_values) {
     '#default_value' => $pane_values['message'],
     '#required' => FALSE,
   );
+
   $form['#attached']['js'][] = drupal_get_path('module', 'commerce_offline_check') . '/js/commerce_offline_check.js';
   return $form;
 }

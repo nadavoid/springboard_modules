@@ -3,7 +3,7 @@
   top: 0;
   right: 20px;
   width: 140px;
-  height: 32px;
+  height: 38px;
 }
 #springboard-admin-home-link-wrapper {
   overflow: hidden;
@@ -11,10 +11,11 @@
 #springboard-admin-home-link a {
   display: block;
   width: 140px;
-  height: 32px;
-  background: url('../images/springboard-admin-link-sprite.png') no-repeat right -3px;
+  height: 38px;
+  background: url('../images/springboard-admin-link-sprite.png') no-repeat 0 0;
+  background-size: cover;
   text-indent: -9999px;
 }
 #springboard-admin-home-link a:hover {
-  background-position: right -44px;
+  background-position: right -40px;
 }

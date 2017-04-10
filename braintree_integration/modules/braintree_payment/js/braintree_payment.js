@@ -509,6 +509,10 @@
     };
 
     this.autofill = function(obj, autofill) {
+      if (obj === undefined || autofill == 'never') {
+        return;
+      }
+
       var fieldsHaveBeenAutoFilled = false;
       var field_mapping = {
         'submitted[donor_information][first_name]': obj.firstName,

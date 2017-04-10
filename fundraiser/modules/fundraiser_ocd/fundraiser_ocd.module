@@ -241,10 +241,10 @@ function fundraiser_ocd_payment_method_fields_alter(&$element, &$payment_method,
  * @param array $keys
  *   A multi-dimensional array specifying the keys of the element children to
  *   copy the states for.
- * @param array $element
+ * @param array|null $element
  *   The form element array.
  */
-function _fundraiser_ocd_payment_method_fields_alter_states($states, $keys, &$element) {
+function _fundraiser_ocd_payment_method_fields_alter_states(array $states, array $keys, &$element) {
   foreach ($keys as $key => $value) {
     if (count($value)) {
       _fundraiser_ocd_payment_method_fields_alter_states($states, $value, $element[$key]);
@@ -292,7 +292,7 @@ function fundraiser_ocd_webform_user_save_profile_map_alter(&$account, $form, $f
  * fundraiser_ocd_fundraiser_field_info_alter().
  */
 function fundraiser_ocd_webform_user_profile_fields_alter(&$fields, $node) {
-  $fields = array_filter($fields, function($value) {
+  $fields = array_filter($fields, function ($value) {
     return ($value['name'] != 'field_ocd_opt_in' && $value['name'] != 'field_ocd_opt_out');
   });
 }
@@ -350,32 +350,43 @@ function _fundraiser_ocd_check_ocd_default($form, $form_state) {
   }
 
   $old_card = $values['cardonfile']['old_card'];
-  $card = $form_state['card'];
+  $new_card = $form_state['card'];
   if (!empty($values['cardonfile']['card'])) {
-    $card = $values['cardonfile']['card'];
+    $new_card = $values['cardonfile']['card'];
   }
 
-  // If the card number is the same, don't do anything.
-  if ($old_card->card_number == $card->card_number) {
+  if (empty($new_card)) {
+    if (empty($values['credit_card'])) {
+      $cardonfile_fields = array(
+        'card_number' => substr($values['payment_fields']['credit']['card_number'], -4),
+        'card_exp_month' => $values['payment_fields']['credit']['expiration_date']['card_expiration_month'],
+        'card_exp_year' => $values['payment_fields']['credit']['expiration_date']['card_expiration_year'],
+      ) + array('instance_id' => $donation->gateway['id'], 'uid' => $donation->uid);
+    }
+    else {
+      $cardonfile_fields = array(
+        'card_number' => substr($values['credit_card']['number'], -4),
+        'card_exp_month' => $values['credit_card']['exp_month'],
+        'card_exp_year' => $values['credit_card']['exp_year'],
+      ) + array('instance_id' => $donation->gateway['id'], 'uid' => $donation->uid);
+    }
+
+    $new_card = _fundraiser_commerce_cardonfile_match($cardonfile_fields, TRUE);
+  }
+
+  if (empty($new_card)) {
     return;
   }
 
-  $cardonfile_fields = array(
-    'card_number' => substr($values['credit_card']['number'], -4),
-    'card_exp_month' => $values['credit_card']['exp_month'],
-    'card_exp_year' => $values['credit_card']['exp_year'],
-  ) + array('instance_id' => $donation->gateway['id'], 'uid' => $donation->uid);
-
-  $new_card = _fundraiser_commerce_cardonfile_match($cardonfile_fields, TRUE);
-
-  if (empty($new_card)) {
+  // If the card number is the same, don't do anything.
+  if ($old_card->card_number == $new_card->card_number) {
     return;
   }
 
   // If the card number has changed, we need to check if the card was QD enabled
   // and if so, set the new card to QD enabled and disable the old one.
   $ocd = db_query('SELECT * FROM {fundraiser_ocd_cardonfile} WHERE card_id = :card_id AND uid = :uid AND status = 1', array(
-    ':card_id' => $card->card_id,
+    ':card_id' => $old_card->card_id,
     ':uid' => $values['uid'],
   ))->fetch();
 
@@ -387,7 +398,7 @@ function _fundraiser_ocd_check_ocd_default($form, $form_state) {
     ->fields(array(
       'status' => 0,
     ))
-    ->condition('card_id', $card->card_id, '=')
+    ->condition('card_id', $old_card->card_id, '=')
     ->execute();
   db_merge('fundraiser_ocd_cardonfile')
     ->key(array('card_id' => $new_card->card_id))
@@ -405,7 +416,7 @@ function _fundraiser_ocd_check_ocd_default($form, $form_state) {
     ->execute();
 
   $user = user_load($donation->uid);
-  module_invoke_all('fundraiser_ocd_optin_update', $user, $donation, $card, $new_card);
+  module_invoke_all('fundraiser_ocd_optin_update', $user, $donation, $old_card, $new_card);
 }
 
 /**
@@ -414,22 +425,55 @@ function _fundraiser_ocd_check_ocd_default($form, $form_state) {
  * Updates the billing update form on cardonfile card edit pages to redirect
  * back to the cards overview page.
  */
-function fundraiser_ocd_fundraiser_update_billing_form__fundraiser_ocd__alter(&$form, $form_state) {
+function fundraiser_ocd_fundraiser_update_billing_form__fundraiser_commerce_cardonfile__alter(&$form, $form_state) {
   $card = $form_state['card'];
   // If the gateway isn't configured for cardonfile, skip the one-click donate
   // feature.
-  if (!empty($form['#donation']->gateway['gateway_details']['settings']['cardonfile'])) {
-    $gateway_type = $form['#donation']->data['payment_method'];
-    $enabled = db_query('SELECT card_id FROM {fundraiser_ocd_cardonfile} WHERE card_id = :card_id AND status = 1', array(
-      ':card_id' => $card->card_id,
-    ))->fetchField();
-
-    $form['payment_fields'][$gateway_type]['ocd'] = array(
-      '#type' => 'checkbox',
-      '#title' => '&nbsp;' . t('Use this card for One Click Donate'),
-      '#default_value' => !!$enabled,
-    );
+  if (empty($form['#donation']->gateway['gateway_details']['settings']['cardonfile'])) {
+    return;
   }
+
+  // Ensure the gateway is being used by at least one donation form.
+  $method_type = reset($form['#donation']->gateway['payment_method']);
+  $method = array(
+    'status' => 1,
+    'method' => $method_type,
+    'id' => $form['#donation']->gateway['id'],
+  );
+  $serialized_method = serialize($method);
+  if (preg_match('/a:3:\{([^\}]*)\}/', $serialized_method, $matches)) {
+    $serialized_method = $matches[1];
+  }
+  else {
+    return;
+  }
+
+  $fundraiser_count = db_query('SELECT COUNT(fd.nid) FROM {fundraiser} fd JOIN {fundraiser_ocd} fdocd ON fd.nid = fdocd.fundraiser_nid WHERE fd.gateways LIKE :gateways', array(
+    ':gateways' => '%' . db_like($serialized_method) . '%',
+  ))->fetchField();
+  if (empty($fundraiser_count)) {
+    return;
+  }
+
+  // Make sure a donation is using this gateway before allowing it to be
+  // OCD-able.
+  $donations = db_query('SELECT COUNT(did) FROM {fundraiser_donation} WHERE gateway = :gateway', array(
+    ':gateway' => $form['#fundraiser_data']['donation']->gateway['id'],
+  ))->fetchField();
+  if ($donations == 0) {
+    return;
+  }
+
+  $enabled = db_query('SELECT card_id FROM {fundraiser_ocd_cardonfile} WHERE card_id = :card_id AND status = 1', array(
+    ':card_id' => $card->card_id,
+  ))->fetchField();
+
+  $gateway_type = $form['#donation']->data['payment_method'];
+  $form['payment_fields'][$gateway_type]['ocd'] = array(
+    '#type' => 'checkbox',
+    '#title' => '&nbsp;' . t('Use this card for One Click Donate'),
+    '#default_value' => !!$enabled,
+  );
 
   $form['actions']['submit']['#submit'][] = '_fundraiser_ocd_set_new_ocd_cof';
 }
@@ -459,7 +503,7 @@ function _fundraiser_ocd_set_new_ocd_cof(&$form, &$form_state) {
 
   // If the card number is different, don't do anything, and let the other
   // submission handler handle this.
-  if (empty($values['cardonfile']['old_card']) || $values['cardonfile']['old_card']->card_number != $card->card_number) {
+  if (!empty($values['cardonfile']['old_card']) && $values['cardonfile']['old_card']->card_number != $card->card_number) {
     return;
   }
 
@@ -511,7 +555,7 @@ function _fundraiser_ocd_set_new_ocd_cof(&$form, &$form_state) {
       // If the user isn't currently opted into any one-click donation forms,
       // select one from {fundraiser_ocd}.
       if (empty($nid)) {
-        $nid = db_query('SELECT fundraiser_nid FROM {fundraiser_ocd} LIMIT 1')->fetchField();
+        $nid = db_query('SELECT fundraiser_nid FROM {fundraiser_ocd} focd WHERE fundraiser_nid IN (SELECT nid FROM {fundraiser_donation} fd WHERE fd.uid = :uid) LIMIT 1', array(':uid' => $values['uid']))->fetchField();
       }
 
       // If no one-click donation forms exist, we'll need to exit prematurely.
@@ -579,12 +623,12 @@ function fundraiser_ocd_get_default_card($uid) {
  *
  * @param int $uid
  *   The user's uid.
- * @param object|int $card_id
+ * @param object|int $card
  *   The card object or the card's id.
  *
  * @throws \Exception
  */
-function fundraiser_ocd_opt_out_card($uid, $card) {
+function fundraiser_ocd_opt_out_card($uid, $donation, $card) {
   // See if the user currently has a default card.
   $default_card = fundraiser_ocd_get_default_card($uid);
   if (is_numeric($card)) {
@@ -607,7 +651,7 @@ function fundraiser_ocd_opt_out_card($uid, $card) {
 
     user_save($account);
     // Invoke one-click donate opt-out hook.
-    module_invoke_all('fundraiser_ocd_optout', $card, $uid);
+    module_invoke_all('fundraiser_ocd_optout', $uid, $donation, $card);
   }
 }
 

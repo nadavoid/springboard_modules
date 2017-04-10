@@ -434,3 +434,33 @@ function _salesforce_sync_load_extended_modules($module = '') {
     module_load_include('inc', 'salesforce_sync', 'includes/modules/' . $module);
   }
 }
+
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Don't allow deletions of mapped fields.
+ */
+function salesforce_sync_form_field_ui_field_delete_form_alter(&$form, $form_state) {
+  if (isset($form_state['build_info']['args'][0]['field_name'])) {
+    $maps = salesforce_mapping_load();
+    $field = $form_state['build_info']['args'][0]['field_name'];
+    $maps_using_this_field = array();
+    foreach ($maps as $key => $map) {
+      foreach ($map->field_mappings as $index => $field_map) {
+        if (isset($field_map['drupal_field']['fieldmap_value']) && $field_map['drupal_field']['fieldmap_value'] == $field) {
+          $maps_using_this_field[$map->name] = $map->name;
+        }
+      }
+    }
+
+    if (!empty($maps_using_this_field)) {
+      unset($form['actions']);
+      $num = count($maps_using_this_field);
+      $word = format_plural($num, 'mapping', 'mappings');
+      drupal_set_message(t('You cannot delete this field because it is in use by @num salesforce @word. You must remove the @word first.', array('@num' => $num, '@word' => $word)), 'error');
+      $message = theme('item_list', array('title' => t('Salesforce mappings using this field:'), 'items' => $maps_using_this_field));
+      $form['description']['#markup'] = $message;
+    }
+  }
+}

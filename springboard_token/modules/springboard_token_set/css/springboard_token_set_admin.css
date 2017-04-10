@@ -1,0 +1,54 @@
+div#edit-tokens div.form-item, div#edit-token-sets div.form-item {
+  display: inline-block;
+}
+
+#springboard-token-set-sets-admin-form a.add-token-set {
+  display: block;
+  font-size: 13px;
+  font-weight: bold;
+  margin-bottom: 16px;
+}
+#springboard-token-set-sets-admin-form .token-set-links {
+  float: right;
+  font-size: 13px;
+  font-weight: bold;
+}
+#springboard-token-set-sets-admin-form .token-labels {
+  clear: both;
+  height: 18px;
+}
+#springboard-token-set-sets-admin-form .token-labels .token-label {
+  float: left;
+  height: 16px;
+  overflow: hidden;
+  margin-right: 4px;
+  width: 343.993px;
+}
+#springboard-token-set-sets-admin-form  .update-token-link {
+  padding-right: 10px;
+  border-right: 1px solid #888;
+  margin-right: 10px;
+}
+#springboard-token-set-fields-admin-form {
+ zoom: 0.84; 
+}
+#springboard-token-set-fields-admin-form .form-item {
+  float: left;
+  margin-right: 11px;
+}
+#springboard-token-set-fields-admin-form .form-item select {
+  width: 100%;
+}
+#springboard-token-set-fields-admin-form .form-item-form-id {
+  width: 28%;
+}
+#springboard-token-set-fields-admin-form .form-item-field-key {
+  width: 30%;
+}
+#springboard-token-set-fields-admin-form #edit-token-add {
+  margin-left: 10px;
+  margin-top: 20px;
+}
+#sb-token-fields-list td {
+  padding: 4px 6px;
+}
