@@ -423,10 +423,8 @@ function springboard_group_add_group_activate_views_alter($type) {
     case 'webform_ab':
       $restricted = array_merge($restricted, drupal_map_assoc(array('webform_ab_tests')));
       break;
-    case 'springboard_petition':
-      $restricted = array_merge($restricted, drupal_map_assoc(array('webform_ab_tests')));
-      break;
 
+    case 'springboard_petition':
     case 'sba_message_action':
     case 'sba_social_action':
       $restricted = array_merge($restricted, drupal_map_assoc(array('sba_actions')));
