@@ -70,6 +70,10 @@ function salesforce_ocd_queue_subscription_item($account, $donation, $card_on_fi
     $card_on_file = commerce_cardonfile_load($card_on_file);
   }
 
+  if (is_object($account)) {
+    $account = $account->uid;
+  }
+
   $card_id = $card_on_file->card_id;
 
   // Create a one-click donate subscription object and queue it up.
@@ -87,7 +91,7 @@ function salesforce_ocd_queue_subscription_item($account, $donation, $card_on_fi
     'CC_Exp_Year__c' => $card_on_file->card_exp_year,
     'Activation_Date__c' => $card_on_file->created,
     'Default_Payment_Method__c' => $card_on_file->instance_default,
-    'Contact__c' => sprintf('[Contact:user:%d]', $account->uid),
+    'Contact__c' => sprintf('[Contact:user:%d]', $account),
     'Donation__c' => sprintf('[Opportunity:donation:%d]', $donation->did),
     'Donation_Form_Id__c' => $donation->node->nid,
     'Donation_Form_Name__c' => $donation->node->title,

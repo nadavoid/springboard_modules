@@ -3,6 +3,7 @@
     attach: function (context, settings) {
       var clearElement = function($selector) {
         $selector
+          .val('')
           .removeClass('valid')
           .next('label')
             .remove()
@@ -80,30 +81,62 @@
             }
           },
           onfocusout: function (element) {
-            // Callback for real-time onfocusout of form elements.
-            var isValid = $(element).valid();
+            setTimeout(function() {
+              // Callback for real-time onfocusout of form elements.
+              var isValid = $(element).valid();
 
-            if (typeof validateKeyCallback == 'undefined') {
-              return;
-            }
+              if (typeof validateKeyCallback == 'undefined') {
+                return;
+              }
 
-            if (isValid == 0) {
-              // Set status to 0.
-              validateKeyCallback.status = 0;
-              validateKeyCallback.error(element);
-            }
-            else if (isValid == 1) {
-              // Set status to 1.
-              validateKeyCallback.status = 1;
-              validateKeyCallback.success(element);
-            }
+              if (isValid == 0) {
+                // Set status to 0.
+                validateKeyCallback.status = 0;
+                validateKeyCallback.error(element);
+              }
+              else if (isValid == 1) {
+                // Set status to 1.
+                validateKeyCallback.status = 1;
+                validateKeyCallback.success(element);
+              }
+            }, 500);
           },
           highlight: function(element) {
-            $(element).addClass('key-validate');
-            $(element).closest('.control-group').removeClass('success').addClass('error');
+            $element = $(element);
+            var single = $element.attr('name') == 'submitted[donation][amount]';
+            var recurring = $element.attr('name') == 'submitted[donation][recurring_amount]';
+            if (single || recurring) {
+              var $error = $element.next('label.error');
+              if ($error.length) {
+                if (single) {
+                  $error.detach().appendTo('#edit-submitted-donation-amount');
+                }
+                else if (recurring) {
+                  $error.detach().appendTo('#edit-submitted-donation-recurring-amount');
+                }
+              }
+              $element.parent('.control-group').removeClass('success').addClass('error').siblings('.control-group').removeClass('success').addClass('error');
+            }
+            else {
+              $(element).addClass('key-validate');
+              $(element).closest('.control-group').removeClass('success').addClass('error');
+            }
           },
           success: function(element) {
-            $(element).text('OK').addClass('valid').closest('.control-group').removeClass('error').addClass('success');
+            $element = $(element);
+            var single = $element.prev('input[name="submitted[donation][amount]"]').length;
+            var recurring = $element.prev('input[name="submitted[donation][recurring_amount]"]').length;
+            if (single || recurring) {
+              if (single) {
+                $element.detach().appendTo('#edit-submitted-donation-amount');
+              }
+              else if (recurring) {
+                $element.detach().appendTo('#edit-submitted-donation-recurring-amount');
+              }
+            }
+            else {
+              $element.text('OK').addClass('valid').closest('.control-group').removeClass('error').addClass('success');
+            }
           }
         });
 
@@ -255,20 +288,114 @@
           }
         });
         if ($other_amount.length) {
-          $($other_amount).each(function() {
-            var otherAmountField = $(this);
+          $other_amount.each(function() {
             $(this).rules('add', {
               required: function(element) {
                 return $('input[type="radio"][name$="[amount]"]:checked').length == 0 || $('input[type="radio"][name$="[amount]"][value="other"]:visible').is(":checked");
               },
               amount: true,
               min: parseFloat(Drupal.settings.fundraiserWebform.minimum_donation_amount),
+              max: parseFloat(Drupal.settings.fundraiserWebform.fundraiser_maximum_other_amount),
               messages: {
                 required: "This field is required",
                 amount: "Enter a valid amount",
                 min: "The amount entered is less than the minimum donation amount."
               }
             });
+          });
+        }
+
+        var $recurring_other_amount = $('input[name$="[recurring_other_amount]"]');
+        var recurringOtherRuleEnabled = false;
+        if ($recurring_other_amount.length) {
+          $recurring_other_amount.each(function() {
+            var $this = $(this);
+            var enableRecurringOtherRule = function() {
+              $this.rules('add', {
+                required: function(element) {
+                  return $('input[type="radio"][name$="[recurring_amount]"]:checked').length == 0 || $('input[type="radio"][name$="[recurring_amount]"][value="other"]:visible').is(":checked");
+                },
+                amount: true,
+                min: parseFloat(Drupal.settings.fundraiserWebform.recurring_minimum_donation_amount),
+                messages: {
+                  required: "This field is required",
+                  amount: "Enter a valid amount",
+                  min: "The amount entered is less than the minimum donation amount."
+                },
+              });
+              recurringOtherRuleEnabled = true;
+            };
+
+            // If the recurring other amount is hidden by default (in the case
+            // of dual ask amounts), we need to add it's rule when it becomes
+            // visible.
+            if (!$this.is(':visible') && !recurringOtherRuleEnabled) {
+              $('input[type="checkbox"][name="submitted[donation][recurs_monthly][recurs]"], input[type="radio"][name="submitted[donation][recurs_monthly]"]').on('change', function(e) {
+                var $target = $(e.target);
+                if ($target.is(':checked') && $target.val() == 'recurs') {
+                  enableRecurringOtherRule();
+                }
+              });
+            }
+            else {
+              enableRecurringOtherRule();
+            }
+          });
+
+          $('input[name="submitted[donation][amount]"], input[name="submitted[donation][recurring_amount]"]').change(function() {
+            if ($(this).filter(':checked').length) {
+              $(this).parent('.control-group').removeClass('error').addClass('success').siblings('.control-group').removeClass('error').addClass('success');
+            }
+          })
+        }
+
+        // If neither "other" field is present, add validation for the amount
+        // radios.
+        if (!$other_amount.length || !$recurring_other_amount.length) {
+          var selector = '';
+          var recurringRuleEnabled = false;
+
+          if (!$other_amount.length && $recurring_other_amount.length) {
+            selector = 'input[name="submitted[donation][amount]"]:first';
+          }
+          else if ($other_amount.length && !$recurring_other_amount.length) {
+            selector = 'input[name="submitted[donation][recurring_amount]"]:first';
+          }
+          else if (!$other_amount.length && !$recurring_other_amount.length) {
+            selector = 'input[name="submitted[donation][amount]"]:first, input[name="submitted[donation][recurring_amount]"]:first';
+          }
+
+          $(selector).each(function() {
+            var $this = $(this);
+            var enableRecurringRule = function() {
+              $this.rules('add', {
+                required: function(element) {
+                  return $this.siblings('input[type=radio]').filter(':checked').length == 0;
+                },
+                messages: {
+                  required: "This field is required",
+                },
+              });
+              recurringRuleEnabled = true;
+            };
+
+            if (!$this.is(':visible') && !recurringRuleEnabled) {
+              $('input[type="checkbox"][name="submitted[donation][recurs_monthly][recurs]"], input[type="radio"][name="submitted[donation][recurs_monthly]"]').on('change', function(e) {
+                var $target = $(e.target);
+                if ($target.is(':checked') && $target.val() == 'recurs') {
+                  enableRecurringRule();
+                }
+              });
+            }
+            else {
+              enableRecurringRule();
+            }
+          });
+
+          $('input[name="submitted[donation][amount]"]').change(function() {
+            if ($(this).filter(':checked').length) {
+              $(this).parent('.control-group').removeClass('error').addClass('success').siblings('.control-group').removeClass('error').addClass('success');
+            }
           });
         }
 
@@ -292,7 +419,7 @@
             $('input[name*="[recurring_other_amount]"]').focus();
           }
           else {
-            $('input[name*="[recurring_other_amount]"]').clearEle();
+            clearElement($('input[name*="[recurring_other_amount]"]'));
           }
         });
 
