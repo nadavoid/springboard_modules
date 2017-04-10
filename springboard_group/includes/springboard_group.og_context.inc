@@ -191,6 +191,9 @@ function springboard_group_context_menu_paths() {
       if (isset($groups_enabled_types['node']['webform_ab'])) {
         array_push($paths, 'admin/content/webform_ab');
       }
+      if (isset($groups_enabled_types['node']['springboard_petition'])) {
+        array_push($paths, 'admin/springboard/advocacy/petitions/all');
+      }
       foreach ($groups_enabled_types['node'] as $type => $field) {
         if (fundraiser_is_donation_type($type)) {
           array_push($paths, 'admin/springboard');
