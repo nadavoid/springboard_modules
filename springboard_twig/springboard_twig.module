@@ -16,7 +16,7 @@ function springboard_twig_libraries_info() {
   $libraries['twig'] = array(
     'name' => 'Twig',
     'vendor url' => 'http://twig.sensiolabs.org/',
-    'download url' => 'https://github.com/twigphp/Twig/archive/v2.1.0.tar.gz',
+    'download url' => 'https://github.com/twigphp/Twig/archive/v1.33.0.tar.gz',
     'version arguments' => array(
       'file' => 'CHANGELOG',
       'pattern' => '/(\d+\.\d+\.\d \(\d{4}\-\d{2}\-\d{2}\))/',
@@ -40,8 +40,8 @@ function springboard_twig_module_implements_alter(&$implementations, $hook) {
     'form_email_wrapper_node_form_alter',
     'mail_alter',
   );
-  if (in_array($hook, $hooks)) {
-    $module_name = 'springboard_twig';
+  $module_name = 'springboard_twig';
+  if (in_array($hook, $hooks) && !empty($implementations[$module_name])) {
     $group = $implementations[$module_name];
     unset($implementations[$module_name]);
     $implementations[$module_name] = $group;
