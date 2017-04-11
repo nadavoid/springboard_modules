@@ -3027,11 +3027,11 @@ function fundraiser_commerce_form_rules_ui_edit_element_alter(&$form, &$form_sta
 /**
  * Implements hook_form_FORM_ID_alter().
  *
- * Prevent disabling of a gateway if it is in use on a donation form by
- * disabling the submit button on the confirmation form.
+ * Prevent disabling or deleting of a gateway if it is in use on a donation form
+ * by disabling the submit button on the confirmation form.
  */
 function fundraiser_commerce_form_rules_ui_form_rules_config_confirm_op_alter(&$form, &$form_state) {
-  if ($form_state['op'] == 'disable') {
+  if ($form_state['op'] == 'disable' || $form_state['op'] == 'delete') {
     // Seems like there should be a better way to find the rule id than arg()
     $rule = rules_config_load(arg(5));
     // Select all records so we can search inside the serizalied gateways field.
