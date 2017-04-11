@@ -137,7 +137,7 @@ function springboard_advocacy_dashboard($path, $arg = NULL) {
     // Since sections here are optional, don't set an error message
     // if one is missing.
     case 'actions':
-      if (user_access('sba_message_action content')) {
+      if (user_access('create sba_message_action content')) {
         // Actions.
         $actions_view = springboard_advocacy_prepare_dashboard_view('sba_actions', 'block_3', array('sba_message_action'));
         if ($actions_view && module_exists('sba_message_action')) {
@@ -165,7 +165,7 @@ function springboard_advocacy_dashboard($path, $arg = NULL) {
         }
       }
 
-      if (user_access('sba_social_action content')) {
+      if (user_access('create sba_social_action content')) {
 
         // Social Actions.
         $social_actions_view = springboard_advocacy_prepare_dashboard_view('sba_actions', 'block_3', array('sba_social_action'));
