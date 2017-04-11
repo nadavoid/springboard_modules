@@ -16,6 +16,7 @@
     <div class="buttons-wrapper">
 
       <!-- bootstrap drop list widget -->
+      <?php if (user_access('create email_wrapper content') || user_access('create page_wrapper content')) : ?>
       <div class="btn-group">
         <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
           <?php print t('Options'); ?>
@@ -27,9 +28,11 @@
           <li><a href="<?php print base_path(); ?>admin/springboard/asset-library"><?php print t('Templates & Wrappers'); ?></a></li>
         </ul>
       </div><!--// btn-group -->
+      <?php endif; ?>
 
-      <a href="<?php print base_path(); ?>node/add/<?php print preg_replace('/_/', '-', $type->type); ?>" class="button add-button"><?php print t('Create'); ?> <?php print $type->name; ?></a>
-
+      <?php if (user_access('create ' . $type->type . ' content')) : ?>
+        <a href="<?php print base_path(); ?>node/add/<?php print preg_replace('/_/', '-', $type->type); ?>" class="button add-button"><?php print t('Create'); ?> <?php print $type->name; ?></a>
+      <?php endif; ?>
     </div><!-- // buttons-wrapper -->
 
     <?php print($tables[$type->type]); ?>

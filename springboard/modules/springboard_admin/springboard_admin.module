@@ -377,7 +377,7 @@ function springboard_admin_menu() {
   $items['admin/springboard/marketing-analytics'] = array(
     'title' => 'Marketing & Analytics',
     'type' => MENU_NORMAL_ITEM,
-    'access arguments' => array('access springboard dashboard'),
+    'access callback' => 'springboard_admin_access_marketing_overview',
     'page callback' => 'springboard_admin_aggregate_links_page',
     'page arguments' => array('admin/springboard/marketing-analytics'),
    );
@@ -391,7 +391,7 @@ function springboard_admin_menu() {
    $items['admin/springboard/reports/integration-reports'] = array(
     'title' => 'Integration Reports',
     'type' => MENU_NORMAL_ITEM,
-    'access arguments' => array('access springboard dashboard'),
+    'access callback' => 'springboard_admin_access_integration_overview',
     'page callback' => 'springboard_admin_aggregate_links_page',
     'page arguments' => array('admin/springboard/reports/integration-reports', array('admin/springboard/reports')),
    );
@@ -445,6 +445,31 @@ function springboard_admin_menu_title_callback($original_title, $new_title) {
 
   return $original_title;
 }
+
+function springboard_admin_access_marketing_overview() {
+  if (user_access('bypass node access')
+    || user_access('administer market source')
+    || user_access('administer webform_ab')
+    || user_access('manage webform goals')
+    || user_access('administer springboard social')
+    || user_access('administer springboard')
+    || user_access('administer springboard tags')
+  ) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+function springboard_admin_access_integration_overview() {
+  if (user_access('bypass node access')
+    || user_access('administer springboard')
+    || user_access('view salesforce batch logs')
+  ) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
 
 /**
  * Page callback used to redirect from /admin to /springboard when the
@@ -777,16 +802,19 @@ function springboard_admin_aggregate_links_page($path, $parents = array()) {
   $links = array();
   if (isset($item['_children'])) {
     foreach ($item['_children'] as $child) {
-      $options = array();
-      if (isset($child['external'])) {
-        $options['external'] = $child['external'];
+      $item = menu_get_item($child['link_path']);
+      if ($item['access']) {
+        $options = array();
+        if (isset($child['external'])) {
+          $options['external'] = $child['external'];
+        }
+        $links[] = array(
+          'title' => $child['link_title'],
+          'href' => $child['link_path'],
+          'options' => $options,
+          'weight' => $child['weight'],
+        );
       }
-      $links[] = array(
-        'title' => $child['link_title'],
-        'href' => $child['link_path'],
-        'options' => $options,
-        'weight' => $child['weight'],
-      );
     }
   }
   if (!empty($links)) {
