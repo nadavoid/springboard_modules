@@ -100,9 +100,8 @@ function springboard_admin_form_alter(&$form, &$form_state, $form_id) {
               '#type' => 'checkbox',
               '#title' => $roles[$role_id],
               '#default_value' => in_array($role_id, $form['account']['roles']['#default_value']),
-              '#disabled' => TRUE,
+              '#access' => FALSE,
               '#weight' => 0,
-              '#description' => t('You do not have permission to assign this role.'),
             );
             // Remove disallowed from the regular set of checkboxes.
             unset($roles[$role_id]);
@@ -561,7 +560,24 @@ function springboard_admin_permission() {
       'title' => t('Assign user roles'),
       'description' => t('Assign roles to users'),
     ),
+    'view all unpublished nodes' => array(
+      'title' => t('View All Unpublished Nodes'),
+      'description' => t('View all unpublished nodes.'),
+    ),
   );
+}
+
+/**
+ * Implements hook_node_access().
+ */
+function springboard_admin_node_access($node, $op, $account) {
+  if ($op == 'view'
+    && isset($node->status)
+    && $node->status == 0
+    && user_access('view all unpublished nodes', $account)) {
+    return NODE_ACCESS_ALLOW;
+  }
+  return NODE_ACCESS_IGNORE;
 }
 
 /**

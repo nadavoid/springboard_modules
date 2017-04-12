@@ -400,6 +400,10 @@ function commerce_braintree_web_fundraiser_commerce_update($donation, $card_data
       'options' => $options,
     ), $donation->gateway['gateway_details']['settings']);
 
+    if (!$success) {
+      return FALSE;
+    }
+
     // Update cardonfile record.
     // Get the card type. We could just use the type from the result, but in
     // order to be more consistent with other payment methods and ensure

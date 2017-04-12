@@ -125,6 +125,19 @@ function braintree_vault_schema() {
  * Implements hook_install().
  */
 function braintree_vault_install() {
+  // Create a field on the user entity to store the braintree customer id.
+  braintree_vault_create_customer_field();
+  $field_group = field_group_load_field_group('group_profile_admin', 'user', 'user', 'form');
+  $table = 'field_group';
+
+  // If the group exists make sure its not disabled.
+  if ($field_group) {
+    $field_group->children[] = 'braintree_customer_id';
+    ctools_export_crud_save($table, $field_group);
+  }
+  // Config braintree_vault to use that new field.
+  variable_set('braintree_vault_field', 'braintree_customer_id');
+
   // Enable braintree vault.
   variable_set('braintree_use_vault', 1);
 }
