@@ -137,7 +137,8 @@ function springboard_advocacy_dashboard($path, $arg = NULL) {
     // Since sections here are optional, don't set an error message
     // if one is missing.
     case 'actions':
-      if (user_access('create sba_message_action content')) {
+
+      if (user_access('create sba_message_action content') || user_access('edit any sba_message_action content')) {
         // Actions.
         $actions_view = springboard_advocacy_prepare_dashboard_view('sba_actions', 'block_3', array('sba_message_action'));
         if ($actions_view && module_exists('sba_message_action')) {
@@ -165,7 +166,8 @@ function springboard_advocacy_dashboard($path, $arg = NULL) {
         }
       }
 
-      if (user_access('create sba_social_action content')) {
+
+      if (user_access('create sba_social_action content') || user_access('edit any sba_social_action content')) {
 
         // Social Actions.
         $social_actions_view = springboard_advocacy_prepare_dashboard_view('sba_actions', 'block_3', array('sba_social_action'));
@@ -192,7 +194,7 @@ function springboard_advocacy_dashboard($path, $arg = NULL) {
         }
       }
 
-      if (user_access('create springboard_petition content')) {
+      if (user_access('create springboard_petition content') || user_access('edit any springboard_petition content')) {
         $petitions_view = springboard_advocacy_prepare_dashboard_view('sba_actions', 'block_1', array('springboard_petition'));
         if ($petitions_view && module_exists('springboard_petition')) {
           $sections['sba_petitions'] = array(
@@ -228,7 +230,7 @@ function springboard_advocacy_dashboard($path, $arg = NULL) {
         ),
       );
 
-      if (user_access('create sba_message_action content')) {
+      if (user_access('create sba_message_action content') || user_access('edit any sba_message_action content')) {
         $sections['sba_actions']['create_link'] = array('title' => t('Create a new message action'), 'href' => 'node/add/sba-message-action');
       }
       if (springboard_target_user_can_access_targets() || springboard_target_user_can_access_groups()) {
@@ -249,7 +251,7 @@ function springboard_advocacy_dashboard($path, $arg = NULL) {
           'css' => drupal_get_path('module', 'springboard_advocacy') . '/css/sba.css',
       );
 
-      if (user_access('create sba_message_action content')) {
+      if (user_access('create sba_message_action content') || user_access('edit any sba_message_action content')) {
         $sections['sba_social_actions']['create_link'] = array('title' => t('Create a new social action'), 'href' => 'node/add/sba-social-action');
       }
       if (module_exists('springboard_target') && (springboard_target_user_can_access_targets() || springboard_target_user_can_access_groups())) {
@@ -268,7 +270,7 @@ function springboard_advocacy_dashboard($path, $arg = NULL) {
             'css' => drupal_get_path('module', 'springboard_advocacy') . '/css/sba.css',
           ),
         );
-        if (user_access('create springboard_petition content')) {
+        if (user_access('create springboard_petition content') || user_access('edit any springboard_petition content')) {
           $sections['sba_actions']['create_link'] = array('title' => t('Create a new petition'), 'href' => 'node/add/springboard-petition');
         }
       }

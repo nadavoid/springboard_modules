@@ -41,7 +41,7 @@ function springboard_advocacy_menu() {
   $items['admin/config/services/advocacy/index'] = array(
     'title' => 'Springboard Advocacy',
     'type' => MENU_DEFAULT_LOCAL_TASK,
-    'access callback' => 'springboard_advocacy_user_can_create_advocacy_type',
+    'access callback' => 'springboard_advocacy_user_can_access_advocacy_dashboard',
   );
 
   // Path to settings for delivery failure webform confirmation.
@@ -58,30 +58,33 @@ function springboard_advocacy_menu() {
   $items['admin/springboard/advocacy/actions'] = array(
       'title' => 'Advocacy: Actions',
       'page arguments' => array('actions'),
-      'access callback' => 'springboard_advocacy_user_can_create_advocacy_type',
+      'access callback' => 'springboard_advocacy_user_can_access_advocacy_dashboard',
     ) + springboard_advocacy_menu_common(FALSE, TRUE);
 
   $items['admin/springboard/advocacy/message-actions/all'] = array(
       'title' => 'Advocacy: All Message Actions',
       'page arguments' => array('message-actions/all'),
+      'access callback' => 'springboard_advocacy_user_can_access_type',
       'access arguments' => array(
-        'create sba_message_action content',
+        'sba_message_action',
       ),
     ) + springboard_advocacy_menu_common(FALSE, TRUE);
 
   $items['admin/springboard/advocacy/social-actions/all'] = array(
       'title' => 'Advocacy: All Social Actions',
       'page arguments' => array('social-actions/all'),
+      'access callback' => 'springboard_advocacy_user_can_access_type',
       'access arguments' => array(
-        'create sba_social_action content',
+        'sba_social_action',
       ),
     ) + springboard_advocacy_menu_common(FALSE, TRUE);
 
   $items['admin/springboard/advocacy/petitions/all'] = array(
       'title' => 'Advocacy: All Petitions',
       'page arguments' => array('petitions/all'),
+      'access callback' => 'springboard_advocacy_user_can_access_type',
       'access arguments' => array(
-        'create springboard_petition content',
+        'springboard_petition',
       ),
     ) + springboard_advocacy_menu_common(FALSE, TRUE);
 
@@ -97,8 +100,10 @@ function springboard_advocacy_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'springboard_advocacy.views.inc',
     'file path' => drupal_get_path('module', 'springboard_advocacy') . '/includes/views',
-    'access callback' => 'user_access',
-    'access arguments' => array('create sba_social_action content')
+    'access callback' => 'springboard_advocacy_user_can_access_type',
+    'access arguments' => array(
+      'sba_social_action',
+    ),
   );
 
   return $items;
@@ -138,8 +143,56 @@ function springboard_advocacy_menu_common($override_type = FALSE, $override_acce
  */
 function springboard_advocacy_user_can_create_advocacy_type() {
   // Any new advocacy types will have to be added here in the future.
-  return (user_access('create sba_message_action content') || user_access('create springboard_petition content'));
+  return (user_access('create sba_message_action content')
+    || user_access('create springboard_petition content')
+    || user_access('create sba_social_action content')
+  );
 }
+
+/**
+ * Access checking function to ensure a user can edit an advocacy type.
+ *
+ */
+function springboard_advocacy_user_can_edit_any_advocacy_type() {
+  // Any new advocacy types will have to be added here in the future.
+  return (user_access('edit any sba_message_action content')
+    || user_access('edit any springboard_petition content')
+    || user_access('edit any sba_social_action content')
+  );
+}
+
+/**
+ * Check advocacy dashboard access.
+ */
+function springboard_advocacy_user_can_access_advocacy_dashboard() {
+  $access = FALSE;
+  if (springboard_advocacy_user_can_edit_any_advocacy_type() || springboard_advocacy_user_can_create_advocacy_type()) {
+    $access = TRUE;
+  }
+  return $access;
+}
+
+function springboard_advocacy_user_can_access_type($type) {
+  $access = FALSE;
+  if (
+    user_access('create ' . $type . ' content')
+    || user_access('create ' . $type . ' content')
+    || user_access('create ' . $type . ' content')
+  ) {
+    $access = TRUE;
+  }
+
+  if (
+    user_access('edit any ' . $type . ' content')
+    || user_access('edit any ' . $type . ' content')
+    || user_access('edit any ' . $type . ' content')
+  ) {
+    $access = TRUE;
+  }
+
+  return $access;
+}
+
 
 /**
  * Implements hook_menu_alter().
