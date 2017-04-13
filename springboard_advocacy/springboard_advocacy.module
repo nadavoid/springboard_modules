@@ -177,6 +177,14 @@ function springboard_advocacy_user_can_access_advocacy_dashboard() {
   return $access;
 }
 
+/**
+ * Check if a user has edit/create rights on advocacy content.
+ *
+ * @param string $type
+ *   The content type machine name.
+ *
+ * @return bool
+ */
 function springboard_advocacy_user_can_access_type($type) {
   $access = FALSE;
   if (
@@ -1106,6 +1114,11 @@ function springboard_advocacy_node_form_post_save($node) {
   }
 }
 
+/**
+ * Implements hook_springboard_views_springboard_dashboard_panes_alter().
+ *
+ * Make sure advocacy types never appear in springboard dashboard.
+ */
 function springboard_advocacy_springboard_views_springboard_dashboard_panes_alter(&$types) {
   foreach ($types as $key => $type) {
     if (springboard_advocacy_is_action_type($type)) {
