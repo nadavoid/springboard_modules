@@ -138,7 +138,12 @@ function springboard_advocacy_dashboard($path, $arg = NULL) {
     // if one is missing.
     case 'actions':
 
-      if (user_access('create sba_message_action content') || user_access('edit any sba_message_action content')) {
+      if (user_access('create sba_message_action content')
+        || user_access('edit any sba_message_action content')
+        || user_access('bypass node access')
+        || user_access('administer springboard')
+        || user_access('administer springboard advocacy')
+      ) {
         // Actions.
         $actions_view = springboard_advocacy_prepare_dashboard_view('sba_actions', 'block_3', array('sba_message_action'));
         if ($actions_view && module_exists('sba_message_action')) {
@@ -168,7 +173,12 @@ function springboard_advocacy_dashboard($path, $arg = NULL) {
         }
       }
 
-      if (user_access('create sba_social_action content') || user_access('edit any sba_social_action content')) {
+      if (user_access('create sba_social_action content')
+        || user_access('edit any sba_social_action content')
+        || user_access('bypass node access')
+        || user_access('administer springboard')
+        || user_access('administer springboard advocacy')
+      ) {
 
         // Social Actions.
         $social_actions_view = springboard_advocacy_prepare_dashboard_view('sba_actions', 'block_3', array('sba_social_action'));
@@ -197,7 +207,12 @@ function springboard_advocacy_dashboard($path, $arg = NULL) {
         }
       }
 
-      if (user_access('create springboard_petition content') || user_access('edit any springboard_petition content')) {
+      if (user_access('create springboard_petition content')
+        || user_access('edit any springboard_petition content')
+        || user_access('bypass node access')
+        || user_access('administer springboard')
+        || user_access('administer springboard advocacy')
+      ) {
         $petitions_view = springboard_advocacy_prepare_dashboard_view('sba_actions', 'block_1', array('springboard_petition'));
         if ($petitions_view && module_exists('springboard_petition')) {
           $sections['sba_petitions'] = array(
