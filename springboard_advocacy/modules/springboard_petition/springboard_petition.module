@@ -575,3 +575,27 @@ function springboard_petition_springboard_views_springboard_dashboard_panes_alte
     }
   }
 }
+
+/**
+ * Implements hook_springboard_admin_form_page_types_alter().
+ *
+ * Don't allow petition forms to appear on the Springboard Dashboard
+ * "all forms" page.
+ */
+function springboard_petition_springboard_admin_form_page_types_alter(&$display_types, $springboard_type) {
+  if (isset($display_types['springboard_petition'])) {
+    unset($display_types['springboard_petition']);
+  }
+}
+
+/**
+ * Implements hook_springboard_admin_enabled_form_types_alter().
+ *
+ * Don't allow petitions to appear in the
+ * "Springboard Admin Allowed Forms" settings form element.
+ */
+function springboard_petition_springboard_admin_enabled_form_types_alter(&$types) {
+  if (isset($types['springboard_petition'])) {
+    unset($types['springboard_petition']);
+  }
+}

@@ -230,7 +230,6 @@ function springboard_advocacy_taxonomy_access() {
  * Add the advocacy links to springboard admin.
  */
 function springboard_advocacy_springboard_admin_admin_menu_items_alter(&$items) {
-
     // Top Level: Springboard Advocacy.
     $items['admin/springboard/advocacy/actions'] = array(
       'link_path' => 'admin/springboard/advocacy/actions',
@@ -262,9 +261,13 @@ function springboard_advocacy_springboard_admin_admin_menu_items_alter(&$items) 
     // Only create the item if the node type uses Webform User
     // but not Fundraiser.
     if ($type && (springboard_advocacy_is_action_type($type->type)  || !empty($petition))) {
+      $pattern = 'node/add/' . preg_replace('/_/', '-', $type->type);
+      if (isset($items['admin/springboard/forms/all']['_children'][$pattern])) {
+        unset($items['admin/springboard/forms/all']['_children'][$pattern]);
+      }
       // Forms > $type->type.
-      $items['admin/springboard/advocacy/actions']['_children']['node/add/' . preg_replace('/_/', '-', $type->type)] = array(
-        'link_path' => 'node/add/' . preg_replace('/_/', '-', $type->type),
+      $items['admin/springboard/advocacy/actions']['_children'][$pattern] = array(
+        'link_path' => $pattern,
         'link_title' => 'Create a ' . $type->name,
         'menu_name' => 'springboard_admin_menu',
         'expanded' => 1,
@@ -277,7 +280,6 @@ function springboard_advocacy_springboard_admin_admin_menu_items_alter(&$items) 
       );
     }
   }
-
   if (module_exists('springboard_target')) {
 
     // Springboard Advocacy > Custom Targets.

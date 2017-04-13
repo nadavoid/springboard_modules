@@ -452,7 +452,7 @@ function springboard_views_springboard_dashboard_panes() {
     }
   }
 
-  drupal_alter('springboard_views_springboard_dashboard_panes', $webform_types);
+  drupal_alter('springboard_views_springboard_dashboard_panes', $webform_types, $fundraiser_types);
 
   $donation_pane_access = FALSE;
   if (user_access("administer springboard")
