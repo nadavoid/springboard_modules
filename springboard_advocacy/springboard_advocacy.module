@@ -143,10 +143,11 @@ function springboard_advocacy_menu_common($override_type = FALSE, $override_acce
  */
 function springboard_advocacy_user_can_create_advocacy_type() {
   // Any new advocacy types will have to be added here in the future.
-  return (user_access('create sba_message_action content')
-    || user_access('create springboard_petition content')
-    || user_access('create sba_social_action content')
-  );
+  $access = user_access('create sba_social_action content') || user_access('create sba_message_action content') || user_access('create springboard_petition content');
+
+  drupal_alter('springboard_advocacy_user_can_create_advocacy_type', $access);
+
+  return $access;
 }
 
 /**
@@ -166,7 +167,10 @@ function springboard_advocacy_user_can_edit_any_advocacy_type() {
  */
 function springboard_advocacy_user_can_access_advocacy_dashboard() {
   $access = FALSE;
-  if (springboard_advocacy_user_can_edit_any_advocacy_type() || springboard_advocacy_user_can_create_advocacy_type()) {
+  if (springboard_advocacy_user_can_edit_any_advocacy_type()
+    || springboard_advocacy_user_can_create_advocacy_type()
+    || user_access('administer springboard advocacy')
+  ) {
     $access = TRUE;
   }
   return $access;
