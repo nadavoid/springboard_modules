@@ -455,13 +455,15 @@ function springboard_admin_menu_title_callback($original_title, $new_title) {
  * @return bool
  */
 function springboard_admin_access_marketing_overview() {
-  if (user_access('bypass node access')
-    || user_access('administer market source')
+  if (
+    user_access('administer market source')
     || user_access('administer webform_ab')
     || user_access('manage webform goals')
     || user_access('administer springboard social')
-    || user_access('administer springboard')
     || user_access('administer springboard tags')
+    || user_access('administer springboard')
+    || user_access('administer springboard dashboard')
+    || user_access('bypass node access')
   ) {
     return TRUE;
   }
@@ -479,6 +481,7 @@ function springboard_admin_access_marketing_overview() {
 function springboard_admin_access_integration_overview() {
   if (user_access('bypass node access')
     || user_access('administer springboard')
+    || user_access('administer springboard dashboard')
     || user_access('view salesforce batch logs')
   ) {
     return TRUE;
