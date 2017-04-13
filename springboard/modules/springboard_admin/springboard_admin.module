@@ -446,6 +446,14 @@ function springboard_admin_menu_title_callback($original_title, $new_title) {
   return $original_title;
 }
 
+/**
+ * Check user if a user should have access to the marketing menu item.
+ *
+ * This could be replaced by a named permission rather than relying
+ * on subsets of other named permissions.
+ *
+ * @return bool
+ */
 function springboard_admin_access_marketing_overview() {
   if (user_access('bypass node access')
     || user_access('administer market source')
@@ -460,6 +468,14 @@ function springboard_admin_access_marketing_overview() {
   return FALSE;
 }
 
+/**
+ * Check if a user should have access to the reports menu item.
+ *
+ * This could be replaced by a named permission rather than relying
+ * on subsets of other named permissions.
+ *
+ * @return bool
+ */
 function springboard_admin_access_integration_overview() {
   if (user_access('bypass node access')
     || user_access('administer springboard')
@@ -802,8 +818,8 @@ function springboard_admin_aggregate_links_page($path, $parents = array()) {
   $links = array();
   if (isset($item['_children'])) {
     foreach ($item['_children'] as $child) {
-      $item = menu_get_item($child['link_path']);
-      if ($item['access']) {
+      $child_item = menu_get_item($child['link_path']);
+      if ($child_item['access']) {
         $options = array();
         if (isset($child['external'])) {
           $options['external'] = $child['external'];

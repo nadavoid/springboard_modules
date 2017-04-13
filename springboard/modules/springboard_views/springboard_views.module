@@ -37,8 +37,9 @@ function springboard_views_views_pre_render(&$view) {
  *
  * The sbv_forms view result has to be filtered by user_access to
  * each content type in the result, removing rows to which the user does not
- * have edit or create access. Removing is easy, but that makes the
- * pager count wrong, requiring the following to correct it.
+ * have edit or create access for the *content type* (not the node) displayed.
+ * Removing is easy, but that makes the pager count wrong, requiring the
+ * following to correct it.
  *
  * @param object $view
  *   The sbv_forms view.
