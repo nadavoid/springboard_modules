@@ -400,7 +400,7 @@ function springboard_views_springboard_dashboard_panes() {
     }
   }
 
-  drupal_alter('springboard_views_springboard_dashboard_panes', $webform_types);
+  drupal_alter('springboard_views_springboard_dashboard_panes', $webform_types, $fundraiser_types);
 
   $panes['springboard_recent_donation_forms'] = array(
    'label' => t('Recent donation forms'),

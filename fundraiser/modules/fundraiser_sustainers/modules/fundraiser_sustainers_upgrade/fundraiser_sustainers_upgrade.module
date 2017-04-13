@@ -148,7 +148,7 @@ function fundraiser_sustainers_upgrade_springboard_admin_form_page_types_alter(&
  * Springboard admin excludes non-webform user forms from display.
  * Add our form here, too.
  */
-function fundraiser_sustainers_upgrade_springboard_views_springboard_dashboard_panes_alter(&$webform_types) {
+function fundraiser_sustainers_upgrade_springboard_views_springboard_dashboard_panes_alter(&$webform_types, &$fundraiser_types) {
   $webform_types[] = 'sustainers_upgrade_form';
 }
 

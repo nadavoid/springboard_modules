@@ -1097,3 +1097,28 @@ function sba_message_action_element_process_text_format($element) {
   }
   return $element;
 }
+
+
+/**
+ * Implements hook_springboard_admin_form_page_types_alter().
+ *
+ * Don't allow message action forms to appear on the Springboard Dashboard
+ * "all forms" page.
+ */
+function sba_message_action_springboard_admin_form_page_types_alter(&$display_types, $springboard_type) {
+  if (isset($display_types['sba_message_action'])) {
+    unset($display_types['sba_message_action']);
+  }
+}
+
+/**
+ * Implements hook_springboard_admin_enabled_form_types_alter().
+ *
+ * Don't allow message actions to appear in the
+ * "Springboard Admin Allowed Forms" settings form element.
+ */
+function sba_message_action_springboard_admin_enabled_form_types_alter(&$types) {
+  if (isset($types['sba_message_action'])) {
+    unset($types['sba_message_action']);
+  }
+}
