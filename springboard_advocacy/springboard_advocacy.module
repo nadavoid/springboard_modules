@@ -171,7 +171,6 @@ function springboard_advocacy_user_can_access_advocacy_dashboard() {
     || springboard_advocacy_user_can_create_advocacy_type()
     || user_access('administer springboard advocacy')
     || user_access('administer springboard')
-    || user_access('bypass node access')
   ) {
     $access = TRUE;
   }
