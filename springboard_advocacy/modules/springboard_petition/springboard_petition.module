@@ -568,10 +568,10 @@ function springboard_petition_preprocess_two_column_petition_form_right(&$vars) 
   }
 }
 
-function springboard_petition_springboard_views_springboard_dashboard_panes_alter(&$types) {
-  foreach ($types as $key => $type) {
+function springboard_petition_springboard_views_springboard_dashboard_panes_alter(&$webform_types, &$fundraiser_types) {
+  foreach ($webform_types as $key => $type) {
     if ($type == 'springboard_petition') {
-      unset($types[$key]);
+      unset($webform_types[$key]);
     }
   }
 }

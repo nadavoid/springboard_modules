@@ -1121,10 +1121,10 @@ function springboard_advocacy_node_form_post_save($node) {
  *
  * Make sure advocacy types never appear in springboard dashboard.
  */
-function springboard_advocacy_springboard_views_springboard_dashboard_panes_alter(&$types) {
-  foreach ($types as $key => $type) {
+function springboard_advocacy_springboard_views_springboard_dashboard_panes_alter(&$webform_types, &$fundraiser_types) {
+  foreach ($webform_types as $key => $type) {
     if (springboard_advocacy_is_action_type($type)) {
-      unset($types[$key]);
+      unset($webform_types[$key]);
     }
   }
 }
