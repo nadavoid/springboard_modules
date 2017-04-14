@@ -99,6 +99,29 @@ function springboard_group_menu() {
     'weight' => -8,
   );
 
+  $items["admin/springboard/groups/settings/roles"] = array(
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('og_ui_admin_new_role', 'node', '0', 'springboard_group'),
+    'title' => 'Group Roles',
+    'access arguments' => array('configure springboard groups'),
+    'description' => 'Configure Springboard Group roles.',
+    'file' => 'og_ui.admin.inc',
+    'file path' => drupal_get_path('module', 'og_ui'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -7,
+  );
+
+  $items['admin/springboard/groups/settings/role/%/edit'] = array(
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('og_ui_admin_roles', '', '0', '', 5),
+    'title callback' => 'og_ui_menu_bundle_roles_title_callback',
+    'title arguments' => array('OG @type - @bundle - @role', '', '', 5),
+    'access arguments' => array('configure springboard groups'),
+    'description' => 'Configure Organic groups group type roles.',
+    'file path' => drupal_get_path('module', 'og_ui'),
+    'file' => 'og_ui.admin.inc',
+  );
+
   $items["admin/springboard/groups/settings/advanced"] = array(
     'page callback' => 'drupal_get_form',
     'page arguments' => array('springboard_group_advanced_settings'),

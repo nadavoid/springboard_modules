@@ -107,3 +107,106 @@ function springboard_group_delete_membership_submit($form, &$form_state) {
     }
   }
 }
+
+/**
+ * @param $vars
+ */
+function springboard_group_preprocess_og_ui_admin_new_role(&$vars) {
+  if (empty(variable_get('springboard_group_show_non_member', NULL)));
+  foreach($vars['form']['role_names']['#value'] as $index => $role) {
+    if ($role == 'non-member') {
+      unset($vars['form']['role_names']['#value'][$index]);
+    }
+  }
+}
+
+/**
+ * Implements hook_theme_registry_alter().
+ *
+ * Modify organic group's roles apge theme.
+ */
+function springboard_group_theme_registry_alter(&$theme_registry) {
+  $theme_registry['og_ui_admin_new_role']['function'] = 'theme_springboard_group_admin_new_role';
+}
+
+
+/**
+ * Modify og's roles theme for springboard groups.
+ */
+function theme_springboard_group_admin_new_role($vars) {
+  $form = $vars['form'];
+  $header = array(t('Name'), array('data' => t('Operations'), 'colspan' => 2));
+
+  $group_type = $form['group_type']['#value'];
+  $gid = $form['gid']['#value'];
+  $bundle = $form['bundle']['#value'];
+  $role_names = $form['role_names']['#value'];
+
+  if ($gid) {
+    $group = entity_load_single($group_type, $gid);
+    $default_access = $group && og_is_group_default_access($group_type, $group);
+  }
+  else {
+    $default_access = FALSE;
+  }
+  foreach ($role_names as $rid => $name) {
+    $text = !$default_access ? t('edit permissions') : t('view permissions');
+    if ($bundle != 'springboard_group') {
+      $path = $gid ? "group/$group_type/$gid/admin" : 'admin/config/group';
+      $permissions = l($text, "$path/permission/$rid/edit");
+    }
+    else {
+      $path = $gid ? "springboard/node/$gid/group" : 'springboard/groups/settings';
+      $permissions = l($text, "$path/permissions", array('query' => array('destination' => 'admin/springboard/groups/settings/roles')));
+    }
+    if ($bundle != 'springboard_group') {
+      if (!$default_access && !in_array($name, array(OG_ANONYMOUS_ROLE, OG_AUTHENTICATED_ROLE))) {
+        $rows[] = array(
+          check_plain($name),
+          l(t('edit role'), "$path/role/$rid/edit"),
+          $permissions,
+        );
+      }
+      else {
+        $rows[] = array(check_plain($name), t('locked'), $permissions);
+      }
+    }
+    else {
+      if (!$default_access && !in_array($name, array(OG_ANONYMOUS_ROLE, OG_AUTHENTICATED_ROLE))) {
+        $rows[] = array(
+          check_plain($name),
+          l(t('edit role'), "$path/role/$rid/edit", array('query' => array('destination' => 'admin/springboard/groups/settings/roles'))),
+          $permissions,
+        );
+      }
+      else {
+        $rows[] = array(check_plain($name), t('locked'), $permissions);
+      }
+    }
+  }
+
+  $rows[] = array(array('data' => drupal_render($form['name']) . drupal_render($form['add']), 'colspan' => 4, 'class' => 'edit-name'));
+
+  hide($form['actions']);
+  $output = drupal_render_children($form);
+  $output .= theme('table', array('header' => $header, 'rows' => $rows));
+  $output .= render($form['actions']);
+
+  return $output;
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function springboard_group_form_og_ui_admin_new_role_alter(&$form, &$form_state) {
+  if ($form['bundle']['#value'] == 'springboard_group') {
+    $form['add']['#submit'][] = 'springboard_group_form_og_ui_admin_new_role_submit';
+  }
+}
+
+/**
+ * Redirect to our custom roles page.
+ */
+function springboard_group_form_og_ui_admin_new_role_submit($form, &$form_state) {
+  $form_state['redirect'] = array('admin/springboard/groups/settings/roles');
+}
