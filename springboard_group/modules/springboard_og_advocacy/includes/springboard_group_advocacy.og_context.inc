@@ -18,7 +18,8 @@ function springboard_group_advocacy_springboard_group_context_menu_paths() {
       array_push($paths, 'admin/springboard/advocacy/actions');
       array_push($paths, 'admin/springboard/advocacy/targets/custom-targets');
       array_push($paths, 'admin/springboard/advocacy/targets/custom-groups');
-
+      array_push($paths, 'admin/springboard/advocacy/targets/custom-targets/add');
+      array_push($paths, 'admin/springboard/advocacy/targets/custom-groups/add');
     }
     if (isset($groups_enabled_types['node']['sba_message_action'])) {
       array_push($paths, 'admin/springboard/advocacy/message-actions/all');

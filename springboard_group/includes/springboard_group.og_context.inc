@@ -147,8 +147,26 @@ function springboard_group_get_group_context($node = NULL) {
     }
   }
 
-  // "_none".
+  // "_none", "_all" etc.
   if (!empty($_SESSION['springboard_group_working_group'])) {
+
+    // If the selection is "all" and we're on the "add target" pages,
+    // we have to present a dropdown with valid options to the user.
+    // This involves removing the "all" option if it is already selected.
+    if ($_SESSION['springboard_group_working_group'] == '_all'
+      && module_exists('springboard_group_advocacy')
+      && ((arg(4) == 'custom-targets' || arg(4) == 'custom-groups') && arg(5) == 'add')
+    ) {
+      if (user_access('administer group')) {
+        return '_none';
+      }
+      else {
+        // It's an affiliate.
+        $groups = $_SESSION['springboard_group_context_multiple'];
+        $gid = array_shift($groups);
+        return $gid;
+      }
+    }
     return $_SESSION['springboard_group_working_group'];
   }
 
@@ -297,6 +315,13 @@ function springboard_group_context_selector_form($form, &$form_state, $groups) {
   if (count($groups) > 1) {
     $options['_all'] = 'All Groups';
   }
+
+  if ((arg(4) == 'custom-groups' || arg(4) == 'custom-targets')
+    && arg(5) == 'add' && isset($options['_all'])
+  ) {
+    unset($options['_all']);
+  }
+
   foreach ($groups as $nid) {
     $node = node_load($nid);
     $options[$nid] = check_plain($node->title);
