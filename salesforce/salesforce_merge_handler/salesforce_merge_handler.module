@@ -4,8 +4,8 @@
  * Implements hook_salesforce_sync_fail_item().
  *
  * Examines statusCode returned from failed sync items for ENTITY_IS_DELETED.
- * When found, the corresponding record from salesforce_sync_map is deleted and
- * the queue item is refreshed.
+ * When found, the corresponding Contact and Account records from
+ * salesforce_sync_map are deleted and the queue item is refreshed.
  *
  * When the queue item is synced, it should match on the email field and a new
  * salesforce_sync_map record created that referenced the new SF record.
@@ -15,12 +15,12 @@ function salesforce_merge_handler_salesforce_sync_fail_item($item, $message, $re
     if (isset($result->errors)) {
       foreach ($result->errors as $error) {
         if ($error->statusCode == 'ENTITY_IS_DELETED') {
-          $rmid = db_query('SELECT rmid FROM salesforce_sync_map WHERE drupal_id=:drupal_id AND module=:module AND delta=:delta AND object_type=:object_type LIMIT 1', array(':drupal_id' => $item->drupal_id, ':module' => $item->module, ':delta' => $item->delta, ':object_type' => $item->object_type))->fetchField();
-          if (!empty($rmid)) {
-            entity_delete('salesforce_sync_map', $rmid);
-            // In order for the queue item to refresh properly, we need to change
-            // the operation from UPDATE to UPSERT, and delete the old/invalid
-            // SF Id from the queued item.
+          $rmids = db_query("SELECT rmid FROM salesforce_sync_map WHERE drupal_id=:drupal_id AND module=:module AND delta=:delta AND object_type IN ('Contact', 'Account') LIMIT 2", array(':drupal_id' => $item->drupal_id, ':module' => $item->module, ':delta' => $item->delta))->fetchCol();
+          if (!empty($rmids)) {
+            entity_delete_multiple('salesforce_sync_map', $rmids);
+            // In order for the queue item to refresh properly, we need to
+            // change the operation from UPDATE to UPSERT, and delete the
+            // old/invalid SF Id from the queued item.
             $item->operation = 'UPSERT';
             unset($item->sobject->Id);
             salesforce_queue_salesforce_queue_item_refresh_item_action($item);
