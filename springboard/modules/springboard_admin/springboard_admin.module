@@ -1007,11 +1007,12 @@ function springboard_admin_springboard_admin_form_page_types_alter(&$display_typ
 function springboard_admin_springboard_views_springboard_dashboard_panes_alter(&$webform_types, &$fundraiser_types) {
   // Remove types not checked to display in the settings.
   $allowed_types = array_filter(variable_get('springboard_admin_allowed_form_types', array_keys(_springboard_admin_enabled_form_types())));
-  foreach ($webform_types as $type => $info) {
+  foreach ($webform_types as $type) {
     if (!in_array($type, $allowed_types)) {
       unset($webform_types[$type]);
     }
   }
+
   foreach ($fundraiser_types as $type => $info) {
     if (!in_array($type, $allowed_types)) {
       unset($fundraiser_types[$type]);
