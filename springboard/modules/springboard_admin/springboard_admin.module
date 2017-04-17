@@ -1012,8 +1012,7 @@ function springboard_admin_springboard_views_springboard_dashboard_panes_alter(&
       unset($webform_types[$type]);
     }
   }
-
-  foreach ($fundraiser_types as $type => $info) {
+  foreach ($fundraiser_types as $type) {
     if (!in_array($type, $allowed_types)) {
       unset($fundraiser_types[$type]);
     }
