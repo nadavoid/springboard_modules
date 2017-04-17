@@ -455,13 +455,7 @@ function springboard_views_springboard_dashboard_panes() {
   drupal_alter('springboard_views_springboard_dashboard_panes', $webform_types, $fundraiser_types);
 
   $donation_pane_access = FALSE;
-  if (user_access("administer springboard")
-    || user_access('administer springboard dashboard')
-    || user_access('administer fundraiser')
-    || user_access('bypass node access')
-    || user_access('edit any donation form')
-    || user_access('create donation form')
-  ) {
+  if (module_exists('springboard_admin') && springboard_admin_access_donation_form_pages()) {
     $donation_pane_access = TRUE;
   }
 
@@ -485,7 +479,6 @@ function springboard_views_springboard_dashboard_panes() {
     );
   }
 
-
   $webform_pane_access = FALSE;
   foreach ($webform_types as $type) {
     if (user_access('create ' . $type . ' content') || user_access('edit any ' . $type . ' content')) {
@@ -493,10 +486,13 @@ function springboard_views_springboard_dashboard_panes() {
     }
   }
 
-  if (user_access("administer springboard")
-    || user_access('administer springboard dashboard')
-    || user_access('bypass node access')
-    || user_access('administer nodes')
+  if (
+    (user_access("administer springboard")
+      || user_access('administer springboard dashboard')
+      || user_access('bypass node access')
+      || user_access('administer nodes')
+    )
+    && !empty($webform_types)
   ) {
     $webform_pane_access = TRUE;
   }
