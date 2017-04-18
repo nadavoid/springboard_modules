@@ -464,6 +464,17 @@ function springboard_admin_access_donation_form_pages() {
   ) {
     return TRUE;
   }
+  $types = node_type_get_types();
+  foreach ($types as $type) {
+    if (fundraiser_is_donation_type($type->type)
+      && (
+        user_access('create ' . $type->type . ' content')
+        ||  user_access('edit any ' . $type->type . ' content')
+      )
+    ) {
+      return TRUE;
+    }
+  }
   return FALSE;
 }
 
