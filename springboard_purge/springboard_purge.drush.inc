@@ -4,8 +4,8 @@
  * Defines drush command for purging old data.
  */
 
-define(SPRINGBOARD_PURGE_DEFAULT_DAYS_OLD, 90);
-define(SPRINGBOARD_PURGE_DEFAULT_BATCH_SIZE, 250);
+define('SPRINGBOARD_PURGE_DEFAULT_DAYS_OLD', 90);
+define('SPRINGBOARD_PURGE_DEFAULT_BATCH_SIZE', 250);
 
 /**
  * Implements hook_drush_command().

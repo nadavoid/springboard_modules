@@ -101,28 +101,36 @@ function braintree_vault_payment_method_save($payment_method, $context = array()
     return array(FALSE, $context);
   }
 
-  if ($context['result']->success) {
+  if (!empty($context['result']->success)) {
     // When adding a card, check if it is a duplicate payment method.
     // Currently, the only way to achieve this is by adding the card first and
     // determining if the card's unique idenifier ID exists for the user.
     // @todo Re-implement this when/if Braintree ever supports looking up a
     // user's card before it has to be saved.
-    if ($context['op'] == 'add' && !empty($context['customer']['creditCards'] && in_array($context['result']->paymentMethod->uniqueNumberIdentifier, $context['customer']['creditCards']))) {
+    $payment_method_result = $context['result']->paymentMethod;
+    $payment_method_result_class = get_class($payment_method_result);
+    if ($context['op'] == 'add' && $payment_method_result_class == 'Braintree\CreditCard' && !empty($context['customer']['creditCards']) && in_array($context['result']->paymentMethod->uniqueNumberIdentifier, $context['customer']['creditCards'])) {
       // If we already have this card stored, delete this card and update the
       // stored card.
       try {
         Braintree_PaymentMethod::delete($context['result']->paymentMethod->token);
+        $token = db_query('SELECT payment_method_token FROM {braintree_vault_payment_methods} WHERE unique_identifier = :u AND uid = :uid', array(
+          ':u' => $context['result']->paymentMethod->uniqueNumberIdentifier,
+          ':uid' => $context['customer']['customer']->uid,
+        ))->fetchField();
+        unset($payment_method['paymentMethodNonce']);
+        unset($payment_method['customerId']);
+        $payment_method['expirationMonth'] = $context['result']->paymentMethod->expirationMonth;
+        $payment_method['expirationYear'] = $context['result']->paymentMethod->expirationYear;
+        $payment_method['options']['verifyCard'] = FALSE;
+        $context['result'] = Braintree_PaymentMethod::update($token, $payment_method);
+        $context['result']->token = $token;
       }
-      catch (Exception $e) {
+      catch (Braintree_Result_Error $e) {
         $error_message = braintree_report_error($e);
         $context['error'] = $error_message;
         return array(FALSE, $context);
       }
-      $token = db_query('SELECT payment_method_token FROM {braintree_vault_payment_methods} WHERE unique_identifier = :u AND customer_id = :customer_id', array(
-        ':u' => $context['result']->paymentMethod->uniqueNumberIdentifier,
-        ':customer_id' => $payment_method['customerId'],
-      ))->fetchField();
-      $context['result']->paymentMethod->token = $token;
     }
 
     // @todo Determine if this should be the current user or the user specified

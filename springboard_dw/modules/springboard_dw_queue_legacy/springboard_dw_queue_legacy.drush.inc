@@ -476,17 +476,19 @@ function springboard_dw_queue_legacy_message($messages, $operation_details, $idl
   $queue = DrupalQueue::get("springboard_dw_export");
   foreach ($messages as $message) {
     // Create the Advocacy action item in the queue if not warehoused.
-    if (!springboard_dw_item_is_warehoused('advocacy message', $message['id'])) {
+    if (!springboard_dw_item_is_warehoused('advocacy message', $message['_id']['$id'])) {
       $message_item = array();
       $message_item['queue_type'] = 'advocacy message';
-      $message_item['message_id'] = $message['id'];
-      $message_item['action_id'] = $message['action_id'];
+      $message_item['message_id'] = $message['_id']['$id'];
+      $message_item['action_id'] = $message['alertId'];
       $queue->createItem($message_item);
       springboard_dw_log_queue_item($message_item);
-      springboard_dw_track_item_warehouse_queued('advocacy message', $message['id']);
+      springboard_dw_track_item_warehouse_queued('advocacy message', $message['_id']['$id']);
+      // Mark message as tracked in Advocacy.
+      $metrics = springboard_dw_queue_legacy_get_endpoint($message['_id']['$id'], 'warehouse/track');
     }
     else {
-      drush_log('Attempted to queue message ' . $message['id'] . ' but it is already warehoused', 'warning');
+      drush_log('Attempted to queue message ' . $message['_id']['$id'] . ' but it is already warehoused', 'warning');
     }
   }
   $context['message'] = $operation_details;
@@ -538,61 +540,49 @@ function springboard_dw_queue_legacy_build_action($submission) {
  * Get list of advocacy message node IDs.
  *
  * @return array
- *   Array of all message values.
+ *   Array of all message values or an empty array.
  */
-function springboard_dw_queue_legacy_get_advocacy_messages() {
+function springboard_dw_queue_legacy_get_advocacy_messages($limit = FALSE) {
   // Get nids of all sba_message_action nodes.
   $advocacy_action_records = db_query("SELECT nid FROM {node} WHERE type = 'sba_message_action' OR type = 'sba_social_action' ORDER BY created ASC", array(), array('target' => 'slave'))->fetchAll();
   $messages = array();
   foreach ($advocacy_action_records as $advocacy_action_record) {
     $node = node_load($advocacy_action_record->nid);
-    $messages = array_merge($messages, springboard_dw_queue_legacy_get_advocacy_message_details($node->advocacy_id));
-
-  }
-  return $messages;
-}
-
-/**
- * Get advocacy messages related to a single action.
- *
- * Loops through all available pages to get entire dataset.
- *
- * @return array
- *   Return an array of messages and pagination details.
- */
-function springboard_dw_queue_legacy_get_advocacy_message_details($action_id) {
-  $details = array();
-  $current_page = 1;
-  $last_page = 2;
-  while ($current_page <= $last_page) {
-    drush_log('Getting page ' . $current_page . ' of data for ' . $action_id, 'ok');
-    $page = springboard_dw_queue_legacy_get_advocacy_message_details_page($action_id, $current_page);
-    $current_page = $page['current_page'] + 1;
-    $last_page = $page['last_page'];
-    foreach ($page['data'] as $message) {
-      $details[] = array(
-        'id' => $message['_id']['$id'],
-        'action_id' => $action_id,
-        'created' => $message['delivery']['createdAt']['sec'],
-      );
+    // Get count of remaining messages for this advocacy_id.
+    $metrics = springboard_dw_queue_legacy_get_endpoint($node->advocacy_id, 'warehouse/metrics');
+    if (!isset($metrics['message'])) {
+      drush_log(dt('There was a problem retrieving message count for action: @action_id', array('@action_id' => $node->advocacy_id)), 'error');
+    }
+    else {
+      drush_log($metrics['message'], 'ok');
+      // If count of warehosued messages is less than total messages.
+      if ($metrics['warehousedMessages'] < $metrics['totalCount']) {
+        $api_params = ($limit !== FALSE) ? array('limit' => $limit) : array();
+        $messages = springboard_dw_queue_legacy_get_endpoint($node->advocacy_id, 'warehouse/untracked', $api_params);
+        // We found messages to queue, so break out of this foreach. To get the
+        // rest of the messages, keep running this drush commend.
+        break;
+      }
     }
   }
-  return $details;
+  return isset($messages) ? $messages : array();
 }
 
 /**
- * GET a single page of JSON data.
+ * GET a single page of untracked messages.
  *
  * @return array
  *   Return an array of message data for a specified pagination offset.
+ *
+ * @todo add limit param.
  */
-function springboard_dw_queue_legacy_get_advocacy_message_details_page($action_id, $page = 1) {
-  // Composer Vendor autoload
+function springboard_dw_queue_legacy_get_endpoint($id, $endpoint, $additional_params = array()) {
+  // Composer Vendor autoload.
   if (function_exists('drush_autoload')) {
     drush_autoload("sites/all/libraries/springboard_composer/vendor/autoload.php");
   }
   else {
-    require_once("sites/all/libraries/springboard_composer/vendor/autoload.php");
+    require_once "sites/all/libraries/springboard_composer/vendor/autoload.php";
   }
 
   // Load Guzzle client.
@@ -600,10 +590,10 @@ function springboard_dw_queue_legacy_get_advocacy_message_details_page($action_i
   $params = array(
     'query' => array(
       'access_token' => variable_get('springboard_dw_advocacy_authentication_token'),
-      'page' => $page,
     ),
   );
-  $endpoint = variable_get('springboard_dw_advocacy_api_endpoint') . '/api/v1/messages/get/' . $action_id;
+  $params['query'] += $additional_params;
+  $endpoint = variable_get('springboard_dw_advocacy_api_endpoint') . '/api/v1/messages/' . $id . '/' . $endpoint;
   $response = $guzzle->request('GET', $endpoint, $params);
   $body = $response->getBody();
   return json_decode($body->getContents(), TRUE);
@@ -663,7 +653,7 @@ function springboard_dw_queue_legacy_get_records($type, $limit = FALSE, $highwat
       break;
 
     case 'message':
-      $records = springboard_dw_queue_legacy_get_advocacy_messages();
+      $records = springboard_dw_queue_legacy_get_advocacy_messages($limit);
       break;
 
     case 'petition_message':
@@ -770,7 +760,7 @@ function springboard_dw_queue_legacy_get_records($type, $limit = FALSE, $highwat
     default:
       return drush_set_error(dt('"@type" is not a valid record type. Nothing was processed.', array('@type' => $type)));
   }
-  if ($query) {
+  if (isset($query)) {
     if ($limit) {
       $query->range(0, $limit);
     }
