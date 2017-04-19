@@ -248,6 +248,9 @@ function commerce_authnet_fundraiser_commerce_update($donation, $card_data = NUL
       commerce_cardonfile_save($card_data);
       return $card_data;
     }
+    else {
+      return FALSE;
+    }
   }
   // Create a new card on file record
   elseif ($action == 'new') {

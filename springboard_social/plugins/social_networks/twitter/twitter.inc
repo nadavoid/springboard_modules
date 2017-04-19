@@ -87,17 +87,20 @@ function sb_social_twitter_settings(&$form, $enabled_services = array(), $settin
     '#description' => t('Custom twitter message text.'),
     '#default_value' => isset($settings['message']) ? $settings['message'] : '',
   );
-  $form['twitter_settings']['tokens'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Available Tokens'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-  );
-  $form['twitter_settings']['tokens']['token_help'] = array(
-    '#type' => 'item',
-    '#title' => t('Drupal tokens'),
-    '#description' => theme('token_tree', array('token_types' => $token_set, 'recursion_limit' => 2, 'click_insert' => FALSE)),
-  );
+
+  if (!module_exists('springboard_token_set')) {
+    $form['twitter_settings']['tokens'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Available Tokens'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+    $form['twitter_settings']['tokens']['token_help'] = array(
+      '#type' => 'item',
+      '#title' => t('Drupal tokens'),
+      '#description' => theme('token_tree', array('token_types' => $token_set, 'recursion_limit' => 2, 'click_insert' => FALSE)),
+    );
+  }
 }
 
 function sb_social_twitter_admin_settings(&$form) {
