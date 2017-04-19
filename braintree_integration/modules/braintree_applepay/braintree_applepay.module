@@ -194,7 +194,7 @@ function braintree_applepay_form_webform_client_form_alter(&$form, &$form_state)
   if (_braintree_applepay_method_is_enabled($form['#node'])) {
     // @todo refactor this duplicate code from validation. Ideally call the
     // validate function.
-    $default_fundraiser_fields = _braintree_applepay_default_fundraiser_fields();
+    $default_fundraiser_fields = _braintree_payment_default_fundraiser_fields();
     $billing_cid = webform_get_cid($form['#node'], 'billing_information', 0);
     $donor_cid = webform_get_cid($form['#node'], 'donor_information', 0);
     $billing_children = _braintree_payment_webform_components_find_parent_children($billing_cid, $form['#node']->webform['components']);
