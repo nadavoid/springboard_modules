@@ -167,10 +167,10 @@ function _braintree_applepay_webform_components_validate($form, &$form_state) {
   $billing_cid = webform_get_cid($form['#node'], 'billing_information', 0);
   $billing_children = _braintree_applepay_webform_components_find_parent_children($billing_cid, $form_state['values']['components']);
   $donor_cid = webform_get_cid($form['#node'], 'donor_information', 0);
-  $donor_children = _braintree_applepay_webform_components_find_parent_children($donor_cid, $form_state['values']['components']);
+  $donor_children = _braintree_payment_webform_components_find_parent_children($donor_cid, $form_state['values']['components']);
   $children = array_merge($donor_children, $billing_children);
   foreach ($children as $cid) {
-    $component = _braintree_applepay_webform_get_component_by_cid($form['#node']->nid, $cid);
+    $component = _braintree_payment_webform_get_component_by_cid($form['#node']->nid, $cid);
     if (!in_array($component->form_key, $default_fundraiser_fields) && $component->type != 'hidden') {
       form_set_error('components][' . $component->cid, t('The component <em>@key</em> cannot be added to this fieldset when applepay compact flow is enabled', array('@key' => $component->form_key)));
       $errors[] = $component;
@@ -197,13 +197,13 @@ function braintree_applepay_form_webform_client_form_alter(&$form, &$form_state)
     $default_fundraiser_fields = _braintree_applepay_default_fundraiser_fields();
     $billing_cid = webform_get_cid($form['#node'], 'billing_information', 0);
     $donor_cid = webform_get_cid($form['#node'], 'donor_information', 0);
-    $billing_children = _braintree_applepay_webform_components_find_parent_children($billing_cid, $form['#node']->webform['components']);
-    $donor_children = _braintree_applepay_webform_components_find_parent_children($donor_cid, $form['#node']->webform['components']);
+    $billing_children = _braintree_payment_webform_components_find_parent_children($billing_cid, $form['#node']->webform['components']);
+    $donor_children = _braintree_payment_webform_components_find_parent_children($donor_cid, $form['#node']->webform['components']);
     $children = array_merge($donor_children, $billing_children);
     // If compact flow is enabled display a warning if there are disallowed
     // components present.
     foreach ($children as $cid) {
-      $component = _braintree_applepay_webform_get_component_by_cid($form['#node']->nid, $cid);
+      $component = _braintree_payment_webform_get_component_by_cid($form['#node']->nid, $cid);
       if (!in_array($component->form_key, $default_fundraiser_fields) && $component->type != 'hidden') {
         if (user_access('edit any donation form')) {
           drupal_set_message(t('The component <em>@key</em> in its current position will prevent the applepay compact flow from displaying properly.', array('@key' => $component->form_key)), 'error');
