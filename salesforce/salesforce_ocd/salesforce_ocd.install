@@ -69,13 +69,11 @@ function salesforce_ocd_map_optout_date() {
  */
 function salesforce_ocd_unmap_field($field_name) {
   $user_map = salesforce_mapping_load('user_to_contact');
-  $index = 0;
   $indices = array();
-  foreach ($user_map->field_mappings as $mapped_field) {
+  foreach ($user_map->field_mappings as $index => $mapped_field) {
     if ($mapped_field['drupal_field']['fieldmap_value'] == $field_name) {
       $indices[] = $index;
     }
-    $index++;
   }
 
   if (count($indices) > 0) {
