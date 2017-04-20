@@ -186,19 +186,18 @@ function springboard_advocacy_user_can_access_advocacy_dashboard() {
  * @return bool
  */
 function springboard_advocacy_user_can_access_type($type) {
-  $access = FALSE;
   if (
-    user_access('create ' . $type . ' content')
-    || user_access('create ' . $type . ' content')
-    || user_access('create ' . $type . ' content')
-    || user_access('edit any ' . $type . ' content')
-    || user_access('edit any ' . $type . ' content')
+    node_access('create', $type)
     || user_access('edit any ' . $type . ' content')
     || user_access('bypass node access')
   ) {
-    $access = TRUE;
+    return TRUE;
   }
-
+  $access = FALSE;
+  $check_access = module_invoke_all('springboard_advocacy_user_can_access_type', $type);
+  if (!empty($check_access)) {
+    $access = $check_access;
+  }
   return $access;
 }
 

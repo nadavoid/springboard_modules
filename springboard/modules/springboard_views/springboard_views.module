@@ -55,8 +55,9 @@ function springboard_views_filter_sbv_forms(&$view) {
 
   // Iterate through the un-paged result and filter by access.
   foreach ($counting_view->result as $index => $count_result) {
-    if (!empty($count_result->node_type)) {
-      if (!user_access('edit any ' . $count_result->node_type . ' content') && !user_access('create ' . $count_result->node_type . ' content')) {
+    if (!empty($count_result->nid)) {
+      $node = node_load($count_result->nid);
+      if (!node_access('update', $node) && !node_access('create', $count_result->node_type)) {
         unset($counting_view->result[$index]);
       }
     }
@@ -65,8 +66,9 @@ function springboard_views_filter_sbv_forms(&$view) {
   // Remove the user_access filtered results, this time
   // from the original pre-rendered view.
   foreach ($view->result as $index => $result) {
-    if (!empty($result->node_type)) {
-      if (!user_access('edit any ' . $result->node_type . ' content') && !user_access('create ' . $result->node_type . ' content')) {
+    if (!empty($result->nid)) {
+      $node = node_load($count_result->nid);
+      if (!node_access('update', $node) && !node_access('create', $result->node_type)) {
         unset($view->result[$index]);
       }
     }
@@ -480,20 +482,7 @@ function springboard_views_springboard_dashboard_panes() {
   }
 
   $webform_pane_access = FALSE;
-  foreach ($webform_types as $type) {
-    if (user_access('create ' . $type . ' content') || user_access('edit any ' . $type . ' content')) {
-      $webform_pane_access = TRUE;
-    }
-  }
-
-  if (
-    (user_access("administer springboard")
-      || user_access('administer springboard dashboard')
-      || user_access('bypass node access')
-      || user_access('administer nodes')
-    )
-    && !empty($webform_types)
-  ) {
+  if (module_exists('springboard_admin') && springboard_admin_access_form_pages()) {
     $webform_pane_access = TRUE;
   }
 

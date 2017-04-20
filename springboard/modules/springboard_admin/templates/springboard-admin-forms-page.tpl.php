@@ -29,8 +29,7 @@
         </ul>
       </div><!--// btn-group -->
       <?php endif; ?>
-
-      <?php if (user_access('create ' . $type->type . ' content')) : ?>
+      <?php if (node_access('create', $type->type)) : ?>
         <a href="<?php print base_path(); ?>node/add/<?php print preg_replace('/_/', '-', $type->type); ?>" class="button add-button"><?php print t('Create'); ?> <?php print $type->name; ?></a>
       <?php endif; ?>
     </div><!-- // buttons-wrapper -->

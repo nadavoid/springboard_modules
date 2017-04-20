@@ -25,7 +25,7 @@
           <li><a href="<?php print base_path(); ?>admin/springboard/forms/all"><?php print t('Forms'); ?></a></li>
         </ul>
       </div><!--// btn-group -->
-    <?php if (user_access('create ' . $type->type . ' content')) : ?>
+    <?php if (node_access('create', $type->type)) : ?>
       <a href="<?php print base_path(); ?>node/add/<?php print preg_replace('/_/', '-', $type->type); ?>" class="button add-button"><?php print t('Create'); ?> <?php print $type->name; ?></a>
     <?php endif; ?>
     </div><!-- // buttons-wrapper -->
