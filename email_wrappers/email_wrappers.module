@@ -211,11 +211,7 @@ function _email_wrappers_node_edit_email_fields_validate($form, $form_state) {
 
     // Validate the field's value or values:
     foreach ($form_state['values'][$email_field][$lang] as $key => $email_value) {
-<<<<<<< HEAD
       if (isset($email_value['value']) && !springboard_validate_email($email_value['value'])) {
-=======
-      if (!empty($email_value['value']) && !valid_email_address($email_value['value'])) {
->>>>>>> origin/7.x-4.x
         form_set_error($email_field, t('Please enter a valid email address for field :email_field_label.',
           array(':email_field_label' => $email_field_label)));
       }
