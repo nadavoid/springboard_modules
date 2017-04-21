@@ -139,22 +139,35 @@ function springboard_group_fundraiser_rebuild_form(&$form, &$form_state) {
  *   The gateways filtered by group.
  */
 function springboard_group_fundraiser_filter_gateways($gateways, $gid = NULL) {
+  $group_methods = array();
+  $no_group_methods = array();
+
   foreach ($gateways as $key => $gateway) {
 
     // Get the gateway's rule configuraiton and checked if it's grouped.
     $name = explode('|', $key);
     $rule = rules_config_load($name[1]);
     $rule_gid = NULL;
-    if (!empty($rule->og_group_ref_rules_config[LANGUAGE_NONE][0]['target_id'])) {
-      $rule_gid = $rule->og_group_ref_rules_config[LANGUAGE_NONE][0]['target_id'];
+    if (!empty($rule->og_group_ref_rules_config[LANGUAGE_NONE][0])) {
+      foreach ($rule->og_group_ref_rules_config[LANGUAGE_NONE] as $gateway) {
+        $rule_gid = $gateway['target_id'];
+        if ($gid == $rule_gid) {
+          $group_methods[$key] = $key;
+        }
+      }
     }
-    if ($gid == '_none' && !empty($rule_gid)) {
-      unset($gateways[$key]);
-    }
-    elseif ($gid != '_none' && $gid != $rule_gid) {
-      unset($gateways[$key]);
+    else {
+      // No group on payment method.
+      $no_group_methods[$key] = $key;
     }
 
+    if ($gid == '_none' && !in_array($key, $no_group_methods)) {
+      unset($gateways[$key]);
+    }
+    elseif ($gid != '_none' && !in_array($key, $group_methods)) {
+      unset($gateways[$key]);
+    }
   }
+
   return $gateways;
 }
