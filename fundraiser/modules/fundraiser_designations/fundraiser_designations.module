@@ -1039,16 +1039,35 @@ function _fundraiser_designations_add_js_settings(&$form) {
  */
 function fundraiser_designations_client_form_validate($form, &$form_state) {
 
-  $components = $form['#node']->webform['components'];
+  $node = $form['#node'];
+  $components = $node->webform['components'];
   $component_hierarchy = webform_user_parse_components($form['#node']->nid, $components);
 
   // Check if the cart is empty.
   $amount = $component_hierarchy['amount'];
   $total = _fundraiser_designations_find_field_form_state($form_state['values'], $amount);
-  if (empty($total)) {
+
+  if (empty($total) || intval($total) === 0) {
     form_set_error('amount', t('Your cart is empty.'));
   }
 
+  if (!empty($component_hierarchy['recurs_monthly'])) {
+    $recurs_component = $component_hierarchy['recurs_monthly'];
+    $recurs = _fundraiser_designations_find_field_form_state($form_state['values'], $recurs_component);
+  }
+  if ((!empty($recurs['recurs']) && !empty($node->recurring_dual_ask_amounts)) || $recurs == 'recurs') {
+    $minimum = isset($node->recurring_minimum_donation_amount) ? $node->recurring_minimum_donation_amount : NULL;
+  }
+  else {
+    $minimum = isset($node->minimum_donation_amount) ? $node->minimum_donation_amount : NULL;
+  }
+
+  if (!empty($minimum)) {
+    $this_amount = empty($total) ? 0 : floatval($total);
+    if ($this_amount < floatval($minimum)) {
+      form_set_error('amount', t('Donation amount is less than minimum required donation amount.'));
+    }
+  }
   // Make sure there is not just an add-on conation in the cart.
   $container = $component_hierarchy['fd_cart_container'];
   $cart = _fundraiser_designations_find_field_form_state($form_state['values'], $container);
