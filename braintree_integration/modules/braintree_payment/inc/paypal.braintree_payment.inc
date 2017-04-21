@@ -71,6 +71,7 @@ function braintree_payment_form_node_form_alter(&$form, &$form_state, $form_id) 
 ) {
     $enabled_form_ids = variable_get('braintree_paypal_compact', array());
     $paypal_id = reset(array_keys($matches));
+    $form['#attached']['js'][] = drupal_get_path('module', 'braintree_payment') . '/js/braintree_payment.paypal.admin.js';
     $form['payment_methods']['braintree_paypal_compact'] = array(
       '#type' => 'checkbox',
       '#title' => t('Enable PayPal compact flow on this donation form?'),
@@ -79,7 +80,7 @@ function braintree_payment_form_node_form_alter(&$form, &$form_state, $form_id) 
       '#states' => array(
         'visible' => array(
           ':input[name="gateways[paypal][status]"]' => array('checked' => TRUE),
-          'select[name="gateways[paypal][id]"]' => array('value' => $paypal_id),
+          'select[name="gateways[paypal][id]"]' => array('value' => array('regex' => '^braintree_paypal\|.*')),
         ),
       ), 
               
