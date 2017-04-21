@@ -212,11 +212,15 @@ function springboard_group_context_menu_paths() {
       if (isset($groups_enabled_types['node']['springboard_petition'])) {
         array_push($paths, 'admin/springboard/advocacy/petitions/all');
       }
+      if (isset($groups_enabled_types['node']['sustainers_upgrade_form'])) {
+        array_push($paths, 'admin/springboard/donation-forms/sustainers_upgrade_form');
+      }
       foreach ($groups_enabled_types['node'] as $type => $field) {
         if (fundraiser_is_donation_type($type)) {
           array_push($paths, 'admin/springboard');
           array_push($paths, 'admin/springboard/donation-forms/' . $type);
           array_push($paths, 'admin/springboard/donation-forms/all');
+          array_push($paths, 'admin/springboard/donation-forms/sustainers_upgrade_form');
         }
         if (in_array($type, webform_variable_get('webform_node_types'))) {
           array_push($paths, 'admin/springboard');
