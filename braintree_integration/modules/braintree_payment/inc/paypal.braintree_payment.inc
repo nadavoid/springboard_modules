@@ -65,9 +65,12 @@ function braintree_payment_form_node_form_alter(&$form, &$form_state, $form_id) 
     return;
   }
   // Is Paypal Braintree an available payment method?
+  $matches  = preg_grep('/^braintree_paypal|/', $form['payment_methods']['gateways']['paypal']['id']['#options']);
   if (isset($form['payment_methods']['gateways']['paypal']) &&
-    array_key_exists('braintree_paypal|commerce_payment_braintree_paypal', $form['payment_methods']['gateways']['paypal']['id']['#options'])) {
+    !empty($matches)
+) {
     $enabled_form_ids = variable_get('braintree_paypal_compact', array());
+    $paypal_id = reset(array_keys($matches));
     $form['payment_methods']['braintree_paypal_compact'] = array(
       '#type' => 'checkbox',
       '#title' => t('Enable PayPal compact flow on this donation form?'),
@@ -76,7 +79,7 @@ function braintree_payment_form_node_form_alter(&$form, &$form_state, $form_id) 
       '#states' => array(
         'visible' => array(
           ':input[name="gateways[paypal][status]"]' => array('checked' => TRUE),
-          'select[name="gateways[paypal][id]"]' => array('value' => 'braintree_paypal|commerce_payment_braintree_paypal'),
+          'select[name="gateways[paypal][id]"]' => array('value' => $paypal_id),
         ),
       ), 
               
@@ -91,7 +94,7 @@ function braintree_payment_form_node_form_alter(&$form, &$form_state, $form_id) 
  */
 function _braintree_payment_node_form_submit($form, &$form_state) {
    if (isset($form_state['values']['gateways']['paypal']) &&
-      $form_state['values']['gateways']['paypal']['id'] == 'braintree_paypal|commerce_payment_braintree_paypal' &&
+      preg_match('/^braintree_paypal\|/', $form_state['values']['gateways']['paypal']['id']) &&
       $form_state['values']['gateways']['paypal']['status'] &&
       isset($form_state['values']['braintree_paypal_compact']) &&
       $form_state['values']['braintree_paypal_compact']) {
@@ -247,7 +250,6 @@ function braintree_payment_form_webform_client_form_alter(&$form, &$form_state) 
  * Propagate Braintree Paypal compact settings to cloned node.
  */
 function braintree_payment_clone_node_alter(&$node, $context) {
- 
   if (empty($context['original_node']->type) || !fundraiser_is_donation_type($context['original_node']->type)) {
     return;
   }
@@ -257,7 +259,8 @@ function braintree_payment_clone_node_alter(&$node, $context) {
     return;
   }
   if ($context['original_node']->gateways['paypal']['status'] &&
-      $context['original_node']->gateways['paypal']['id'] == 'braintree_paypal|commerce_payment_braintree_paypal') {
+      preg_match('/^braintree_paypal\|/', $context['original_node']->gateways['paypal']['id']))
+   {
     $enabled_form_ids = variable_get('braintree_paypal_compact', array());
     if (in_array($context['original_node']->nid, $enabled_form_ids)) {
       // if the source node for cloning has the compact flow enabled, set this flag
@@ -286,7 +289,7 @@ function _braintree_payment_paypal_method_is_option($node, $form = NULL) {
     return FALSE;
   }
   if (isset($node->gateways) && isset($node->gateways['paypal']) &&
-      $node->gateways['paypal']['id'] == 'braintree_paypal|commerce_payment_braintree_paypal') {
+      preg_match('/^braintree_paypal\|/', $node->gateways['paypal']['id'])) {
     return TRUE;  
   }
   return FALSE;
