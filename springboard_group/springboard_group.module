@@ -388,12 +388,15 @@ function springboard_group_field_widget_form_alter(&$element, &$form_state, $con
   if (isset($context['field']['settings']['handler']) && $context['field']['settings']['handler'] == 'og_springboard_og') {
     // If the og reference field is using our custom selection handler,
     // remove the admin "groups you are not of member of" field.
-    if (user_access('administer group')) {
+    if (user_access('administer group') && !empty($element['admin'])) {
       $element['admin']['#access'] = FALSE;
       // Set the value of the default field to the default value of the admin
       // field if there are values present.
       if (!empty($element['admin']['#default_value']) && empty($element['default']['#default_value'])) {
         $element['default']['#default_value'] = $element['admin']['#default_value'];
+      }
+      elseif (!empty($element['admin']['#default_value']) && is_array($element['default']['#default_value'])) {
+        $element['default']['#default_value']  = array_merge($element['default']['#default_value'], $element['admin']['#default_value']);
       }
       $element['admin']['#default_value'] = [];
     }
