@@ -146,14 +146,14 @@ function springboard_group_rules_payment_rules_overview__page_alter(&$page) {
 function springboard_group_form_rules_ui_add_element_alter(&$form, &$form_state, $form_id) {
   if (arg(1) == 'ajax') {
     $rule_name = !empty($form_state['parent_element']->name) ? $form_state['parent_element']->name : '';
-    if (empty($rule_name)) {
+    if (!empty($rule_name)) {
       $rule = rules_config_load($rule_name);
       if (empty($rule)) {
         // It's a custom UI managed rule.
         $rule = rules_config_load('rules_' . $rule_name);
       }
       if (!empty($rule)) {
-        springboard_group_rules_add_group_widget($form, $form_state, $rule);
+        //springboard_group_rules_add_group_widget($form, $form_state, $rule);
       }
     }
   }
@@ -168,8 +168,10 @@ function springboard_group_form_rules_ui_add_element_alter(&$form, &$form_state,
 function springboard_group_form_rules_ui_edit_element_alter(&$form, &$form_state, $form_id) {
   // We need the rule name to proceed.
   $rule_name = arg(6) != 'edit' ? arg(6) : arg(5);
-  $rule = rules_config_load($rule_name);
-  if (empty($rule)) {
+  if (!empty($rule_name)) {
+    $rule = rules_config_load($rule_name);
+  }
+  if (empty($rule) && !empty($rule_name)) {
     // It's a custom UI managed rule.
     $rule = rules_config_load('rules_' . $rule_name);
   }
@@ -195,7 +197,7 @@ function springboard_group_form_rules_ui_form_edit_rules_config_alter(&$form, &$
 
   $rule_name = $form['settings']['name']['#default_value'];
   $rule = rules_config_load($rule_name);
-  if (empty($rule)) {
+  if (empty($rule) && !empty($rule_name)) {
     // It's a custom UI managed rule.
     $rule = rules_config_load('rules_' . $rule_name);
   }
@@ -290,11 +292,21 @@ function springboard_group_rules_config_form__validate(&$form, &$form_state, $ca
     return;
   }
 
-  $rule_name = $form['settings']['name']['#default_value'];
-  $rule = rules_config_load($rule_name);
+  if (!empty($form['settings']['name']['#default_value'])) {
+    $rule_name = $form['settings']['name']['#default_value'];
+    if (!empty($rule_name)) {
+      $rule = rules_config_load($rule_name);
+    }
+
+    if (empty($rule) && !empty($rule_name)) {
+      // It's a custom UI managed rule.
+      $rule = rules_config_load('rules_' . $rule_name);
+    }
+  }
+
   if (empty($rule)) {
-    // It's a custom UI managed rule.
-    $rule = rules_config_load('rules_' . $rule_name);
+    // Ajax.
+    $rule = !empty($form_state['build_info']['args'][0]->name) ? rules_config_load($form_state['build_info']['args'][0]->name) : FALSE;
   }
 
   $this_rule_old_gids = og_get_entity_groups('rules_config', $rule, array(), 'og_group_ref_rules_config');
