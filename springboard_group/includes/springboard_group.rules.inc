@@ -388,7 +388,7 @@ function springboard_group_rules_config_form__validate(&$form, &$form_state, $ca
       '@format' => $format,
       '@use' => $uses,
     ));
-    if ($count < 11) {
+    if ($count < 50) {
       $message .= theme('item_list', array('items' => $rows));
     }
     $form_state['group_ajax_messages'][] = $message;
