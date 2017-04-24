@@ -207,6 +207,8 @@ function sba_quicksign_form_validate(&$form, &$form_state) {
       }
     }
 
+    $account = user_load_by_mail($mail);
+
     // Compile list of webform required fields.
     $required_fields = sba_quicksign_get_required_fields($node);
     // Compare profile to required fields via the Webform User field map.
@@ -216,7 +218,7 @@ function sba_quicksign_form_validate(&$form, &$form_state) {
     $missing_message_fields = sba_quicksign_check_message_fields($form, $form_state);
     foreach ($required_non_profile_fields as $form_key) {
       $field = _sba_quicksign_find_field_form_state($form_state['values'], $component_hierarchy[$form_key]);
-      if (empty($field)) {
+      if (empty($field) && empty($account[$form_key])) {
         $missing_non_profile_fields = TRUE;
       }
     }
@@ -236,9 +238,9 @@ function sba_quicksign_form_validate(&$form, &$form_state) {
     }
     else {
       // Load user profile from email.
-      $account = user_load_by_mail($mail);
       foreach ($map as $webform_field => $profile_field) {
         $field_value = _sba_quicksign_find_field_form_state($form_state['values'], $component_hierarchy[$webform_field]);
+
         if (!empty($field_value)) {
           $profile[$webform_field] = $field_value;
         } else {
