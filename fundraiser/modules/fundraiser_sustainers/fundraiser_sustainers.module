@@ -3884,7 +3884,7 @@ function _fundraiser_sustainers_update_recurring($donation) {
       // we only want to update once, even if we're cycling through a cancelled
       // series (if cancelled, we'll pick it up again later).
       $recur_remain = _fundraiser_sustainers_get_donations_recurr_remaining($record['master_did']);
-      if (!empty($recur_remain)) {
+      if (!empty($recur_remain) && empty($record['cancellation_reason'])) {
         if ($record['master_did'] != $mdid) {
           $fundraiser_sustainers_series = entity_load_single('fundraiser_sustainers_series', $record['master_did']);
           // Do we need to do this at all?
