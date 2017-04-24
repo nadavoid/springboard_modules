@@ -13,19 +13,34 @@
       //}
     }
   };
-  Drupal.behaviors.statesModification = {
-    weight: -10,
+  Drupal.behaviors.paypalCompactStates = {
     attach: function(context, settings) {
-      if (Drupal.states) {
-        Drupal.states.Dependent.comparisons.Object =
-          function(reference, value) {
-            if ('regex' in reference) {
-              return (new RegExp(reference.regex, reference.flags)).test(value);
-            } else {
-              return reference.indexOf(value) !== false;
+      this.compactStates();
+      $('select[name="gateways[paypal][id]"]').change(this.compactStates);
+    },
+    compactStates: function () {
+      var payPalOption = $(':input[name="gateways[paypal][status]"]');
+      var payPalEnabled = false;
+      if (payPalOption.length) {
+        payPalEnabled = payPalOption[0].checked;
+      }
+      var payPalSelect = $('select[name="gateways[paypal][id]"] option');
+      var braintreePaypalSelected = false;
+      if (payPalSelect.length) {
+        $(payPalSelect).each( function() {
+          if ($(this).attr('selected')) {
+            if (/^braintree_paypal\|/.test($(this).val())) {
+              braintreePaypalSelected = true;
             }
           }
+        });
+      }
+      if (payPalEnabled && braintreePaypalSelected) {
+        $(':input[name="braintree_paypal_compact"]').parent().show();
+      }
+      else {
+        $(':input[name="braintree_paypal_compact"]').parent().hide();
       }
     }
-  }
+  };
 }(jQuery));
