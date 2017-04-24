@@ -253,7 +253,7 @@ function fundraiser_tokens($type, $tokens, $data = array(), $options = array()) 
 function fundraiser_clone_access_alter(&$access, $node) {
   if (fundraiser_is_donation_type($node->type)) {
     // Remove the access if the user isn't allowed to clone the donation form.
-    if (user_access('create ' . $node->type . ' content')) {
+    if (node_access('update', $node)) {
       $access = 1;
     }
   }
