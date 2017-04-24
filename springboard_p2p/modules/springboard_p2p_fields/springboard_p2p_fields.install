@@ -107,7 +107,7 @@ function springboard_p2p_fields_personal_campaign_progress_schema() {
   return array(
     'columns' => array(
       'amount' => array(
-        'type' => 'int',
+        'type' => 'float',
         'unsigned' => TRUE,
         'not null' => FALSE,
         'description' => 'The donation amount attributed to this personal campaign.',

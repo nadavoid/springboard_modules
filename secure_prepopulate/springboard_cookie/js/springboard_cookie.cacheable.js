@@ -12,10 +12,17 @@
             url: '/springboard_cookie/js/new',
             success: function(data, status) {
               // Save the cookie to this client.
+              var settings = {
+                expires: parseInt(data.expires),
+                path: data.path
+              };
+              if (Drupal.settings.springboard_cookie.domain != '') {
+                settings.domain = Drupal.settings.springboard_cookie.domain;
+              }
               $.cookie(
                 Drupal.settings.springboard_cookie.name,
                 data.cookie,
-                { expires: parseInt(data.expires), path: data.path }
+                settings
               );
             }
           });
