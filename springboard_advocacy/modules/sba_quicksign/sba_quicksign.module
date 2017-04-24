@@ -265,7 +265,7 @@ function sba_quicksign_form_validate(&$form, &$form_state) {
     // No profile available.
     if (!$sb_cookie && !$account) {
       if ($missing_fields || $missing_non_profile_fields) {
-        drupal_set_message(t("We're sorry, we did not find an account with the email address !mail. Please fill out the full form.", array('!mail' => $mail)));
+        drupal_set_message(t("We could not find a match for !mail. Please re-enter your email address, or sign the petition using the full form below.", array('!mail' => $mail)));
       }
       form_set_value($quicksign_field, '', $form_state);
     }
