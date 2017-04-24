@@ -340,9 +340,10 @@ function springboard_webform_submission_insert($node, $submission) {
     '%type' => isset($node->type) ? $node->type : 'N/A',
     '%nid' => isset($node->nid) ? $node->nid : 'N/A',
     '%sid' => isset($submission->sid) ? $submission->sid : 'N/A',
-    '%duration' => isset($node->sb_submitted_microtime) ? round(microtime(TRUE) - $node->sb_submitted_microtime, 4) . 's': 'N/A',
+    '%duration' => isset($node->sb_submitted_microtime) ? round(microtime(TRUE) - $node->sb_submitted_microtime, 4) : 'N/A',
+    '%title' => isset($node->title) ? $node->title : '',
   );
-  $message = 'Webform submitted: type=%type, nid=%nid, sid=%sid, duration=%duration';
+  $message = 'Webform submitted: type=%type, nid=%nid, sid=%sid, duration=%duration, title="%title"';
   watchdog('springboard', $message, $vars);
 }
 
