@@ -119,7 +119,7 @@ class FundraiserCloneTest extends FundraiserSetup {
    */
   protected function fundraiserCloneNode() {
     // create a user with cloning permissions
-    $user = $this->createFundraiserUser(array('clone donation form', 'clone node', 'clone own nodes', 'create donation form', 'create donation_form content', 'edit own donation_form content', 'edit any donation form'));
+    $user = $this->createFundraiserUser(array('clone node', 'clone own nodes', 'create donation_form content', 'edit own donation_form content'));
 
     // Create a node to clone.
     $node = $this->createDonationForm(array('uid' => $user->uid));
