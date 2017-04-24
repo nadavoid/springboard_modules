@@ -1,6 +1,0 @@
-name = Salesforce Cache
-description = Helper functions for managing Salesforce cache
-package = Salesforce
-core = 7.x
-dependencies[] = salesforce
-dependencies[] = salesforce_mapping

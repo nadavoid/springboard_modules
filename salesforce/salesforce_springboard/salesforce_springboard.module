@@ -1,0 +1,63 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function salesforce_springboard_menu() {
+  $items['admin/structure/salesforce/mappings/cache'] = array(
+    'title' => 'Clear Salesforce Object Cache',
+    'description' => 'Clear the object cache to get the latest Salesforce field settings.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('salesforce_springboard_clear_form'),
+    'access callback' => 'salesforce_mappings_access',
+    'type' => MENU_LOCAL_ACTION,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_springboard_admin_admin_menu_items_alter().
+ */
+function salesforce_springboard_springboard_admin_admin_menu_items_alter(&$items) {
+  // Add the cache clear item to the Springboard settings menu.
+  $items['admin/springboard/settings']['_children']['admin/springboard/settings/config']['_children']['admin/structure/salesforce/mappings/cache'] = array(
+    'link_path' => 'admin/structure/salesforce/mappings/cache',
+    'link_title' => 'Clear Salesforce Object Cache',
+    'menu_name' => 'springboard_admin_menu',
+    'expanded' => 1,
+    'customized' => 1,
+    'weight' => 3,
+  );
+}
+
+/**
+ * Form callback for clearing the object cache.
+ */
+function salesforce_springboard_clear_form() {
+  $form = array();
+  $form['message'] = array(
+    '#prefix' => '<div>',
+    '#markup' => 'This action will clear the Salesforce object cache, adding any new fields to the form.',
+    '#suffix' => '</div>',
+
+  );
+  $form['destination'] = array(
+    '#type' => 'hidden',
+    '#value' => current_path(),
+  );
+  $form['actions'] = array(
+    '#type' => 'submit',
+    '#value' => 'Clear the object cache',
+  );
+  return $form;
+}
+
+/**
+ * Submit function for clearing the object cache.
+ */
+function salesforce_springboard_clear_form_submit(&$form, &$form_state) {
+  cache_clear_all('*', 'cache_salesforce_object', TRUE);
+  drupal_set_message('Salesforce Object Cache Cleared');
+  $form_state['redirect'] = array('admin/structure/salesforce/mappings');
+}
