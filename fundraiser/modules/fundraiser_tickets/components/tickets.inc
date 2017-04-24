@@ -118,7 +118,7 @@ function _webform_render_tickets($component, $value = NULL, $filter = TRUE) {
       );
       $element['fundraiser-tickets-extra-donation'] = $item;
     }
-    elseif($element['#allow_extra_donation'] == TRUE && !isset($addon_details['fields']['other_amount']) && user_access('create ' . $node->type . ' content')) {
+    elseif($element['#allow_extra_donation'] == TRUE && !isset($addon_details['fields']['other_amount']) && node_access('create', $node->type)) {
       drupal_set_message('The add-on donation form for this item does not have an "other amount" field configured. Addon Donations will not be processed.', 'warning');
     }
 
