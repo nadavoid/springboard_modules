@@ -3886,11 +3886,13 @@ function _fundraiser_sustainers_update_recurring($donation) {
       $recur_remain = _fundraiser_sustainers_get_donations_recurr_remaining($record['master_did']);
       if (!empty($recur_remain)) {
         if ($record['master_did'] != $mdid) {
-          $status = 'active';
           $fundraiser_sustainers_series = entity_load_single('fundraiser_sustainers_series', $record['master_did']);
-          $fundraiser_sustainers_series->status = $status;
-          $fundraiser_sustainers_series->save();
-          $mdid = $record['master_did'];
+          // Do we need to do this at all?
+          if ($fundraiser_sustainers_series->status != 'active') {
+            $fundraiser_sustainers_series->status = 'active';
+            $fundraiser_sustainers_series->save();
+            $mdid = $record['master_did'];
+          }
         }
       }
       else {
