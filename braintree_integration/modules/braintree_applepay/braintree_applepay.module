@@ -10,7 +10,7 @@ define('BRAINTREE_APPLEPAY_PAYMENT_METHOD_ID', 'braintree_applepay|commerce_paym
 /**
  * Implements hook_braintree_applepay_form__PAYMENT_TYPE__alter().
  */
-function braintree_applepay_braintree_applepay_form__applepay__alter(&$context) {
+function braintree_applepay_braintree_payment_form__applepay__alter(&$context) {
   $payment_method_instance = $context['payment_method_instance'];
   if ($payment_method_instance['method_id'] != 'braintree_applepay') {
     return;
@@ -220,7 +220,7 @@ function braintree_applepay_form_webform_client_form_alter(&$form, &$form_state)
       $settings['applepay']['form_layout'] = $form['#node']->form_layouts;
     }
     drupal_add_js(array('braintree' => $settings), 'setting');
-    drupal_add_js(drupal_get_path('module', 'braintree_applepay') . '/js/braintree_applepay.applepay.js');
+    drupal_add_js(drupal_get_path('module', 'braintree_applepay') . '/js/braintree_applepay.js');
   }
 }
 
