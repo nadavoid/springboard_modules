@@ -3296,6 +3296,7 @@ function fundraiser_sustainers_fundraiser_donation_success($donation) {
           'did' => $donation->did,
           'uid' => $donation->uid,
           'amount' => $donation->donation['amount'],
+          'status' => 'active',
           'installments' => _fundraiser_sustainers_calculate_installments($donation),
         );
 
@@ -3862,12 +3863,61 @@ function _fundraiser_sustainers_update_recurring($donation) {
     _fundraiser_sustainers_create_recurring($donation);
   }
   else {
+
     // Merge data together so we get everything in the record.
     $record = array_merge((array) $original, $donation);
     drupal_write_record('fundraiser_sustainers', $record, 'did');
-
     $log = fundraiser_sustainers_log();
     $log->log($donation, $original);
+
+
+    // Update the fundraiser_sustainer_series status.
+    if (!empty($record['master_did'])) {
+      $status = NULL;
+
+      // Save the master did to a static var in case we're cycling through
+      // a set of donations (normal processing and cancellation of series),
+      // so that we don't repeatedly re-save the sustainers_series object.
+      static $mdid;
+
+      // Check if there are remaining recurring donations. If there are,
+      // we only want to update once, even if we're cycling through a cancelled
+      // series (if cancelled, we'll pick it up again later).
+      $recur_remain = _fundraiser_sustainers_get_donations_recurr_remaining($record['master_did']);
+      if (!empty($recur_remain)) {
+        if ($record['master_did'] != $mdid) {
+          $status = 'active';
+          $fundraiser_sustainers_series = entity_load_single('fundraiser_sustainers_series', $record['master_did']);
+          $fundraiser_sustainers_series->status = $status;
+          $fundraiser_sustainers_series->save();
+          $mdid = $record['master_did'];
+        }
+      }
+      else {
+        // We only get here if this is the last donation in a series.
+        $statuses = array(
+          // Series has no pending charges, status of final charge is "Payment Received".
+          'Expired' => array('payment_received', 'offline_check'),
+          // Series has no pending charges, status of final charge is "Canceled".
+          'Canceled' => array('canceled', 'omitted'),
+          // Series has no pending charges, status of final charge is "Auto-canceled".
+          'Auto-canceled' => array('auto_canceled'),
+          // Series has no pending charges, status of final charge is "Payment Failed".
+          'Failed' => array('failed', 'unknown'),
+        );
+
+        // Load the full donation object to get the status.
+        $full_donation = fundraiser_donation_get_donation($donation['did']);
+        foreach ($statuses as $key => $status_arr) {
+          if (in_array($full_donation->status, $status_arr)) {
+            $status = $key;
+          }
+        }
+        $fundraiser_sustainers_series = entity_load_single('fundraiser_sustainers_series', $record['master_did']);
+        $fundraiser_sustainers_series->status = $status;
+        $fundraiser_sustainers_series->save();
+      }
+    }
   }
 
   // Fire a hook so that other modules can respond to the update.

@@ -353,6 +353,12 @@ function fundraiser_sustainers_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
+      'status' => array(
+        'description' => 'Gateway Status.',
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => FALSE,
+      ),
       'created' => array(
         'description' => 'The timestamp when this donation series was created.',
         'type' => 'int',
@@ -1106,3 +1112,17 @@ function fundraiser_sustainers_update_7018(&$sandbox) {
   }
 }
 */
+
+/**
+ * Add the status field to the sustainers series entity.
+ */
+function fundraiser_sustainers_update_7018(&$sandbox) {
+  // Add the new column.
+  $status = array(
+    'description' => 'Gateway Status.',
+    'type' => 'varchar',
+    'length' => '255',
+    'not null' => FALSE,
+  );
+  db_add_field('fundraiser_sustainers_series', 'status', $status);
+}
