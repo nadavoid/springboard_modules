@@ -324,6 +324,21 @@ function springboard_form_alter(&$form, &$form_state, $form_id) {
 }
 
 /**
+ * Implements hook_webform_submission_insert().
+ */
+function springboard_webform_submission_insert($node, $submission) {
+  $vars = array(
+    '%type' => isset($node->type) ? $node->type : 'N/A',
+    '%nid' => isset($node->nid) ? $node->nid : 'N/A',
+    '%sid' => isset($submission->sid) ? $submission->sid : 'N/A',
+    '%duration' => isset($submission->submitted) ? (time() - $submission->submitted) . 's': 'N/A',
+  );
+  $message = 'Webform submitted: type=%type, nid=%nid, sid=%sid, duration=%duration';
+
+  watchdog('springboard', $message, $vars);
+}
+
+/**
  * Given a standard form array. Locate a given key and return it.
  * Recursive.
  */
