@@ -17,6 +17,7 @@
     attach: function(context, settings) {
       this.compactStates();
       $('select[name="gateways[paypal][id]"]').change(this.compactStates);
+      $(':input[name="gateways[paypal][status]"]').change(this.compactStates);
     },
     compactStates: function () {
       var payPalOption = $(':input[name="gateways[paypal][status]"]');
