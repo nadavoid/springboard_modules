@@ -411,11 +411,14 @@ function _fundraiser_commerce_commerce_order_statuses_used() {
 /**
  * Implements hook_fundraiser_gateway_info().
  */
-function fundraiser_commerce_fundraiser_gateway_info() {
+function fundraiser_commerce_fundraiser_gateway_info($methods = NULL) {
   /// Load all the methods available.
-  $methods = new stdClass();
-  $methods->payment_methods = array();
-  rules_invoke_all('commerce_payment_methods', $methods);
+  if (empty($methods)) {
+    $methods = new stdClass();
+    $methods->payment_methods = array();
+    rules_invoke_all('commerce_payment_methods', $methods);
+  }
+
   $fundraiser_gateways = array();
   foreach ($methods->payment_methods as $id => $info) {
     $this_gateway = array();
@@ -717,14 +720,22 @@ function fundraiser_commerce_generic_credit_card_validate($value) {
     if ($valid !== TRUE && !empty($cvv)) {
       return array('card_cvv' => t('You have entered an invalid CVV number.'));
     }
-    $cc_expiration_month = $value['credit']['card_expiration_month'];
-    $cc_expiration_year = $value['credit']['card_expiration_year'];
-    $valid = commerce_payment_validate_credit_card_exp_date($cc_expiration_month, $cc_expiration_year);
-    if ($valid !== TRUE && !empty($cc_expiration_month) && !empty($cc_expiration_year)) {
-      return array(
-        'card_expiration_month' => t('The credit card you entered has expired.'),
-        'card_expiration_year' => '',
-      );
+    if (!empty($value['credit']['expiration_date'])) {
+      $cc_expiration_month = $value['credit']['expiration_date']['card_expiration_month'];
+      $cc_expiration_year = $value['credit']['expiration_date']['card_expiration_year'];
+    }
+    elseif (!empty($value['credit']['card_expiration_month']) && !empty($value['credit']['card_expiration_year'])) {
+      $cc_expiration_month = $value['credit']['card_expiration_month'];
+      $cc_expiration_year = $value['credit']['card_expiration_year'];
+    }
+    if (!empty($cc_expiration_month) && !empty($cc_expiration_year)) {
+      $valid = commerce_payment_validate_credit_card_exp_date($cc_expiration_month, $cc_expiration_year);
+      if ($valid !== TRUE && !empty($cc_expiration_month) && !empty($cc_expiration_year)) {
+        return array(
+          'card_expiration_month' => t('The credit card you entered has expired.'),
+          'card_expiration_year' => '',
+        );
+      }
     }
   }
 }
@@ -3249,4 +3260,19 @@ function fundraiser_commerce_update_billing_form_validate($form, &$form_state) {
       }
     }
   }
+}
+
+/**
+ * Implements hook_commerce_payment_method_info_alter().
+ *
+ * Include the gateways/commerce_payment_example.inc file so that adjustments to
+ * that gateways settings will be seen by the commerce_payment module.
+ */
+function fundraiser_commerce_commerce_payment_method_info_alter(&$payment_methods) {
+  module_load_include('inc', 'fundraiser_commerce', 'gateways/commerce_payment_example');
+  $payment_methods['commerce_payment_example']['cardonfile'] = array(
+    'charge callback' => 'commerce_payment_example_fundraiser_commerce_cardonfile_charge',
+    'update callback' => 'commerce_payment_example_fundraiser_commerce_cardonfile_update',
+    'delete callback' => 'commerce_payment_example_fundraiser_commerce_cardonfile_delete',
+  );
 }
