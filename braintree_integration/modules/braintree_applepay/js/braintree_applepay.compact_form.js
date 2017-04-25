@@ -5,7 +5,6 @@
       settings.applepay.autofill = 'always';
 
       $(document).on('braintree.methodChange', function(event, paymentMethod) {
-        console.log(paymentMethod);
         compactApplepay(paymentMethod == 'applepay');
       });
 
@@ -34,8 +33,8 @@
 
       var populatePhone = function(obj) {
         var phone = null;
-        var billingPhone = $("#webform-component-billing-information input[name$='sbp_phone]']");
-        var donorPhone = $("#webform-component-donor-information input[name$='sbp_phone]']");
+        var billingPhone = $('#webform-component-billing-information input[name$="sbp_phone]"]');
+        var donorPhone = $('#webform-component-donor-information input[name$="sbp_phone]"]');
         if (billingPhone.length) {
           phone = $(billingPhone);
         }
@@ -51,7 +50,6 @@
         if (settings.applepay && settings.applepay.compact && hasDefaultFields()) {
           var currentState = settings.applepay.collapsed;
           var layout = settings.applepay.form_layout || false;
-          console.log(collapse);
           if (collapse) {
             if (layout == 'two_column_donation') {
               $('#left').hide();
