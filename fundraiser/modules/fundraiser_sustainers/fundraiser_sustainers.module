@@ -332,17 +332,6 @@ function fundraiser_sustainers_check_access($did) {
 }
 
 /**
- * Menu callback function, determines if a user has any recurring donations.
- */
-function _fundraiser_sustainers_user_has_recurring_donations($user) {
-  $donations = _fundraiser_sustainers_get_donation_sets_recurr_by_uid($user->uid);
-  if (!$donations) {
-    return FALSE;
-  }
-  return TRUE;
-}
-
-/**
  * Menu callback for the standalone cron.
  */
 function fundraiser_sustainers_standalone_cron() {
@@ -544,12 +533,16 @@ function fundraiser_sustainers_salesforce_genmap_map_fields_alter(&$fields, $con
         }
       }
 
-      // If we're dealing with a sustainer charge, only send a subset of data so that other fields
-      // that may have been changed in Salesforce isn't overwritten.
-      if ($donation->donation['recurs_monthly'] == TRUE && $donation->status_charged == 1
+      // If we're dealing with a sustainer charge that has already been synced, only send a subset of data
+      // so that other fields that may have been changed in Salesforce are not overwritten.
+      $synced_donation_id = FALSE;
+      if (isset($donation->did) && is_numeric($donation->did)) {
+        $synced_donation_id = db_query("SELECT drupal_id FROM {salesforce_sync_map} WHERE delta='donation' AND drupal_id = :donation_id",
+          array(':donation_id' => $donation->did))
+          ->fetchField();
+      }
+      if ($synced_donation_id && $donation->donation['recurs_monthly'] == TRUE && $donation->status_charged == 1
          && !empty($donation->master_did) && $donation->did != $donation->master_did) {
-        // @TODO: Add a configuration screen for specifying which fields get sent back
-        // to Salesforce when a recurring donation charge is processed.
         $fields_to_update_on_charge = variable_get('fundraiser_sustainers_recurring_donation_charge_fields',
           array('StageName', 'Amount', 'Gateway_Reference__c', 'Transaction_Date_Time__c', 'Probability'));
 
@@ -1232,6 +1225,16 @@ function fundraiser_sustainers_process_single_recurring_donation(&$log, $recurri
     // Get the donation information that we need.
     $donation = fundraiser_donation_get_donation($recurring->did);
 
+    // Avoid charging donations with certain statuses.
+    $dont_charge = array(
+      'canceled',
+      'auto_canceled',
+      'skipped'
+    );
+    if (in_array($donation->status, $dont_charge)) {
+      return FALSE;
+    }
+
     // Set the reference charge flag to TRUE
     $donation->reference_charge = TRUE;
 
@@ -1827,7 +1830,7 @@ function fundraiser_sustainers_recurs_monthly_pre_render($element) {
     $conditions[] = array('value' => $gateway);
   }
   $element['recurs']['#states']['visible'] = array(
-    ':input[name*=payment_method]' => $conditions
+    ':input[name$="[payment_method]"]' => $conditions,
   );
   // Move description from radio group to the monthly button specifically, so it will go with that button's #state.
   $element['recurs']['#description'] = $element['#description'];
@@ -2066,15 +2069,19 @@ function fundraiser_sustainers_form_fundraiser_admin_settings_alter(&$form, &$fo
     '#title' => t('Email body'),
     '#default_value' => variable_get('fundraiser_cc_exp_body',
       'Your card ending in [donation:card_number] is about to expire on [donation:card_expiration_month]/[donation:card_expiration_year].'),
-    '#description' => t('The body of the email. Available tokens are below.'),
+    '#description' => t('The body of the email.'),
   );
-  $form['fundraiser_sustainers']['fundraiser_cc_expiration_message']['tokens'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Donor replacement tokens'),
-    '#description' => t('The following tokens are available for sustainer emails.'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-  );
+
+  if (!module_exists('springboard_token_set')) {
+    $form['fundraiser_sustainers']['fundraiser_cc_expiration_message']['tokens'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Donor replacement tokens'),
+      '#description' => t('The following tokens are available for sustainer emails.'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+  }
+
   // Auto-cancel options for sustainers whose payment are consistently declined.
   $form['fundraiser_sustainers']['fundraiser_recurring_auto_cancel'] = array (
     '#type' => 'fieldset',
@@ -2094,12 +2101,16 @@ function fundraiser_sustainers_form_fundraiser_admin_settings_alter(&$form, &$fo
     '#description' => t('How many consecutive donation failures after which a permanent cancellation should occur. Please enter a value greater than 3.'),
     '#default_value' => variable_get('fundraiser_recurring_autocancel_threshold', 3),
   );
-  $token_set = array('donation', 'user', 'node');
-  $form['fundraiser_sustainers']['fundraiser_cc_expiration_message']['tokens']['token_help'] = array(
-    '#type' => 'item',
-    '#title' => t('Drupal tokens'),
-    '#description' => theme('token_tree', array('token_types' => $token_set, 'recursion_limit' => 2, 'click_insert' => FALSE)),
-  );
+
+  if (!module_exists('springboard_token_set')) {
+    $token_set = array('donation', 'user', 'node');
+    $form['fundraiser_sustainers']['fundraiser_cc_expiration_message']['tokens']['token_help'] = array(
+      '#type' => 'item',
+      '#title' => t('Drupal tokens'),
+      '#description' => theme('token_tree', array('token_types' => $token_set, 'recursion_limit' => 2, 'click_insert' => FALSE)),
+    );
+  }
+
   $form['#validate'][] = 'fundraiser_sustainers_settings_form_validate';
   $form['#submit'][] = 'fundraiser_update_cron_settings';
 }
@@ -2840,6 +2851,11 @@ function fundraiser_sustainers_gateway_cleanup($gateway, $submission_fields) {
  *   to create new donations in the sustainer series.
  */
 function fundraiser_sustainers_update_billing_info_create_new_donations($master_donation, $source_donation, $submission_fields) {
+  // Check that the donation series hasn't finished already.
+  if (!count(_fundraiser_sustainers_get_donations_recurr_remaining($master_donation->did))) {
+    return;
+  }
+
   // Update this donation (don't save it) so we have the right
   // parentage with the new billing.
   $master_donation->donation = array_merge($master_donation->donation, $submission_fields);
@@ -3172,7 +3188,7 @@ function fundraiser_sustainers_cancel_form_submit($form, &$form_state) {
     $reason = t('No reason given.');
   }
   // Cancel the donations.
-  $sustainer_donations = _fundraiser_sustainers_get_donations_recurr_remaining($master_did);
+  $sustainer_donations = _fundraiser_sustainers_get_donations_for_canceling($master_did);
   foreach ($sustainer_donations as $sustainer_donation) {
     $donation = fundraiser_donation_get_donation($sustainer_donation->did);
 
@@ -4021,6 +4037,40 @@ function _fundraiser_sustainers_get_donations_recurr_remaining($master_did) {
     'AND (r.gateway_resp IS NULL OR (r.gateway_resp = :status && r.attempts != :max_attempts)) ' .
     'ORDER BY r.next_charge ASC', array(':master_did' => $master_did, ':status' => FUNDRAISER_SUSTAINERS_RETRY_STATUS, ':max_attempts' => $max_processing_attempts))->fetchAll();
   return $donations;
+}
+
+/**
+ * Return an array of donations for canceling, including locked donations.
+ *
+ * @param int $master_did
+ *   Master did of the donation series.
+ *
+ * @return array
+ *   Array of donations.
+ */
+function _fundraiser_sustainers_get_donations_for_canceling($master_did) {
+  $max_processing_attempts = variable_get('fundraiser_sustainers_max_processing_attempts', 3);
+
+  // Build the query for selecting donations for canceling.
+  $query = db_select('fundraiser_sustainers', 'r');
+  $query->fields('r');
+  $query->leftJoin('fundraiser_donation', 'd', 'r.did = d.did');
+  $query->condition('r.master_did', $master_did);
+
+  // Build an OR condition to filter on the gateway_resp value.
+  $db_or = db_or();
+  // Select donations that have not been charged.
+  $db_or->isNull('r.gateway_resp');
+  // Select donations that are in retry.
+  $db_and = db_and();
+  $db_and->condition('r.gateway_resp', FUNDRAISER_SUSTAINERS_RETRY_STATUS);
+  $db_and->condition('r.attempts', $max_processing_attempts, '!=');
+  $db_or->condition($db_and);
+  // Select donations that are locked.
+  $db_or->condition('r.gateway_resp', FUNDRAISER_SUSTAINERS_LOCKED_STATUS);
+  $query->condition($db_or);
+
+  return $query->execute()->fetchAll();
 }
 
 /**
