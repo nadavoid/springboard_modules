@@ -69,10 +69,6 @@ function salesforce_springboard_clear_form() {
     '#suffix' => '</div>',
 
   );
-  $form['destination'] = array(
-    '#type' => 'hidden',
-    '#value' => current_path(),
-  );
   $form['actions'] = array(
     '#type' => 'submit',
     '#value' => 'Clear the object cache',
