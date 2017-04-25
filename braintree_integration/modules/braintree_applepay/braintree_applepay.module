@@ -165,7 +165,7 @@ function _braintree_applepay_webform_components_validate($form, &$form_state) {
   // fieldsets, flag it.
   $default_fundraiser_fields = _braintree_payment_default_fundraiser_fields();
   $billing_cid = webform_get_cid($form['#node'], 'billing_information', 0);
-  $billing_children = _braintree_applepay_webform_components_find_parent_children($billing_cid, $form_state['values']['components']);
+  $billing_children = _braintree_payment_webform_components_find_parent_children($billing_cid, $form_state['values']['components']);
   $donor_cid = webform_get_cid($form['#node'], 'donor_information', 0);
   $donor_children = _braintree_payment_webform_components_find_parent_children($donor_cid, $form_state['values']['components']);
   $children = array_merge($donor_children, $billing_children);
@@ -208,7 +208,6 @@ function braintree_applepay_form_webform_client_form_alter(&$form, &$form_state)
         if (user_access('edit any donation form')) {
           drupal_set_message(t('The component <em>@key</em> in its current position will prevent the applepay compact flow from displaying properly.', array('@key' => $component->form_key)), 'error');
         }
-
       }
     }
     $settings = array(
@@ -220,7 +219,7 @@ function braintree_applepay_form_webform_client_form_alter(&$form, &$form_state)
       $settings['applepay']['form_layout'] = $form['#node']->form_layouts;
     }
     drupal_add_js(array('braintree' => $settings), 'setting');
-    drupal_add_js(drupal_get_path('module', 'braintree_applepay') . '/js/braintree_applepay.js');
+    drupal_add_js(drupal_get_path('module', 'braintree_applepay') . '/js/braintree_applepay.compact_form.js');
   }
 }
 
