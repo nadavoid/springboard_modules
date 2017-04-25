@@ -288,6 +288,7 @@ function commerce_payment_example_fundraiser_commerce_update($donation, $card_da
     $remote_id = (string) $payment_method['method_id'] . '|' . time();
 
     // Get the card type.
+    module_load_include('inc', 'commerce_payment', 'includes/commerce_payment.credit_card');
     $card_type = commerce_payment_validate_credit_card_type($pane_values['credit_card']['number'], array_keys(commerce_payment_credit_card_types()));
     $all_types = commerce_payment_credit_card_types();
     $card_type = !empty($all_types[$card_type]) ? $all_types[$card_type] : 'card';

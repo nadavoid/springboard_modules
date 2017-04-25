@@ -528,7 +528,7 @@ function braintree_vault_braintree_transaction_sale_complete($context) {
  * payment method they used.
  */
 function braintree_vault_commerce_braintree_web_submit_transaction_sale_success($result, $card) {
-  if (!empty($result->transaction->creditCard['token'])) {
+  if (!empty($result->transaction->creditCard['token']) && !empty($result->new_payment_method)) {
     $data = array(
       'customer_id' => $result->transaction->customer['id'],
       'uid' => $card->uid,
@@ -582,7 +582,7 @@ function braintree_vault_add_address_record($data) {
 }
 
 /**
- * Creates an address record in the braintree_vault_payment_methods table.
+ * Creates a record in the braintree_vault_payment_methods table.
  */
 function braintree_vault_add_payment_method_record($data) {
   drupal_alter('braintree_vault_add_payment_method_record', $data);
