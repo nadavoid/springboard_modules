@@ -32,13 +32,40 @@ function salesforce_springboard_springboard_admin_admin_menu_items_alter(&$items
 }
 
 /**
+ * Implement hook_salesforce_genmap_map_form_alter().
+ */
+function salesforce_springboard_form_salesforce_genmap_map_form_alter(&$form, $form_state) {
+  // The node should be the first form argument.
+  if (isset($form_state['build_info']['args'][0]->nid)) {
+    $node = $form_state['build_info']['args'][0];
+
+    // Add links to clear the SF object cache to the genmap forms.
+    $clear_link = l(
+      'clearing the Salesforce Object Cache',
+      'admin/structure/salesforce/mappings/cache',
+      array(
+        'query' => array(
+          'destination' => url('node/' . $node->nid . '/salesforce'),
+        ),
+      )
+    );
+
+    $object_description = t('If the object you are trying to map does not appear in the dropdown, try !clear_link', array('!clear_link' => $clear_link));
+    $form['salesforce_object_info']['salesforce_object_type']['#description'] .= ' ' . $object_description;
+
+    $field_description = t('If the field you are trying to map does not appear in the dropdown, try !clear_link', array('!clear_link' => $clear_link));
+    $form['field_map']['#description'] = $field_description;
+  }
+}
+
+/**
  * Form callback for clearing the object cache.
  */
 function salesforce_springboard_clear_form() {
   $form = array();
   $form['message'] = array(
     '#prefix' => '<div>',
-    '#markup' => 'This action will clear the Salesforce object cache, adding any new fields to the form.',
+    '#markup' => t('This action will clear the Salesforce object cache, making any recently added fields available for mapping.'),
     '#suffix' => '</div>',
 
   );
