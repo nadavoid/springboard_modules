@@ -1434,7 +1434,7 @@ function fundraiser_tickets_publishcontent_publish_access($node, $account) {
 }
 
 /**
- * Implements hook_publishcontent_publish_access().
+ * Implements hook_publishcontent_unpublish_access().
  *
  * Don't let publishcontent interfere with the tickets settings.
  */
