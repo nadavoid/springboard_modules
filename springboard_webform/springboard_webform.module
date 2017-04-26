@@ -32,14 +32,6 @@ function springboard_webform_form_alter(&$form, &$form_state, $form_id) {
 }
 
 /**
- * Implements hook_webform_submission_insert().
- */
-function springboard_webform_webform_submission_insert($node, $submission) {
-  // Capture the sid for use in _springboard_webform_log_webform_submission():
-  $node->sb_sid = isset($submission->sid) ? $submission->sid : '';
-}
-
-/**
  * Set the "start" time used to determine the submission's duration.
  */
 function _springboard_webform_set_submission_timestamp(&$form, &$form_state) {
@@ -57,7 +49,7 @@ function _springboard_webform_log_webform_submission(&$form, &$form_state) {
   $vars = array(
     '%type' => isset($node->type) ? $node->type : 'N/A',
     '%nid' => isset($node->nid) ? $node->nid : 'N/A',
-    '%sid' => isset($node->sb_sid) ? $node->sb_sid : 'N/A',
+    '%sid' => isset($form_state['values']['details']['sid']) ? $form_state['values']['details']['sid'] : 'N/A',
     '%duration' => isset($node->sb_submitted_microtime) ? round(microtime(TRUE) - $node->sb_submitted_microtime, 4) : 'N/A',
     '%title' => isset($node->title) ? str_replace('"', '\'', $node->title) : '',
   );
