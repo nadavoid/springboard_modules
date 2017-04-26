@@ -3088,7 +3088,6 @@ function springboard_views_views_default_views() {
   $handler->display->display_options['style_plugin'] = 'table';
   $handler->display->display_options['style_options']['columns'] = array(
     'title' => 'title',
-    'og_group_ref_page_wrapper' => 'og_group_ref_page_wrapper',
     'status' => 'status',
     'created' => 'created',
     'changed' => 'changed',
@@ -3102,11 +3101,6 @@ function springboard_views_views_default_views() {
     'title' => array(
       'sortable' => 0,
       'default_sort_order' => 'asc',
-      'align' => '',
-      'separator' => '',
-      'empty_column' => 0,
-    ),
-    'og_group_ref_page_wrapper' => array(
       'align' => '',
       'separator' => '',
       'empty_column' => 0,
@@ -3174,16 +3168,6 @@ function springboard_views_views_default_views() {
   $handler->display->display_options['fields']['title']['field'] = 'title';
   $handler->display->display_options['fields']['title']['alter']['word_boundary'] = FALSE;
   $handler->display->display_options['fields']['title']['alter']['ellipsis'] = FALSE;
-  /* Field: Content: Groups audience */
-  $handler->display->display_options['fields']['og_group_ref_page_wrapper']['id'] = 'og_group_ref_page_wrapper';
-  $handler->display->display_options['fields']['og_group_ref_page_wrapper']['table'] = 'og_membership';
-  $handler->display->display_options['fields']['og_group_ref_page_wrapper']['field'] = 'og_group_ref_page_wrapper';
-  $handler->display->display_options['fields']['og_group_ref_page_wrapper']['label'] = 'Owner';
-  $handler->display->display_options['fields']['og_group_ref_page_wrapper']['settings'] = array(
-    'link' => 1,
-  );
-  $handler->display->display_options['fields']['og_group_ref_page_wrapper']['delta_offset'] = '0';
-  $handler->display->display_options['fields']['og_group_ref_page_wrapper']['multi_type'] = 'ul';
   /* Field: Content: Published */
   $handler->display->display_options['fields']['status']['id'] = 'status';
   $handler->display->display_options['fields']['status']['table'] = 'node';

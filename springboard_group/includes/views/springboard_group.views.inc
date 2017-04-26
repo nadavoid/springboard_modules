@@ -174,6 +174,7 @@ function springboard_group_views_default_views_alter(&$views) {
         $fields =& $handler->display->display_options['fields'];
 
         // Place the field in the appropriate column position per view display.
+        $label = t('Owner');
         $index = 2;
         switch ($view_name) {
           case 'sba_actions';
@@ -196,14 +197,19 @@ function springboard_group_views_default_views_alter(&$views) {
               case 'block_1':
                 $index = 3;
             }
+            break;
+
+          case 'sbv_assets':
+            $index = 1;
+
         }
 
         $group_field = [];
         $group_field['title_sb_group']['id'] = 'title_sb_group';
         $group_field['title_sb_group']['table'] = 'node';
-        $group_field['title_sb_group']['field'] = 'title';
-        $group_field['title_sb_group']['label'] = 'Group';
-        $group_field['title_sb_group']['relationship'] = 'og_membership_related_node_group';
+        $group_field['title_sb_group']['field'] = 'springboard_groups';
+        $group_field['title_sb_group']['label'] = $label;
+
         springboard_group_views_add_group_field($fields, $index, $group_field);
       }
     }
@@ -227,6 +233,11 @@ function springboard_group_views_add_group_field(&$fields, $position, $group_fie
   $fields = array_merge($pre, $group_field, $post);
 }
 
+/**
+ * Implements hook_views_pre_view().
+ *
+ * Add create group button to group views.
+ */
 function springboard_group_views_pre_view(&$view, &$display_id, &$args) {
   if ($view->name == 'springboard_group' || $view->name == 'springboard_group_my_groups') {
     if (user_access('administer group') || user_access('create springboard-group content')) {
@@ -247,6 +258,11 @@ function springboard_group_views_pre_view(&$view, &$display_id, &$args) {
   }
 }
 
+/**
+ * Implements hook_views_pre_render().
+ *
+ * Hide the manage members link from members who can't manage members.
+ */
 function springboard_group_views_pre_render(&$view) {
   if ($view->name == 'springboard_group_my_groups' && $view->current_display == 'page_1') {
     foreach ($view->result as $index => &$result) {
@@ -256,4 +272,22 @@ function springboard_group_views_pre_render(&$view) {
       }
     }
   }
+}
+
+/**
+ * Implements hook_views_data_alter().
+ *
+ * Create a mock field to display a node's Springboard Group affiliation. The
+ * Actual group lookup query is performed in the custom field handler.
+ */
+function springboard_group_views_data_alter(&$data) {
+  $data['node']['springboard_groups'] = array(
+    'title' => t('Node Groups'),
+    'help' => t('Show all the springbord groups a node belongs to, with a link back to the group.'),
+    'real field' => 'nid',
+    'field' => array(
+      'handler' => 'springboard_group_views_handler_groups',
+    ),
+    'group' => t('Springboard Groups'),
+  );
 }
