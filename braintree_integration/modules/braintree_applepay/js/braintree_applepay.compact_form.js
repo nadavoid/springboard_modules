@@ -9,12 +9,9 @@
       });
 
       $(document).on('braintree.autoFilled', function(event, btInstance, payLoad, autofilled) {
-        if (autofilled) {
+        if (btInstance.settings.currentPaymentMethod == 'applepay' && autofilled) {
           populatePhone(payLoad);
-          if (verifyApplepayFields(payLoad)) {
-            btInstance.$form.submit();
-          }
-          else {
+          if (!verifyApplepayFields(payLoad)) {
             // Missing required fields, expose them.
             compactApplepay(false);
           }
@@ -50,20 +47,22 @@
         if (settings.applepay && settings.applepay.compact && hasDefaultFields()) {
           var currentState = settings.applepay.collapsed;
           var layout = settings.applepay.form_layout || false;
-          if (collapse) {
+          if (collapse && !settings.paypal.collapsed) {
             if (layout == 'two_column_donation') {
               $('#left').hide();
             }
             $('#webform-component-donor-information').hide();
             $('#webform-component-billing-information').hide();
             settings.applepay.collapsed = true;
-          } else {
+            settings.paypal.collapsed = true;
+          } else if (!collapse && settings.paypal.collapsed) {
             if (layout == 'two_column_donation') {
               $('#left').show();
             }
             $('#webform-component-donor-information').show();
             $('#webform-component-billing-information').show();
             settings.applepay.collapsed = false;
+            settings.paypal.collapsed = false;
           }
         }
       };

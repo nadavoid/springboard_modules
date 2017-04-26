@@ -8,7 +8,7 @@
         compactPaypal(paymentMethod == 'paypal');
       });
       $(document).on('braintree.autoFilled', function(event, btInstance, payLoad, autofilled) {
-        if (autofilled) {
+        if (btInstance.settings.currentPaymentMethod == 'paypal' && autofilled) {
           populatePhone(payLoad);
           if (verifyPaypalFields(payLoad)) {
             btInstance.$form.submit();
@@ -29,7 +29,7 @@
         }
         return true;
       };
-      
+
       var populatePhone = function(obj) {
         var phone = null;
         var billingPhone = $("#webform-component-billing-information input[name$='sbp_phone]']");
@@ -44,25 +44,27 @@
           $(phone).val(obj.phone);
         }
       };
-      
+
       var compactPaypal = function(collapse) {
         if (settings.paypal && settings.paypal.compact && hasDefaultFields()) {
           var currentState = settings.paypal.collapsed;
           var layout = settings.paypal.form_layout || false;
-          if (collapse) {
+          if (collapse && !settings.applepay.collapsed) {
             if (layout == 'two_column_donation') {
               $('#left').hide();
             }
             $('#webform-component-donor-information').hide();
             $('#webform-component-billing-information').hide();
             settings.paypal.collapsed = true;
-          } else {
+            settings.applepay.collapsed = true;
+          } else if (!collapse && settings.applepay.collapsed) {
             if (layout == 'two_column_donation') {
               $('#left').show();
             }
             $('#webform-component-donor-information').show();
             $('#webform-component-billing-information').show();
             settings.paypal.collapsed = false;
+            settings.applepay.collapsed = false;
           }
         }
       };
@@ -83,11 +85,11 @@
             'zip',
           ],
         };
-        
+
         var notHidden = function() {
           return $(this).attr('type') != 'hidden';
         };
-        
+
         var donorInfo = $('#webform-component-donor-information :input').filter(notHidden);
 
         var billingInfo = $('#webform-component-billing-information :input').filter(notHidden);
