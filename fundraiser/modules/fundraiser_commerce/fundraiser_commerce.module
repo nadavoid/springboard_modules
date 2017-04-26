@@ -1469,7 +1469,7 @@ function _fundraiser_commerce_fundraiser_donation_process_external_form_cancel($
   $order = commerce_order_load($donation->did);
   $info = _fundraiser_get_donation_gateway($donation->did);
   $method_instance = commerce_payment_method_instance_load($info['id']); // From commerce_payment.module.
-  $log = t('Payment cancelled at the gateway.');
+  $log = t('Payment canceled at the gateway.');
   // Check if we're in the wrong spot.
   if (!$method_instance || !$method_instance['offsite']) {
     if (!$method_instance) {

@@ -326,13 +326,13 @@ class FundraiserSustainerTest extends FundraiserSustainerSetup {
       'reason' => 'EXAMPLE CANCEL REASON',
     );
     $this->drupalPost('user/' . $created_user->uid . '/recurring_overview/' . $master_did, $post, t('Cancel all future payments'));
-    $this->assertText('All future payments cancelled.', t('The donation sequence is cancelled.'), t('Fundraiser Cancel'));
+    $this->assertText('All future payments canceled.', t('The donation sequence is canceled.'), t('Fundraiser Cancel'));
     // Check display in table.
     $this->drupalGet('user/' . $created_user->uid . '/recurring_overview');
-    $this->assertText('Canceled', t('The donation sequence is listed as cancelled in overview.'), t('Fundraiser Cancel'));
+    $this->assertText('Canceled', t('The donation sequence is listed as canceled in overview.'), t('Fundraiser Cancel'));
     // Check display in page.
     $this->drupalGet('user/' . $created_user->uid . '/recurring_overview/' . $master_did);
-    $this->assertText('Canceled', t('The donation sequence is listed as cancelled in overview.'), t('Fundraiser Cancel'));
+    $this->assertText('Canceled', t('The donation sequence is listed as canceled in overview.'), t('Fundraiser Cancel'));
     $this->assertText('There are no further charges for this recurring donation.', t('The donation update amount forms are not available.'),
       t('Fundraiser Cancel'));
   }

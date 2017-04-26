@@ -287,7 +287,7 @@ function hook_fundraiser_donation_exception($donation) {
 }
 
 /**
- * Respond to a cancelled donation.
+ * Respond to a canceled donation.
  *
  * For all modules.
  */

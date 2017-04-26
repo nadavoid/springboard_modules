@@ -2124,7 +2124,7 @@ function fundraiser_donation_exception($donation) {
 }
 
 /**
- * Donation processing, a given donation needs to be cancelled.
+ * Donation processing, a given donation needs to be canceled.
  * Generally, only available for Authorize.net gateway donations. For example, during sustainer call.
  */
 function fundraiser_donation_cancel($donation) {
@@ -2139,7 +2139,7 @@ function fundraiser_donation_cancel($donation) {
   // Add a comment.
   global $user;
   $username = isset($user->name) ? $user->name : 'Anonymous';
-  fundraiser_donation_comment($donation, 'This donation was cancelled on @date by @username.',
+  fundraiser_donation_comment($donation, 'This donation was canceled on @date by @username.',
     array('@date' => format_date(strtotime('now')), '@username' => $username));
 
   // Allow other modules such as Ubercart to respond to cancellation and
