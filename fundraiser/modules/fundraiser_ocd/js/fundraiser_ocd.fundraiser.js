@@ -68,6 +68,13 @@
           });
         };
 
+        if ($('#webform-component-donation').length != 0) {
+          var afterTarget = '#webform-component-donation'
+        }
+        else {
+           afterTarget = '#webform-component-billing-information'
+        }
+
         readonlyize({
           'your-information': {
             'title': Drupal.t('Your Information'),
@@ -79,7 +86,7 @@
                 ['city', 'value:,', 'state', 'zip']
               ]
             },
-            'after': '#webform-component-donation'
+            'after': afterTarget
           },
           'payment-information': {
             'title': Drupal.t('Payment Information'),
