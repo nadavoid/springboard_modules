@@ -26,16 +26,8 @@ function springboard_webform_module_implements_alter(&$implementations, $hook) {
  */
 function springboard_webform_form_alter(&$form, &$form_state, $form_id) {
   if (strstr($form_id, 'webform_client_form') !== FALSE) {
-    array_unshift($form['#submit'], '_springboard_webform_set_submission_timestamp');
     $form['#submit'][] = '_springboard_webform_log_webform_submission';
   }
-}
-
-/**
- * Set the "start" time used to determine the submission's duration.
- */
-function _springboard_webform_set_submission_timestamp(&$form, &$form_state) {
-  $form['#node']->sb_submitted_microtime = microtime(TRUE);
 }
 
 /**
@@ -47,8 +39,8 @@ function _springboard_webform_log_webform_submission(&$form, &$form_state) {
   }
   $node = $form['#node'];
 
-  if (isset($node->sb_submitted_microtime)) {
-    $duration = microtime(TRUE) - $node->sb_submitted_microtime;
+  if (defined('SB_REQUEST_MICROTIME')) {
+    $duration = microtime(TRUE) - SB_REQUEST_MICROTIME;
     define('SB_REQUEST_MICROTIME', $duration);
   }
 
