@@ -1,6 +1,7 @@
 <?php
 
-define('REQUEST_MICROTIME');
+// This value will be overwritten with the "form submission duration" if a webform has been submitted during execution:
+define('SB_REQUEST_MICROTIME', microtime(TRUE));
 
 /**
  * @file
