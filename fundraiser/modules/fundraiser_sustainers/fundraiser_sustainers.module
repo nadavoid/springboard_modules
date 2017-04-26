@@ -4571,6 +4571,7 @@ function fundraiser_sustainers_payment_received_action(&$sustainer_record, $cont
       $sustainer_record->lock_id = 0;
       $sustainer_record->gateway_resp = FUNDRAISER_SUSTAINERS_SUCCESS_STATUS;
       $donation = fundraiser_donation_get_donation($sustainer_record->did);
+      $donation->batch_operation = 'fundraiser_sustainers_payment_received_action';
       fundraiser_donation_success($donation);
       $log->logUnlockedDonation($sustainer_record->did, $sustainer_record->gateway_resp);
       drupal_set_message(t('Unlocked sustainer %did and changed its status from %status to Success.', $replacements));
