@@ -5,7 +5,12 @@
       settings = settings.braintree;
       settings.paypal.autofill = 'always';
       $(document).on('braintree.methodChange', function(event, paymentMethod) {
-        compactPaypal(paymentMethod == 'paypal');
+        if (paymentMethod == 'paypal') {
+          compactPaypal(true);
+        }
+        else if (paymentMethod == 'credit') {
+          compactPaypal(false);
+        }
       });
       $(document).on('braintree.autoFilled', function(event, btInstance, payLoad, autofilled) {
         if (btInstance.settings.currentPaymentMethod == 'paypal' && autofilled) {
@@ -47,9 +52,10 @@
 
       var compactPaypal = function(collapse) {
         if (settings.paypal && settings.paypal.compact && hasDefaultFields()) {
+          var fieldsetsVisible = $('#webform-component-donor-information:visible, #webform-component-billing-information:visible').length > 0;
           var currentState = settings.paypal.collapsed;
           var layout = settings.paypal.form_layout || false;
-          if (collapse && !settings.applepay.collapsed) {
+          if (collapse && fieldsetsVisible) {
             if (layout == 'two_column_donation') {
               $('#left').hide();
             }
@@ -57,7 +63,7 @@
             $('#webform-component-billing-information').hide();
             settings.paypal.collapsed = true;
             settings.applepay.collapsed = true;
-          } else if (!collapse && settings.applepay.collapsed) {
+          } else if (!collapse && !fieldsetsVisible) {
             if (layout == 'two_column_donation') {
               $('#left').show();
             }
