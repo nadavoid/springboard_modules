@@ -39,9 +39,8 @@ function _springboard_webform_log_webform_submission(&$form, &$form_state) {
   }
   $node = $form['#node'];
 
-  if (defined('SB_REQUEST_MICROTIME')) {
-    $duration = microtime(TRUE) - SB_REQUEST_MICROTIME;
-    define('SB_REQUEST_MICROTIME', $duration);
+  if (isset($_SERVER['REQUEST_TIME_FLOAT'])) {
+    $duration = microtime(TRUE) - $_SERVER['REQUEST_TIME_FLOAT'];
   }
 
   $vars = array(
