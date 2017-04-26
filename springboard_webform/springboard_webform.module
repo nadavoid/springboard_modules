@@ -46,11 +46,17 @@ function _springboard_webform_log_webform_submission(&$form, &$form_state) {
     return;
   }
   $node = $form['#node'];
+
+  if (isset($node->sb_submitted_microtime)) {
+    $duration = microtime(TRUE) - $node->sb_submitted_microtime;
+    define('REQUEST_MICROTIME', $duration);
+  }
+
   $vars = array(
     '%type' => isset($node->type) ? $node->type : 'N/A',
     '%nid' => isset($node->nid) ? $node->nid : 'N/A',
     '%sid' => isset($form_state['values']['details']['sid']) ? $form_state['values']['details']['sid'] : 'N/A',
-    '%duration' => isset($node->sb_submitted_microtime) ? round(microtime(TRUE) - $node->sb_submitted_microtime, 4) : 'N/A',
+    '%duration' => (REQUEST_MICROTIME !== null) ? round(REQUEST_MICROTIME, 4) : 'N/A', 
     '%title' => isset($node->title) ? str_replace('"', '\'', $node->title) : '',
   );
   $message = 'Webform submitted: type=%type, nid=%nid, sid=%sid, duration=%duration, title="%title"';

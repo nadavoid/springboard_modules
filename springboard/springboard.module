@@ -1,5 +1,7 @@
 <?php
 
+define('REQUEST_MICROTIME');
+
 /**
  * @file
  * Provides a admin facing interface to the Springboard system.
