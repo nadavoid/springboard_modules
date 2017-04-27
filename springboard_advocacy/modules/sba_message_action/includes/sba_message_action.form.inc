@@ -319,7 +319,7 @@ function sba_message_action_message_form(&$form, $message, $action_type) {
     $sig = strip_tags($message_wrapper->field_sba_signature->value());
     $sig = str_replace('[contact:first_name]', '[First Name]', $sig);
     $sig = str_replace('[contact:last_name]', '[Last Name]', $sig);
-    $sig = str_replace('[contact:address]', '[Your Addess]', $sig);
+    $sig = str_replace('[contact:address]', '[Your Address]', $sig);
     $form['message'][$message->sba_message_id]['signature'] = array(
       '#markup' => check_markup($sig, 'plain_text'),
       '#access' => $access,

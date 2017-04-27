@@ -97,7 +97,7 @@ function commerce_sage_payments_cc_settings_form($settings = array()) {
 
   $form['verbose_gateway'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Verbose gateway errors.'),
+    '#title' => t('Display detailed error messages on failed submission.'),
     '#description' => t('If checked, specific error messages from the Sage Payments gateway will be displayed to the user.'),
     '#default_value' => isset($settings['verbose_gateway']) ? $settings['verbose_gateway'] : FALSE,
   );

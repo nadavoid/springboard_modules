@@ -234,21 +234,24 @@ function sb_social_facebook_settings(&$form, $enabled_services = array(), $setti
     ),
     '#theme' => 'sb_social_share_image_preview',
   );
-  $form['fb_settings']['tokens'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Available Tokens'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-  );
-  $form['fb_settings']['tokens']['token_help'] = array(
-    '#type' => 'item',
-    '#title' => t('Drupal tokens'),
-    '#description' => theme('token_tree', array(
-      'token_types' => $token_set,
-      'recursion_limit' => 2,
-      'click_insert' => FALSE,
-    )),
-  );
+
+  if (!module_exists('springboard_token_set')) {
+    $form['fb_settings']['tokens'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Available Tokens'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+    $form['fb_settings']['tokens']['token_help'] = array(
+      '#type' => 'item',
+      '#title' => t('Drupal tokens'),
+      '#description' => theme('token_tree', array(
+        'token_types' => $token_set,
+        'recursion_limit' => 2,
+        'click_insert' => FALSE,
+      )),
+    );
+  }
 }
 
 function sb_social_facebook_process_settings(&$data, $form_state) {
