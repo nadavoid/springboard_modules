@@ -3098,9 +3098,18 @@ function _fundraiser_sustainers_create_future_orders($donation, $month, $year, $
   global $user;
   foreach ($existing_recurring as $key => $recurring) {
     $this_donation = fundraiser_donation_get_donation($recurring->did);
+
+    // In an anonymous session use the user on the donation object for the log.
+    if (user_is_anonymous()) {
+      $name = $this_donation->user->name . ' (Anonymous) ';
+    }
+    else {
+      $name = $user->name;
+    }
+
     // Cancel the donation with an informative message.
     watchdog('fundraiser', 'Donation @id was deleted by @user while updating the card expiration date.',
-      array('@id' => $donation->did, '@user' => $user->name), WATCHDOG_DEBUG, NULL);
+      array('@id' => $donation->did, '@user' => $name), WATCHDOG_DEBUG, NULL);
 
     // Delete these donations so do won't appear in the list of recurring donations.
     // The sustainer record will get deleted and logged by
