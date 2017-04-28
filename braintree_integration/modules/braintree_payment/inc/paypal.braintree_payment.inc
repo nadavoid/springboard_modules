@@ -5,6 +5,9 @@
  * Holds code for paypal fields on Braintree payment form.
  */
 
+define('BRAINTREE_PAYMENT_PAYPAL_PAYMENT_METHOD_ID', 'braintree_paypal');
+define('BRAINTREE_PAYMENT_PAYPAL_PAYMENT_RULE_NAME', 'braintree_paypal|commerce_payment_braintree_paypal');
+
 /**
  * Implements hook_braintree_payment_form__PAYMENT_TYPE__alter().
  */
@@ -67,10 +70,7 @@ function braintree_payment_form_node_form_alter(&$form, &$form_state, $form_id) 
   }
 
   // Is Paypal Braintree an available payment method?
-  $matches  = preg_grep('/^braintree_paypal|/', $form['payment_methods']['gateways']['paypal']['id']['#options']);
-  if (isset($form['payment_methods']['gateways']['paypal']) &&
-    !empty($matches)
-) {
+  if (isset($form['payment_methods']['gateways']['paypal']) && array_key_exists(BRAINTREE_PAYMENT_PAYPAL_PAYMENT_RULE_NAME, $form['payment_methods']['gateways']['paypal']['id']['#options'])) {
     $form['#attached']['js'][] = drupal_get_path('module', 'braintree_payment') . '/js/braintree_payment.paypal.admin.js';
     $form['payment_methods']['braintree_paypal_compact'] = array(
       '#type' => 'checkbox',
@@ -204,15 +204,22 @@ function braintree_payment_form_webform_client_form_alter(&$form, &$form_state) 
 }
 
 /**
+ * Helper function to determine if method ID is apple pay.
+ */
+function _braintree_is_paypal_payment_method($method) {
+  list($method_id, $rule_name) = explode('|', $method);
+  return $method_id == BRAINTREE_PAYMENT_PAYPAL_PAYMENT_METHOD_ID;
+}
+
+/**
  * Helper function to determine if the node has the braintree paypal option.
  */
 function _braintree_payment_paypal_method_is_option($node, $form = NULL) {
   if (empty($node->type) || !fundraiser_is_donation_type($node->type)) {
     return FALSE;
   }
-  if (isset($node->gateways) && isset($node->gateways['paypal']) &&
-      preg_match('/^braintree_paypal\|/', $node->gateways['paypal']['id'])) {
-    return TRUE;  
+  if (isset($node->gateways) && isset($node->gateways['paypal']) && _braintree_is_paypal_payment_method($node->gateways['paypal']['id'])) {
+    return TRUE;
   }
   return FALSE;
 }

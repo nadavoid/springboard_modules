@@ -76,7 +76,7 @@ function braintree_applepay_form_node_form_alter(&$form, &$form_state, $form_id)
           'select[name="gateways[applepay][id]"]' => array('value' => BRAINTREE_APPLEPAY_PAYMENT_RULE_NAME),
         ),
       ),
-      '#parents' => array('gateways', 'paypal', 'compact'),
+      '#parents' => array('gateways', 'applepay', 'compact'),
     );
   }
 }
