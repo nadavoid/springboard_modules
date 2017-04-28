@@ -63,21 +63,43 @@ function braintree_applepay_form_node_form_alter(&$form, &$form_state, $form_id)
     return;
   }
 
-  // Is ApplePay Braintree an available payment method?
-  if (isset($form['payment_methods']['gateways']['applepay']) && array_key_exists(BRAINTREE_APPLEPAY_PAYMENT_RULE_NAME, $form['payment_methods']['gateways']['applepay']['id']['#options'])) {
-    $form['payment_methods']['braintree_applepay_compact'] = array(
-      '#type' => 'checkbox',
-      '#title' => t('Enable ApplePay compact flow on this donation form?'),
-      '#description' => t('If enabled, the default fundraiser donor information and billing fields will be hidden and automatically populated by ApplePay.'),
-      '#default_value' => _braintree_applepay_method_is_enabled($form['#node']),
-      '#states' => array(
-        'visible' => array(
-          ':input[name="gateways[applepay][status]"]' => array('checked' => TRUE),
-          'select[name="gateways[applepay][id]"]' => array('value' => BRAINTREE_APPLEPAY_PAYMENT_RULE_NAME),
-        ),
+  // Is Apple Pay Braintree an available payment method?
+  if (empty($form['payment_methods']['gateways']['applepay']['id']['#options'])) {
+    return;
+  }
+
+  $compatible_payment_methods = array();
+  foreach ($form['payment_methods']['gateways']['applepay']['id']['#options'] as $key => $value) {
+    if (strpos($key, '|') === FALSE) {
+      continue;
+    }
+
+    list($method_id, $rule) = explode('|', $key);
+    if (_braintree_is_applepay_payment_method($key)) {
+      $compatible_payment_methods[] = $key;
+    }
+  }
+
+  if (empty($compatible_payment_methods)) {
+    return;
+  }
+
+  $form['#attached']['js'][] = drupal_get_path('module', 'braintree_applepay') . '/js/braintree_applepay.applepay.admin.js';
+  $form['payment_methods']['braintree_applepay_compact'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable Apple Pay compact flow on this donation form?'),
+    '#description' => t('If enabled, the default fundraiser donor information and billing fields will be hidden and automatically populated by Apple Pay.'),
+    '#default_value' => _braintree_applepay_method_is_enabled($form['#node']),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="gateways[applepay][status]"]' => array('checked' => TRUE),
       ),
-      '#parents' => array('gateways', 'applepay', 'compact'),
-    );
+    ),
+    '#parents' => array('gateways', 'applepay', 'compact'),
+  );
+
+  foreach ($compatible_payment_methods as $compatible_payment_method) {
+    $form['payment_methods']['braintree_applepay_compact']['#states']['visible'][] = array('value' => $compatible_payment_method);
   }
 }
 

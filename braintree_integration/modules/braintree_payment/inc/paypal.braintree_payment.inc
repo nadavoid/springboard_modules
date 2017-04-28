@@ -6,7 +6,6 @@
  */
 
 define('BRAINTREE_PAYMENT_PAYPAL_PAYMENT_METHOD_ID', 'braintree_paypal');
-define('BRAINTREE_PAYMENT_PAYPAL_PAYMENT_RULE_NAME', 'braintree_paypal|commerce_payment_braintree_paypal');
 
 /**
  * Implements hook_braintree_payment_form__PAYMENT_TYPE__alter().
@@ -70,21 +69,42 @@ function braintree_payment_form_node_form_alter(&$form, &$form_state, $form_id) 
   }
 
   // Is Paypal Braintree an available payment method?
-  if (isset($form['payment_methods']['gateways']['paypal']) && array_key_exists(BRAINTREE_PAYMENT_PAYPAL_PAYMENT_RULE_NAME, $form['payment_methods']['gateways']['paypal']['id']['#options'])) {
-    $form['#attached']['js'][] = drupal_get_path('module', 'braintree_payment') . '/js/braintree_payment.paypal.admin.js';
-    $form['payment_methods']['braintree_paypal_compact'] = array(
-      '#type' => 'checkbox',
-      '#title' => t('Enable PayPal compact flow on this donation form?'),
-      '#description' => t('If enabled, the default fundraiser donor information and billing fields will be hidden and automatically populated by Paypal.'),
-      '#default_value' => _braintree_payment_paypal_method_is_enabled($form['#node']),
-      '#states' => array(
-        'visible' => array(
-          ':input[name="gateways[paypal][status]"]' => array('checked' => TRUE),
-          'select[name="gateways[paypal][id]"]' => array('value' => 'braintree_paypal|commerce_payment_braintree_paypal'),
-        ),
+  if (empty($form['payment_methods']['gateways']['paypal']['id']['#options'])) {
+    return;
+  }
+
+  $compatible_payment_methods = array();
+  foreach ($form['payment_methods']['gateways']['paypal']['id']['#options'] as $key => $value) {
+    if (strpos($key, '|') === FALSE) {
+      continue;
+    }
+
+    list($method_id, $rule) = explode('|', $key);
+    if (_braintree_is_paypal_payment_method($key)) {
+      $compatible_payment_methods[] = $key;
+    }
+  }
+
+  if (empty($compatible_payment_methods)) {
+    return;
+  }
+
+  $form['#attached']['js'][] = drupal_get_path('module', 'braintree_payment') . '/js/braintree_payment.paypal.admin.js';
+  $form['payment_methods']['braintree_paypal_compact'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable PayPal compact flow on this donation form?'),
+    '#description' => t('If enabled, the default fundraiser donor information and billing fields will be hidden and automatically populated by Paypal.'),
+    '#default_value' => _braintree_payment_paypal_method_is_enabled($form['#node']),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="gateways[paypal][status]"]' => array('checked' => TRUE),
       ),
-      '#parents' => array('gateways', 'paypal', 'compact'),
-    );
+    ),
+    '#parents' => array('gateways', 'paypal', 'compact'),
+  );
+
+  foreach ($compatible_payment_methods as $compatible_payment_method) {
+    $form['payment_methods']['braintree_paypal_compact']['#states']['visible']['select[name="gateways[paypal][id]"]'][] = array('value' => $compatible_payment_method);
   }
 }
 
