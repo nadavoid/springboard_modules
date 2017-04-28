@@ -67,7 +67,11 @@ function braintree_payment_form_node_form_alter(&$form, &$form_state, $form_id) 
   }
 
   // Is Paypal Braintree an available payment method?
-  if (isset($form['payment_methods']['gateways']['paypal']) && array_key_exists('braintree_paypal|commerce_payment_braintree_paypal', $form['payment_methods']['gateways']['paypal']['id']['#options'])) {
+  $matches  = preg_grep('/^braintree_paypal|/', $form['payment_methods']['gateways']['paypal']['id']['#options']);
+  if (isset($form['payment_methods']['gateways']['paypal']) &&
+    !empty($matches)
+) {
+    $form['#attached']['js'][] = drupal_get_path('module', 'braintree_payment') . '/js/braintree_payment.paypal.admin.js';
     $form['payment_methods']['braintree_paypal_compact'] = array(
       '#type' => 'checkbox',
       '#title' => t('Enable PayPal compact flow on this donation form?'),
@@ -206,8 +210,9 @@ function _braintree_payment_paypal_method_is_option($node, $form = NULL) {
   if (empty($node->type) || !fundraiser_is_donation_type($node->type)) {
     return FALSE;
   }
-  if (isset($node->gateways) && isset($node->gateways['paypal']) && $node->gateways['paypal']['id'] == 'braintree_paypal|commerce_payment_braintree_paypal') {
-    return TRUE;
+  if (isset($node->gateways) && isset($node->gateways['paypal']) &&
+      preg_match('/^braintree_paypal\|/', $node->gateways['paypal']['id'])) {
+    return TRUE;  
   }
   return FALSE;
 }
