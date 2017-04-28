@@ -18,33 +18,13 @@ function fundraiser_permission() {
       'title' => t('Administer fundraiser'),
       'description' => t('Perform administration tasks for fundraiser.'),
     ),
+    'access donation form overview' => array(
+      'title' => t('Access Donation Form Overview'),
+      'description' => t('Access the admin content tab for donation forms'),
+    ),
     'refund donations' => array(
       'title' => t('Refund donations'),
       'description' => t('Refund donations for fundraiser.'),
-    ),
-    'create donation form' => array(
-      'title' => t('Create donation form'),
-      'description' => t('Create donation forms.'),
-    ),
-    'edit own donation form' => array(
-      'title' => t('Edit own donation form'),
-      'description' => t('Edit own donation forms.'),
-    ),
-    'edit any donation form' => array(
-      'title' => t('Edit any donation form'),
-      'description' => t('Edit any donation forms.'),
-    ),
-    'delete own donation form' => array(
-      'title' => t('Delete own donation form'),
-      'description' => t('Delete own donation forms.'),
-    ),
-    'delete any donation form' => array(
-      'title' => t('Delete any donation form'),
-      'description' => t('Delete any donation forms.'),
-    ),
-    'clone donation form' => array(
-      'title' => t('Clone donation form'),
-      'description' => t('Clone donation forms.'),
     ),
     'use gateway switcher' => array(
       'title' => t('Use the bulk gateway switcher'),
@@ -273,10 +253,7 @@ function fundraiser_tokens($type, $tokens, $data = array(), $options = array()) 
 function fundraiser_clone_access_alter(&$access, $node) {
   if (fundraiser_is_donation_type($node->type)) {
     // Remove the access if the user isn't allowed to clone the donation form.
-    if (!user_access('clone donation form')) {
-      $access = 0;
-    }
-    if (user_access('clone donation form')) {
+    if (node_access('update', $node)) {
       $access = 1;
     }
   }
@@ -306,26 +283,6 @@ function fundraiser_views_api() {
   return array(
     'api' => 2,
   );
-}
-
-/**
- * Implementshook_node_access().
- */
-function fundraiser_node_access($node, $op, $account) {
-  // Without an idea who the owner is or type is we can't assess access. So don't rock the boat.
-  if ( isset($node->type) && isset($node->uid) && fundraiser_is_donation_type($node->type)) {
-    $is_author = $account->uid == $node->uid;
-    switch ($op) {
-      case 'create':
-        return user_access('create donation form', $account) ? NODE_ACCESS_ALLOW : NODE_ACCESS_IGNORE;
-      case 'update':
-        return ((user_access('edit own donation form', $account) && $is_author) ||
-          user_access('edit any donation form', $account)) ? NODE_ACCESS_ALLOW : NODE_ACCESS_IGNORE;
-      case 'delete':
-        return ((user_access('delete own donation form', $account) && $is_author) ||
-          user_access('delete any donation form', $account)) ? NODE_ACCESS_ALLOW : NODE_ACCESS_IGNORE;
-    }
-  }
 }
 
 /**
