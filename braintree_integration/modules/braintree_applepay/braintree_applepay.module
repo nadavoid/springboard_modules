@@ -5,7 +5,8 @@
  * Module file for braintree_applepay.
  */
 
-define('BRAINTREE_APPLEPAY_PAYMENT_METHOD_ID', 'braintree_applepay|commerce_payment_braintree_applepay');
+define('BRAINTREE_APPLEPAY_PAYMENT_METHOD_ID', 'braintree_applepay');
+define('BRAINTREE_APPLEPAY_PAYMENT_RULE_NAME', 'braintree_applepay|commerce_payment_braintree_applepay');
 
 /**
  * Implements hook_braintree_applepay_form__PAYMENT_TYPE__alter().
@@ -52,20 +53,18 @@ function braintree_applepay_module_implements_alter(&$implementations, $hook) {
  * payment method.
  */
 function braintree_applepay_form_node_form_alter(&$form, &$form_state, $form_id) {
-  if (empty($form['#node']->type) || !fundraiser_is_donation_type($form['#node']->type)) {
+  if (!_braintree_applepay_method_is_option($form['#node'])) {
     return;
   }
 
-  _braintree_applepay_method_is_option($form['#node']);
   // If this is an appropriate node edit/add form, add the "applepay compact"
   // checkbox to the "Payment methods" fieldset.
   if (empty($form['payment_methods']['gateways']) || !element_get_visible_children($form['payment_methods']['gateways'])) {
     return;
   }
-  // Is applepay Braintree an available payment method?
-  if (isset($form['payment_methods']['gateways']['applepay']) &&
-    array_key_exists(BRAINTREE_APPLEPAY_PAYMENT_METHOD_ID, $form['payment_methods']['gateways']['applepay']['id']['#options'])) {
-    $enabled_form_ids = variable_get('braintree_applepay_compact', array());
+
+  // Is ApplePay Braintree an available payment method?
+  if (isset($form['payment_methods']['gateways']['applepay']) && array_key_exists(BRAINTREE_APPLEPAY_PAYMENT_RULE_NAME, $form['payment_methods']['gateways']['applepay']['id']['#options'])) {
     $form['payment_methods']['braintree_applepay_compact'] = array(
       '#type' => 'checkbox',
       '#title' => t('Enable ApplePay compact flow on this donation form?'),
@@ -74,39 +73,11 @@ function braintree_applepay_form_node_form_alter(&$form, &$form_state, $form_id)
       '#states' => array(
         'visible' => array(
           ':input[name="gateways[applepay][status]"]' => array('checked' => TRUE),
-          'select[name="gateways[applepay][id]"]' => array('value' => BRAINTREE_APPLEPAY_PAYMENT_METHOD_ID),
+          'select[name="gateways[applepay][id]"]' => array('value' => BRAINTREE_APPLEPAY_PAYMENT_RULE_NAME),
         ),
       ),
-
+      '#parents' => array('gateways', 'paypal', 'compact'),
     );
-    $form['actions']['submit']['#submit'][] = '_braintree_applepay_node_form_submit';
-  }
-}
-
-/**
- * Additional submit handler for donation_form node form.
- *
- * Track which nodes have the applepay compact flow enabled.
- */
-function _braintree_applepay_node_form_submit($form, &$form_state) {
-  if (isset($form_state['values']['gateways']['applepay'])
-    && $form_state['values']['gateways']['applepay']['id'] == BRAINTREE_APPLEPAY_PAYMENT_METHOD_ID
-    && $form_state['values']['gateways']['applepay']['status']
-    && isset($form_state['values']['braintree_applepay_compact'])
-    && $form_state['values']['braintree_applepay_compact']) {
-    $enabled_form_ids = variable_get('braintree_applepay_compact', array());
-    if (!in_array($form_state['nid'], $enabled_form_ids)) {
-      $enabled_form_ids[] = $form_state['nid'];
-      variable_set('braintree_applepay_compact', $enabled_form_ids);
-    }
-  }
-  else {
-    $enabled_form_ids = variable_get('braintree_applepay_compact', array());
-    $index = array_search($form_state['nid'], $enabled_form_ids);
-    if ($index !== FALSE) {
-      unset($enabled_form_ids[$index]);
-      variable_set('braintree_applepay_compact', $enabled_form_ids);
-    }
   }
 }
 
@@ -115,7 +86,7 @@ function _braintree_applepay_node_form_submit($form, &$form_state) {
  */
 function braintree_applepay_form_webform_component_edit_form_alter(&$form, &$form_state, $form_id) {
   if ($form_id == 'webform_component_edit_form') {
-    if (isset($form['nid']) && isset($form['nid']['#value'])) {
+    if (!empty($form['nid']['#value'])) {
       $node = node_load($form['nid']['#value']);
       // Need to do some additional component validation to prevent breaking
       // the compact flow.
@@ -130,16 +101,15 @@ function braintree_applepay_form_webform_component_edit_form_alter(&$form, &$for
  * Implements hook_form_FORM_ID_alter().
  */
 function braintree_applepay_form_webform_components_form_alter(&$form, &$form_state) {
-  if (isset($form['#node'])) {
-    if (_braintree_applepay_method_is_option($form['#node']) && _braintree_applepay_method_is_enabled($form['#node'])) {
-      // On the components overview page, need to workaround an issue with the
-      // weights (which determine the components position) not being updated
-      // after a validation error).
-      if (!empty($form_state['input'])) {
-        drupal_add_js(drupal_get_path('module', 'braintree_applepay') . '/js/braintree_applepay.applepay.admin.js');
-      }
-      $form['#validate'][] = '_braintree_applepay_webform_components_validate';
+  if (!empty($form['#node']) && _braintree_applepay_method_is_option($form['#node']) && _braintree_applepay_method_is_enabled($form['#node'])) {
+    // On the components overview page, need to workaround an issue with the
+    // weights (which determine the components position) not being updated
+    // after a validation error).
+    if (!empty($form_state['input'])) {
+      drupal_add_js(drupal_get_path('module', 'braintree_applepay') . '/js/braintree_applepay.applepay.admin.js');
     }
+
+    $form['#validate'][] = '_braintree_applepay_webform_components_validate';
   }
 }
 
@@ -155,11 +125,12 @@ function _braintree_applepay_webform_components_validate($form, &$form_state) {
     $node = node_load($form['nid']['#value']);
     $billing_cid = webform_get_cid($node, 'billing_information', 0);
     $donor_cid = webform_get_cid($node, 'donor_information', 0);
-    if (isset($form_state['values']['pid']) && ($form_state['values']['pid'] == $billing_cid || $form_state['values']['pid'] == $donor_cid) && isset($form_state['values']['type'])  && $form_state['values']['type'] != 'hidden' && $form_state['values']['form_key'] != 'sbp_phone') {
+    if (isset($form_state['values']['pid']) && ($form_state['values']['pid'] == $billing_cid || $form_state['values']['pid'] == $donor_cid) && isset($form_state['values']['type']) && $form_state['values']['type'] != 'hidden' && $form_state['values']['form_key'] != 'sbp_phone') {
       form_set_error($form_state['values']['form_key'], t('The component <em>@key</em> cannot be added to this fieldset when applepay compact flow is enabled', array('@key' => $form_state['values']['form_key'])));
     }
     return;
   }
+
   // Check the component position and type against the default fundraiser
   // fields. If there's a non-hidden field present in either of the default
   // fieldsets, flag it.
@@ -176,6 +147,7 @@ function _braintree_applepay_webform_components_validate($form, &$form_state) {
       $errors[] = $component;
     }
   }
+
   if (isset($errors) && !empty($errors)) {
     drupal_add_js(array('applepayCompactErrors' => $errors), 'setting');
   }
@@ -191,6 +163,7 @@ function braintree_applepay_form_webform_client_form_alter(&$form, &$form_state)
   if (empty($form['#node']->type) || !fundraiser_is_donation_type($form['#node']->type)) {
     return;
   }
+
   if (_braintree_applepay_method_is_enabled($form['#node'])) {
     // @todo refactor this duplicate code from validation. Ideally call the
     // validate function.
@@ -210,54 +183,28 @@ function braintree_applepay_form_webform_client_form_alter(&$form, &$form_state)
         }
       }
     }
+
     $settings = array(
       'applepay' => array(
         'compact' => TRUE,
       ),
     );
+
     if (isset($form['#node']->form_layouts)) {
       $settings['applepay']['form_layout'] = $form['#node']->form_layouts;
     }
+
     drupal_add_js(array('braintree' => $settings), 'setting');
     drupal_add_js(drupal_get_path('module', 'braintree_applepay') . '/js/braintree_applepay.compact_form.js');
   }
 }
 
 /**
- * Implements hook_clone_node_alter().
- *
- * Propagate Braintree applepay compact settings to cloned node.
+ * Helper function to determine if method ID is apple pay.
  */
-function braintree_applepay_clone_node_alter(&$node, $context) {
-  if (empty($context['original_node']->type) || !fundraiser_is_donation_type($context['original_node']->type)) {
-    return;
-  }
-  // If this is an appropriate node edit/add form, add the "applepay compact"
-  // checkbox to the "Payment methods" fieldset.
-  if (empty($context['original_node']->gateways) || empty($context['original_node']->gateways['applepay'])) {
-    return;
-  }
-  if ($context['original_node']->gateways['applepay']['status'] &&
-      $context['original_node']->gateways['applepay']['id'] == BRAINTREE_APPLEPAY_PAYMENT_METHOD_ID) {
-    $enabled_form_ids = variable_get('braintree_applepay_compact', array());
-    if (in_array($context['original_node']->nid, $enabled_form_ids)) {
-      // If the source node for cloning has the compact flow enabled, set this
-      // flag for our implementation of hook_node_insert().
-      $node->braintree_applepay_compact = TRUE;
-    }
-  }
-}
-
-/**
- * Implements hook_node_insert().
- *
- * On cloning a donation form, check to see if the source form had the Braintree
- * compact flow enabled.
- */
-function braintree_applepay_node_insert($node) {
-  if (isset($node->braintree_applepay_compact) && $node->braintree_applepay_compact) {
-    _braintree_applepay_set_compact($node->nid);
-  }
+function _braintree_is_applepay_payment_method($method) {
+  list($method_id, $rule_name) = explode('|', $method);
+  return $method_id == BRAINTREE_APPLEPAY_PAYMENT_METHOD_ID;
 }
 
 /**
@@ -267,8 +214,7 @@ function _braintree_applepay_method_is_option($node, $form = NULL) {
   if (empty($node->type) || !fundraiser_is_donation_type($node->type)) {
     return FALSE;
   }
-  if (isset($node->gateways) && isset($node->gateways['applepay']) &&
-      $node->gateways['applepay']['id'] == BRAINTREE_APPLEPAY_PAYMENT_METHOD_ID) {
+  if (isset($node->gateways) && isset($node->gateways['applepay']) && _braintree_is_applepay_payment_method($node->gateways['applepay']['id'])) {
     return TRUE;
   }
   return FALSE;
@@ -280,22 +226,5 @@ function _braintree_applepay_method_is_option($node, $form = NULL) {
  * Check if a given node has the applepay compact flow enabled.
  */
 function _braintree_applepay_method_is_enabled($node) {
-  $enabled_form_ids = variable_get('braintree_applepay_compact', array());
-  if (isset($node->nid) && in_array($node->nid, $enabled_form_ids)) {
-    return TRUE;
-  }
-  return FALSE;
-}
-
-/**
- * Helper function.
- *
- * Set the compact flow var for a given nid.
- */
-function _braintree_applepay_set_compact($nid) {
-  $enabled_form_ids = variable_get('braintree_applepay_compact', array());
-  if (!in_array($nid, $enabled_form_ids)) {
-    $enabled_form_ids[] = $nid;
-    variable_set('braintree_applepay_compact', $enabled_form_ids);
-  }
+  return !empty($node->gateways['applepay']['compact']);
 }

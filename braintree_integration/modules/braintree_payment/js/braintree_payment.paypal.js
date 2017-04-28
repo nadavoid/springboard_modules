@@ -62,7 +62,9 @@
             $('#webform-component-donor-information').hide();
             $('#webform-component-billing-information').hide();
             settings.paypal.collapsed = true;
-            settings.applepay.collapsed = true;
+            if (settings.applepay !== undefined) {
+              settings.applepay.collapsed = true;
+            }
           } else if (!collapse && !fieldsetsVisible) {
             if (layout == 'two_column_donation') {
               $('#left').show();
@@ -70,7 +72,9 @@
             $('#webform-component-donor-information').show();
             $('#webform-component-billing-information').show();
             settings.paypal.collapsed = false;
-            settings.applepay.collapsed = false;
+            if (settings.applepay !== undefined) {
+              settings.applepay.collapsed = false;
+            }
           }
         }
       };
