@@ -850,3 +850,18 @@ function sba_quicksign_clone_node_alter(&$node, $context) {
     $node->quicksign_button_text = $original_settings['quicksign_button_text'];
   }
 }
+
+
+/**
+ * Implements hook_webform_user_session_storage_cancel().
+ *
+ * Don't allow session storage when forms are submitted via quicksign.
+ */
+function sba_quicksign_webform_user_session_storage_cancel($form_state) {
+  if (isset($form_state['triggering_element'])) {
+    if (in_array('sba_quicksign', $form_state['triggering_element']['#parents'])) {
+      return FALSE;
+    }
+  }
+  return TRUE;
+}
