@@ -865,3 +865,13 @@ function sba_quicksign_webform_user_session_storage_cancel($form_state) {
   }
   return TRUE;
 }
+
+/**
+ * Implements hook_springboard_cookie_should_store_profile_values().
+ *
+ * Don't allow profile values in cookie when forms are submitted via quicksign.
+ */
+function sba_quicksign_springboard_cookie_should_store_profile_values($form_state) {
+  // Using the webform_user hook since this looks for the same item.
+  return sba_quicksign_webform_user_session_storage_cancel($form_state);
+}
