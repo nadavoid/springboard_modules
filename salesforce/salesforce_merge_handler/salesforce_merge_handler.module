@@ -19,9 +19,9 @@ function salesforce_merge_handler_salesforce_sync_fail_item($item, $message, $re
           if (!empty($rmids)) {
             entity_delete_multiple('salesforce_sync_map', $rmids);
             // In order for the queue item to refresh properly, we need to
-            // change the operation from UPDATE to UPSERT, and delete the
+            // change the operation from UPDATE to CREATE, and delete the
             // old/invalid SF Id from the queued item.
-            $item->operation = 'UPSERT';
+            $item->operation = 'CREATE';
             unset($item->sobject->Id);
             salesforce_queue_salesforce_queue_item_refresh_item_action($item);
             watchdog('salesforce_merge_handler', 'ENTITY_IS_DELETED error detected on Salesforce queue item #:item_id. The relationship to the deleted SF record has been broken and the queue item refreshed. It should sync in the next run.', array(':item_id' => $item->item_id), WATCHDOG_NOTICE, l('View the queued item', 'springboard/reports/integration-reports/queue', array('query' => array('item_id' => $item->item_id))));

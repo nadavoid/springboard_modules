@@ -475,6 +475,10 @@ function salesforce_genmap_entity_delete($entity, $entity_type) {
  *   queued, or if the item was not supposed to be queued.
  */
 function salesforce_mapping_send_entity_to_queue($entity, $entity_type, $op) {
+  dpm('salesforce_mapping_send_entity_to_queue');
+  dpm($entity);
+  dpm($entity_type);
+  dpm($op);
   $sfapi = salesforce_get_api();
   if (!$sfapi->isAuthorized()) {
     // If there isn't a valid connection to Salesforce, lets not start queueing
