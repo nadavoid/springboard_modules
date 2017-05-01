@@ -215,6 +215,10 @@ function springboard_group_context_menu_paths() {
       if (isset($groups_enabled_types['node']['sustainers_upgrade_form'])) {
         array_push($paths, 'admin/springboard/donation-forms/sustainers_upgrade_form');
       }
+      if (isset($groups_enabled_types['commerce_order'])) {
+        array_push($paths, 'admin/commerce/orders');
+        array_push($paths, 'admin/reports/salesforce/donations');
+      }
       foreach ($groups_enabled_types['node'] as $type => $field) {
         if (fundraiser_is_donation_type($type)) {
           array_push($paths, 'admin/springboard');

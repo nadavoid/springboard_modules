@@ -53,6 +53,24 @@ function springboard_group_views_query_alter(&$view, &$query) {
     // we skip the query alteration.
     //$grouped = springboard_group_views_query_check_content_type($query);
 
+
+    $entity_type = 'node';
+    $entity_table = 'node';
+    $entity_field = 'nid';
+    switch ($view->name) {
+
+      case 'commerce_orders':
+        $entity_type = 'commerce_order';
+        $entity_table = 'commerce_order';
+        $entity_field = 'order_id';
+        break;
+      case 'sbv_donations':
+        $entity_type = 'commerce_order';
+        $entity_table = 'fundraiser_donation';
+        $entity_field = 'did';
+        Break;
+    }
+
     // Get the current active group ID.
     $context = springboard_group_get_group_context();
     if (empty($context)) {
@@ -61,8 +79,8 @@ function springboard_group_views_query_alter(&$view, &$query) {
     }
     // Build the query.
     $condition = db_and();
-
     if (($context == '_none' || $context == '_all') && (user_access('administer group') || user_access('bypass node access'))) {
+
       // Value is "none" or "all" and user is an admin.
       if ($context == '_none') {
         $condition->isNull('og_membership.gid');
@@ -74,7 +92,7 @@ function springboard_group_views_query_alter(&$view, &$query) {
           $and = db_and();
           $all_groups = springboard_group_get_all_springboard_groups();
           $and->condition('og_membership.gid', $all_groups, 'IN');
-          $and->condition('og_membership.entity_type', 'node');
+          $and->condition('og_membership.entity_type', $entity_type);
 
           $condition->isNull('og_membership.gid');
           $condition->condition($and);
@@ -88,14 +106,14 @@ function springboard_group_views_query_alter(&$view, &$query) {
         $context = $_SESSION['springboard_group_context_multiple'];
       }
       $condition->condition('og_membership.gid', $context);
-      $condition->condition('og_membership.entity_type', 'node');
+      $condition->condition('og_membership.entity_type', $entity_type);
     }
 
     // Help views understand what we're doing. Adding the table without
     // the join explicitly defined makes the query messy.
     $def = array(
-      'left_table' => 'node',
-      'left_field' => 'nid',
+      'left_table' => $entity_table,
+      'left_field' => $entity_field,
       'table' => 'og_membership',
       'field' => 'etid',
     );
@@ -104,14 +122,15 @@ function springboard_group_views_query_alter(&$view, &$query) {
     $join->extra = array(
       array(
         'field' => 'entity_type',
-        'value' => 'node',
+        'value' => $entity_type,
       ),
     );
 
     $join->construct();
     $join->adjusted = TRUE;
 
-    $query->add_table('og_membership', 'node', $join);
+
+    $query->add_table('og_membership', $entity_table, $join);
     $query->add_where(0, $condition);
 
   }
@@ -151,7 +170,7 @@ function springboard_group_views_query_check_content_type($query) {
 
 
 function springboard_group_views_pre_execute(&$view) {
- // dpq($view->build_info['query']);
+  dpq($view->build_info['query']);
 }
 
 /**
@@ -168,20 +187,21 @@ function springboard_group_views_default_views_alter(&$views) {
       $handler =& $views[$view_name]->display[$display_name]->handler;
       /* Field: Content: Title */
       if (!empty($handler->display->display_options['fields'])) {
-        $handler->display->display_options['relationships']['og_membership_related_node_group']['id'] = 'og_membership_related_node_group';
-        $handler->display->display_options['relationships']['og_membership_related_node_group']['table'] = 'og_membership';
-        $handler->display->display_options['relationships']['og_membership_related_node_group']['field'] = 'og_membership_related_node_group';
+//        $handler->display->display_options['relationships']['og_membership_related_node_group']['id'] = 'og_membership_related_node_group';
+//        $handler->display->display_options['relationships']['og_membership_related_node_group']['table'] = 'og_membership';
+//        $handler->display->display_options['relationships']['og_membership_related_node_group']['field'] = 'og_membership_related_node_group';
         $fields =& $handler->display->display_options['fields'];
-
         // Place the field in the appropriate column position per view display.
         $label = t('Owner');
         $index = 2;
         switch ($view_name) {
           case 'sba_actions';
+            $table = 'node';
             $index = 5;
             break;
 
           case 'sbv_forms';
+            $table = 'node';
             switch ($display_name) {
               // Recent forms block.
               case 'block_3':
@@ -200,13 +220,27 @@ function springboard_group_views_default_views_alter(&$views) {
             break;
 
           case 'sbv_assets':
+            $table = 'node';
             $index = 1;
+            break;
 
+          case 'commerce_orders':
+            $table = 'commerce_order';
+            $index = 1;
+            break;
+
+          case 'sbv_donations':
+            $table = 'fundraiser_donation';
+            $index = 1;
+            break;
+
+          default:
+            $table = 'node';
         }
 
         $group_field = [];
         $group_field['title_sb_group']['id'] = 'title_sb_group';
-        $group_field['title_sb_group']['table'] = 'node';
+        $group_field['title_sb_group']['table'] = $table;
         $group_field['title_sb_group']['field'] = 'springboard_groups';
         $group_field['title_sb_group']['label'] = $label;
 
@@ -283,10 +317,30 @@ function springboard_group_views_pre_render(&$view) {
 function springboard_group_views_data_alter(&$data) {
   $data['node']['springboard_groups'] = array(
     'title' => t('Node Groups'),
-    'help' => t('Show all the springbord groups a node belongs to, with a link back to the group.'),
+    'help' => t('Show all the Springboard groups a node belongs to, with a link back to the group.'),
     'real field' => 'nid',
     'field' => array(
       'handler' => 'springboard_group_views_handler_groups',
+    ),
+    'group' => t('Springboard Groups'),
+  );
+
+  $data['commerce_order']['springboard_groups'] = array(
+    'title' => t('Order Groups'),
+    'help' => t('Show all the Springboard groups an order belongs to, with a link back to the group.'),
+    'real field' => 'order_id',
+    'field' => array(
+      'handler' => 'springboard_group_views_handler_groups_orders',
+    ),
+    'group' => t('Springboard Groups'),
+  );
+
+  $data['fundraiser_donation']['springboard_groups'] = array(
+    'title' => t('Donation Groups'),
+    'help' => t('Show all the springboard groups an donation belongs to, with a link back to the group.'),
+    'real field' => 'did',
+    'field' => array(
+      'handler' => 'springboard_group_views_handler_groups_orders',
     ),
     'group' => t('Springboard Groups'),
   );

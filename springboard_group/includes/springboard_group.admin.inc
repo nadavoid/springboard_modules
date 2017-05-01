@@ -194,7 +194,6 @@ function springboard_group_entity_settings_form() {
     'taxonomy_term:sba_organization_issues',
     'commerce_cardonfile:commerce_cardonfile',
     'commerce_customer_profile:billing',
-    'commerce_order:commerce_order',
   );
 
   foreach ($entity_type_options as $type => $name) {
@@ -392,6 +391,8 @@ function springboard_group_advanced_settings() {
     'webform_ab_tests',
     'sba_actions',
     'sbv_email_templates',
+    'commerce_orders',
+    'sbv_donations',
   );
 
   $form['altered_views']['group_restricted_views'] = array(
