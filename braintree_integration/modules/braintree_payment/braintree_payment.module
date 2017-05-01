@@ -224,3 +224,12 @@ function _braintree_payment_default_fundraiser_fields() {
     'sbp_phone',
   );
 }
+
+/**
+ * Implements hook_fundraiser_update_billing_form_preprocess().
+ */
+function braintree_payment_fundraiser_update_billing_form_preprocess_alter(&$data) {
+  if ($data['update payment'] && !empty($data['card']) && $data['card']->payment_method == 'braintree_paypal') {
+    $data['update payment'] = FALSE;
+  }
+}

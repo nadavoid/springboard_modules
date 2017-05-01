@@ -250,3 +250,12 @@ function _braintree_applepay_method_is_option($node, $form = NULL) {
 function _braintree_applepay_method_is_enabled($node) {
   return !empty($node->gateways['applepay']['compact']);
 }
+
+/**
+ * Implements hook_fundraiser_update_billing_form_preprocess().
+ */
+function braintree_applepay_fundraiser_update_billing_form_preprocess_alter(&$data) {
+  if ($data['update payment'] && !empty($data['card']) && $data['card']->payment_method == 'braintree_applepay') {
+    $data['update payment'] = FALSE;
+  }
+}

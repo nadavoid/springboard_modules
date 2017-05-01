@@ -3840,12 +3840,18 @@ function fundraiser_update_billing_form($form, &$form_state, $data) {
   if (isset($data['calling module']) && !empty($data['calling module'])) {
     $functions[] = sprintf('fundraiser_update_billing_form__%s__preprocess', $data['calling module']);
   }
+
+  // Allow other modules to alter the data variables before building.
+  drupal_alter($functions, $data);
+
   foreach ($functions as $function) {
     $continue = module_invoke_all($function, $form, $form_state, $data);
     if (!empty($continue)) {
       return $continue;
     }
   }
+
+  $data['donation']->update_payment = $data['update payment'];
 
   $fundraiser_path = drupal_get_path('module', 'fundraiser');
   $form['#attached']['js'] = array(
@@ -3977,7 +3983,7 @@ function fundraiser_update_billing_form($form, &$form_state, $data) {
   }
 
   // Set any payment information from the $data variable.
-  if ($data['update payment'] && isset($data['payment_fields'])) {
+  if ($data['update payment'] && isset($data['payment_fields']) && !empty($form['payment_fields'])) {
     $form['payment_fields'] = array_replace_recursive($form['payment_fields'], $data['payment_fields']);
   }
 

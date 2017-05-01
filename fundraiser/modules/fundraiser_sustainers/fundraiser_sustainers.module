@@ -2504,7 +2504,7 @@ function fundraiser_sustainers_update_billing_form_submit($form, &$form_state) {
   $username = isset($user->name) ? $user->name : 'Anonymous';
   // We only update donations to come, not ones already processed.
   $donations = _fundraiser_sustainers_get_donations_recurr_remaining($master_did);
-  fundraiser_sustainers_update_billing_info_in_series($donations, $submission_fields, $username);
+  fundraiser_sustainers_update_billing_info_in_series($donations, $submission_fields, $username, $form_state['donation']->update_payment);
 
   // Use the first future donation for a template of new future donations.
   $source_donation = reset($donations);
@@ -2903,8 +2903,10 @@ function fundraiser_sustainers_update_billing_info_create_new_donations($master_
  *   Fields that get merged into $donation->donation to update it.
  * @param string $name
  *   The name used in the donation comment.
+ * @param bool $update_payment
+ *   Default value for updating payment.
  */
-function fundraiser_sustainers_update_billing_info_in_series($donations, $submission_fields, $name = '') {
+function fundraiser_sustainers_update_billing_info_in_series($donations, $submission_fields, $name = '', $update_payment = TRUE) {
   // Set a flag for other modules to respond to the first order being
   // updated in series.
   $sustainer_update_first = TRUE;
@@ -2919,7 +2921,7 @@ function fundraiser_sustainers_update_billing_info_in_series($donations, $submis
     $donation->update_billing = TRUE;
 
     // Mark the payment information as needing to be updated.
-    $donation->update_payment = TRUE;
+    $donation->update_payment = $update_payment;
 
     // Let other modules know this is a sustainer update.
     $donation->sustainer_update = TRUE;
