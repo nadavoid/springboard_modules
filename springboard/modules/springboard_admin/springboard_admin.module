@@ -459,7 +459,6 @@ function springboard_admin_access_donation_form_pages($type = NULL) {
     || user_access('administer springboard dashboard')
     || user_access('administer fundraiser')
     || user_access('bypass node access')
-    || user_access('edit any donation form')
   ) {
     return TRUE;
   }
@@ -469,7 +468,6 @@ function springboard_admin_access_donation_form_pages($type = NULL) {
     foreach ($types as $type) {
       if (fundraiser_is_donation_type($type)) {
         if (user_access('edit any ' . $type . ' content')
-        || user_access('edit any donation form')
         || node_access('create', $type)) {
           return TRUE;
         }
