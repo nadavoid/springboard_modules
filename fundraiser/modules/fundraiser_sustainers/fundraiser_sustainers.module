@@ -3909,6 +3909,15 @@ function fundraiser_sustainers_update_recurring_series_entity($master_did) {
       }
     }
 
+    // If the status is canceled, check if its auto_canceled.
+    if (
+      !empty($status)
+      && $status == 'canceled'
+      && $last_donation->recurring->gateway_resp == 'auto_canceled'
+    ) {
+      $status = 'auto_canceled';
+    }
+
     if (!empty($status)) {
       $fundraiser_sustainers_series->status = $status;
       $fundraiser_sustainers_series->save();
