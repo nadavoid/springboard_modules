@@ -474,6 +474,13 @@ function springboard_admin_access_donation_form_pages($type = NULL) {
       }
     }
   }
+  elseif(fundraiser_is_donation_type($type)) {
+    if ((user_access('edit any ' . $type . ' content')
+      || node_access('create', $type))
+    ) {
+      return TRUE;
+    }
+  }
   $check_types = isset($type) ? $type : $types;
   $access = module_invoke_all('springboard_admin_access_donation_form_pages', $check_types);
   if (!empty(array_filter($access))) {
@@ -512,6 +519,13 @@ function springboard_admin_access_form_pages($type = NULL) {
       ) {
         return TRUE;
       }
+    }
+  }
+  else {
+    if ((user_access('edit any ' . $type . ' content')
+      || node_access('create', $type))
+    ) {
+      return TRUE;
     }
   }
 
