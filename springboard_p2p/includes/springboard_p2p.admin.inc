@@ -18,7 +18,7 @@ function springboard_p2p_dashboard() {
     'p2p_campaigns' => array (
       'header' => t('Active peer to peer campaigns'),
       'content' => views_embed_view('p2p_campaigns', 'block'),
-      'create_link' => array('title' => t('Create a new landing page link'), 'href' => 'node/add/p2p-campaign'),
+      'create_link' => array('title' => t('Create a new campaign'), 'href' => 'node/add/p2p-campaign'),
       'viewmore_link' => array('title' => t('See all campaigns'), 'href' => 'admin/springboard/p2p/campaign')
     ),
     'p2p_categories' => array(
@@ -40,7 +40,7 @@ function springboard_p2p_dashboard() {
     'p2p_landing_pages' => array(
       'header' => t('Landing pages'),
       'content' => views_embed_view('p2p_landing_pages', 'block'),
-      'create_link' => array('title' => t('Create a new category'), 'href' => 'node/add/p2p-category'),
+      'create_link' => array('title' => t('Create a new landing page'), 'href' => 'node/add/p2p-campaign-landing'),
       'viewmore_link' => array('title' => t('View all landing pages'), 'href' => 'admin/springboard/p2p/landing-pages'),
     ),
   );
