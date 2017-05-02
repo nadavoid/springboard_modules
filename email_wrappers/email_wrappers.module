@@ -716,6 +716,13 @@ $html_raw
     $token_set['donation'] = $message['params']['donation'];
   }
 
+  $data = array(
+    'html_raw' => &$html_raw,
+    'text_raw' => &$text_raw,
+    'message' => &$message,
+  );
+  drupal_alter('email_wrappers_email_body_messages', $data);
+
   $multi_body = token_replace($multi_body, $token_set, array('clear' => TRUE));
   if ($eid) {
     $multi_body = _webform_filter_values($multi_body, $message['params']['node'], $message['params']['submission'], $message['params']['node']->webform['emails'][$eid], FALSE, TRUE);
