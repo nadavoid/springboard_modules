@@ -2309,7 +2309,17 @@ function fundraiser_sustainers_edit_form($did) {
   }
   $donation_amount_form = '<div id="donation-amount-form"><h2>Update Donation Amount</h2>' . $donation_amount_form . '</div>';
 
+<<<<<<< HEAD
   if ($remaining_donation_count > 0 && empty($canceled)) {
+=======
+  list($method_id, $rule_name) = explode('|', $next_donation->gateway['id']);
+  $incompatible_gateway = $method_id == 'braintree_paypal' || $method_id == 'braintree_applepay';
+
+  if ($incompatible_gateway) {
+    $billing_update_form = '';
+  }
+  elseif ($remaining_donation_count > 0 && empty($cancelled)) {
+>>>>>>> origin/7.x-4.x_1763_applepay-compact-flow
     $data = array(
       'donation' => $next_donation,
       'calling module' => 'fundraiser_sustainers',
@@ -2347,6 +2357,7 @@ function fundraiser_sustainers_edit_form($did) {
   else {
     $billing_update_form = t('This recurring donation has been canceled.');
   }
+
   if (!empty($billing_update_form)) {
     $billing_update_form = '<div id="donation-billing-form"><h2>Update Your Payment Information</h2>' . $billing_update_form . '</div>';
   }
@@ -2504,7 +2515,7 @@ function fundraiser_sustainers_update_billing_form_submit($form, &$form_state) {
   $username = isset($user->name) ? $user->name : 'Anonymous';
   // We only update donations to come, not ones already processed.
   $donations = _fundraiser_sustainers_get_donations_recurr_remaining($master_did);
-  fundraiser_sustainers_update_billing_info_in_series($donations, $submission_fields, $username);
+  fundraiser_sustainers_update_billing_info_in_series($donations, $submission_fields, $username, $form_state['donation']->updating_billing, $form_state['donation']->update_payment);
 
   // Use the first future donation for a template of new future donations.
   $source_donation = reset($donations);
@@ -2903,8 +2914,10 @@ function fundraiser_sustainers_update_billing_info_create_new_donations($master_
  *   Fields that get merged into $donation->donation to update it.
  * @param string $name
  *   The name used in the donation comment.
+ * @param bool $update_payment
+ *   Default value for updating payment.
  */
-function fundraiser_sustainers_update_billing_info_in_series($donations, $submission_fields, $name = '') {
+function fundraiser_sustainers_update_billing_info_in_series($donations, $submission_fields, $name = '', $update_billing = TRUE, $update_payment = TRUE) {
   // Set a flag for other modules to respond to the first order being
   // updated in series.
   $sustainer_update_first = TRUE;
@@ -2916,10 +2929,10 @@ function fundraiser_sustainers_update_billing_info_in_series($donations, $submis
     $donation->donation = array_merge($donation->donation, $submission_fields);
 
     // Mark the billing information as needing to be updated.
-    $donation->update_billing = TRUE;
+    $donation->update_billing = $update_billing;
 
     // Mark the payment information as needing to be updated.
-    $donation->update_payment = TRUE;
+    $donation->update_payment = $update_payment;
 
     // Let other modules know this is a sustainer update.
     $donation->sustainer_update = TRUE;
