@@ -3853,7 +3853,6 @@ function _fundraiser_sustainers_get_recurring_by_did($did) {
 function _fundraiser_sustainers_update_recurring($donation) {
   // Cast donation just in case.
   $donation = (array) $donation;
-
   // Check old data.
   $original = FALSE;
   if (isset($donation['did'])) {
