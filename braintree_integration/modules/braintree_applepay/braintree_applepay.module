@@ -257,5 +257,6 @@ function _braintree_applepay_method_is_enabled($node) {
 function braintree_applepay_fundraiser_update_billing_form_preprocess_alter(&$data) {
   if ($data['update payment'] && !empty($data['card']) && $data['card']->payment_method == 'braintree_applepay') {
     $data['update payment'] = FALSE;
+    $data['update billing'] = FALSE;
   }
 }
