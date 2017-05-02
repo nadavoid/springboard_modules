@@ -2309,17 +2309,13 @@ function fundraiser_sustainers_edit_form($did) {
   }
   $donation_amount_form = '<div id="donation-amount-form"><h2>Update Donation Amount</h2>' . $donation_amount_form . '</div>';
 
-<<<<<<< HEAD
-  if ($remaining_donation_count > 0 && empty($canceled)) {
-=======
   list($method_id, $rule_name) = explode('|', $next_donation->gateway['id']);
   $incompatible_gateway = $method_id == 'braintree_paypal' || $method_id == 'braintree_applepay';
 
   if ($incompatible_gateway) {
     $billing_update_form = '';
   }
-  elseif ($remaining_donation_count > 0 && empty($cancelled)) {
->>>>>>> origin/7.x-4.x_1763_applepay-compact-flow
+  elseif ($remaining_donation_count > 0 && empty($canceled)) {
     $data = array(
       'donation' => $next_donation,
       'calling module' => 'fundraiser_sustainers',
