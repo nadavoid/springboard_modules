@@ -46,7 +46,7 @@ class FundraiserEmailTestCase extends FundraiserSetup {
     $emails[] = '1Email+add@example.c0m'; // Invalid character in domain ending.
     foreach ($emails as $email) {
       // Test each email address by sending it directly through fundraiser's email validation function.
-      $this->assertFalse(_fundraiser_validate_email($email), t('An invalid email address (@email) was not accepted.',
+      $this->assertFalse(springboard_validate_email($email), t('An invalid email address (@email) was not accepted.',
           array('@email' => $email)), t('Fundraiser Email'));
     }
 
@@ -65,7 +65,7 @@ class FundraiserEmailTestCase extends FundraiserSetup {
     $emails[] = '1Email+add@sub-example.coooom'; // Maximum length domain ending.
     foreach ($emails as $email) {
       // Test each email address by sending it directly through fundraiser's email validation function.
-      $this->assertTrue(_fundraiser_validate_email($email), t('A valid email address (@email) was accepted.',
+      $this->assertTrue(springboard_validate_email($email), t('A valid email address (@email) was accepted.',
           array('@email' => $email)), t('Fundraiser Email'));
     }
   }

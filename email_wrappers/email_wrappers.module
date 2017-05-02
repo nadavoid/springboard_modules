@@ -169,6 +169,18 @@ function email_wrappers_form_email_wrapper_node_form_alter(&$form, &$form_state,
     );
   }
 
+  // Then add any other token set as needed.
+  $form['tokenset']['tokens'] = array(
+    '#type' => 'item',
+    '#title' => t('Drupal tokens'),
+    '#description' => theme('token_tree', array('token_types' => $token_set, 'recursion_limit' => 2, 'click_insert' => FALSE)),
+  );
+  $form['tokenset']['webform_tokens'] = array(
+    '#type' => 'item',
+    '#title' => t('Webform tokens'),
+    '#description' => theme('webform_token_help', array()),
+  );
+
   $form['#validate'][] = '_email_wrappers_node_edit_email_fields_validate';
 }
 
@@ -199,7 +211,7 @@ function _email_wrappers_node_edit_email_fields_validate($form, $form_state) {
 
     // Validate the field's value or values:
     foreach ($form_state['values'][$email_field][$lang] as $key => $email_value) {
-      if (!empty($email_value['value']) && !valid_email_address($email_value['value'])) {
+      if (isset($email_value['value']) && !springboard_validate_email($email_value['value'])) {
         form_set_error($email_field, t('Please enter a valid email address for field :email_field_label.',
           array(':email_field_label' => $email_field_label)));
       }

@@ -143,16 +143,16 @@ function _dynamic_gift_string_generate_test_urls($target_form_prefix) {
     'exclude_fields' => array());
   $test_url_options[] = array(
     'descr' => t('Secure Prepopulate section information + ask amounts with default + recurring amounts without default'),
-    'exclude_fields' => array('recurring_default')); 
+    'exclude_fields' => array('recurring_default'));
   $test_url_options[] = array(
     'descr' => t('Secure Prepopulate section information + ask amounts with default + no recurring amounts'),
-    'exclude_fields' => array('recurring_amounts', 'recurring_default')); 
+    'exclude_fields' => array('recurring_amounts', 'recurring_default'));
   $test_url_options[] = array(
     'descr' => t('Secure Prepopulate section information + ask amounts without default + recurring amounts with default'),
     'exclude_fields' => array('default_amount'));
   $test_url_options[] = array(
     'descr' => t('Secure Prepopulate section information + ask amounts without default + recurring amounts without default'),
-    'exclude_fields' => array('default_amount', 'recurring_default')); 
+    'exclude_fields' => array('default_amount', 'recurring_default'));
   $test_url_options[] = array(
     'descr' => t('Secure Prepopulate section information + ask amounts without default + no recurring amounts'),
     'exclude_fields' => array('default_amount', 'recurring_amounts', 'recurring_default'));
@@ -161,7 +161,7 @@ function _dynamic_gift_string_generate_test_urls($target_form_prefix) {
     'exclude_fields' => array('amounts', 'default_amount'));
   $test_url_options[] = array(
     'descr' => t('Secure Prepopulate section information + no ask amounts + recurring amounts without default'),
-    'exclude_fields' => array('amounts', 'default_amount', 'recurring_default')); 
+    'exclude_fields' => array('amounts', 'default_amount', 'recurring_default'));
   $test_url_options[] = array(
     'descr' => t('Secure Prepopulate section information only'),
     'exclude_fields' => array('amounts', 'default_amount', 'recurring_amounts', 'recurring_default'));
@@ -318,7 +318,7 @@ function dynamic_gift_strings_form_alter(&$form, &$form_state, $form_id) {
  * Form validation function form dynamic gift string settings.
  */
 function dynamic_gift_strings_settings_validate(&$form, &$form_state) {
-  if (!empty($form_state['values']['dynamic_gift_strings_send_alert']) && !valid_email_address($form_state['values']['dynamic_gift_strings_alert_email'])) {
+  if (!empty($form_state['values']['dynamic_gift_strings_send_alert']) && !springboard_validate_email($form_state['values']['dynamic_gift_strings_alert_email'])) {
     form_set_error('dynamic_gift_strings_alert_email', 'Alert email must be a valid email address.');
   }
 }
@@ -414,7 +414,7 @@ function _dynamic_gift_strings_alert($amounts, $nid) {
   $send_alert = variable_get('dynamic_gift_strings_send_alert', 0);
   if ($send_alert) {
     $email = variable_get('dynamic_gift_strings_alert_email', '');
-    if (valid_email_address($email)) {
+    if (springboard_validate_email($email)) {
       $params = array(
         'nid' => $nid,
         'amounts' => $amounts,

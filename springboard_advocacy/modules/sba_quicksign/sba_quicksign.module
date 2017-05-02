@@ -99,7 +99,7 @@ function sba_quicksign_after_build($form, $form_state) {
     if (isset($parents['sba_quicksign'])) {
       $email_field = &_webform_user_find_field($form, $component_hierarchy['mail']);
       $email_value = $quicksign_field['children']['qsign']['quicksign_mail']['#value'];
-      if (valid_email_address($email_value)) {
+      if (springboard_validate_email($email_value)) {
         $email_field['#value'] = $quicksign_field['children']['qsign']['quicksign_mail']['#value'];
       }
     }
@@ -189,7 +189,7 @@ function sba_quicksign_form_validate(&$form, &$form_state) {
       return;
     }
 
-    if (!valid_email_address($mail)) {
+    if (!springboard_validate_email($mail)) {
       sba_quicksign_remove_required_attr($form, $form_state);
       $form_state['storage']['quicksign_validated'] = TRUE;
       return;
@@ -231,7 +231,7 @@ function sba_quicksign_form_validate(&$form, &$form_state) {
       foreach($sb_cookie['profile'] as $key => $value) {
         $profile['sbp_' . $key] = $value;
       }
-      // zip code key is special.
+      // Zip code key is special.
       if(isset($profile['sbp_zip'])) {
         $profile['sbp_zip_plus_four'] = $profile['sbp_zip'];
       }
@@ -249,7 +249,7 @@ function sba_quicksign_form_validate(&$form, &$form_state) {
             $profile[$webform_field] = !empty($items[0]['value']) ? $items[0]['value'] : FALSE;
           } else {
             // Special handling for mail.
-            if (valid_email_address($mail)) {
+            if (springboard_validate_email($mail)) {
               $profile['mail'] = $mail;
             }
           }

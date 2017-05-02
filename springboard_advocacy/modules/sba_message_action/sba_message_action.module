@@ -247,7 +247,7 @@ function sba_message_action_node_insert($node) {
              ':nid' => $node->nid,
            )
          );
-      } 
+      }
 
       // Save the cloned confirmation message data.
       // We cannot do with with hook_clone_node_alter() because the nid of the new
@@ -707,7 +707,7 @@ function sba_message_action_form_sba_message_action_node_form_validate(&$form, &
     if ($form_state['values']['field_sba_test_mode_email'][$lang][0]['value'] == '') {
       form_set_error('field_sba_test_mode_email', t('An email address is required for test mode.'));
     }
-    elseif (!valid_email_address($form_state['values']['field_sba_test_mode_email'][$lang][0]['value'])) {
+    elseif (!springboard_validate_email($form_state['values']['field_sba_test_mode_email'][$lang][0]['value'])) {
       form_set_error('field_sba_test_mode_email', t('Invalid test mode mail address.'));
     }
   }
