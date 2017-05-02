@@ -1137,12 +1137,7 @@ function fundraiser_sustainers_update_7019(&$sandbox) {
     $sandbox['current_did'] = 0;
   }
 
-  $statuses = array(
-    'Expired' => array('payment_received', 'offline_check'),
-    'Canceled' => array('canceled', 'omitted'),
-    'Auto-canceled' => array('auto_canceled'),
-    'Failed' => array('failed', 'unknown'),
-  );
+  $statuses = fundraiser_sustainers_series_entity_statuses();
 
   // Grab every series.
   $series = db_query('
@@ -1168,15 +1163,35 @@ function fundraiser_sustainers_update_7019(&$sandbox) {
         array(':master_did' => $donation->did)
       )->fetchObject();
 
-      $order_status = isset($last_donation->status) ? $last_donation->status : 'unknown';
-      foreach ($statuses as $key => $status_arr) {
-        if (in_array($order_status, $status_arr)) {
-          $status = $key;
+      // Check if the series hasn't been created yet.
+      $update = TRUE;
+      if (variable_get('fundraiser_sustainers_create_series_cron', FALSE)) {
+        $full_donation = fundraiser_donation_get_donation($donation->did);
+        // If the series creation is pending don't update.
+        if (
+          !empty($full_donation->data['fundraiser_sustainers_series_status'])
+          && $full_donation->data['fundraiser_sustainers_series_status'] == FUNDRAISER_SUSTAINERS_SERIES_STATUS_PENDING
+        ) {
+          $update = FALSE;
         }
       }
-      $fundraiser_sustainers_series = entity_load_single('fundraiser_sustainers_series', $donation->did);
-      $fundraiser_sustainers_series->status = $status;
-      $fundraiser_sustainers_series->save();
+
+      if ($update) {
+        // Match the donation status to the array of the series entity statuses.
+        $order_status = isset($last_donation->status) ? $last_donation->status : 'unknown';
+        foreach ($statuses as $key => $status_arr) {
+          if (in_array($order_status, $status_arr)) {
+            $status = $key;
+          }
+        }
+
+        if (!empty($status)) {
+          db_update('fundraiser_sustainers_series')
+            ->fields(array('status' => $status))
+            ->condition('did', $donation->did)
+            ->execute();
+        }
+      }
     }
     $sandbox['progress']++;
     $sandbox['current_did'] = $donation->did;
@@ -1185,6 +1200,12 @@ function fundraiser_sustainers_update_7019(&$sandbox) {
   $sandbox['#finished'] = empty($sandbox['max']) ? 1 : ($sandbox['progress'] / $sandbox['max']);
 
   if ($sandbox['#finished'] >= 1) {
-    return t('Expired fundraiser sustainers series have been updated with the status of their last donation.');
+    // Set all remaining series to active.
+    db_update('fundraiser_sustainers_series')
+      ->fields(array('status' => 'active'))
+      ->isNull('status')
+      ->execute();
+
+    return t('Fundraiser sustainers series status columns have been updated.');
   }
 }
