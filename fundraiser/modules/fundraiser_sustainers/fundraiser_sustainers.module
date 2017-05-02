@@ -3899,7 +3899,8 @@ function fundraiser_sustainers_update_recurring_series_entity($master_did) {
     $statuses = fundraiser_sustainers_series_entity_statuses();
 
     // Load the last donation object to get the final order status.
-    $last_charge = array_pop(_fundraiser_sustainers_get_donations_recurr_by_masterdid($master_did));
+    $all_recuring = _fundraiser_sustainers_get_donations_recurr_by_masterdid($master_did);
+    $last_charge = array_pop($all_recuring);
     $last_donation = fundraiser_donation_get_donation($last_charge->did, TRUE);
     foreach ($statuses as $key => $status_arr) {
       // Match the order status to the array of series entity statuse.
