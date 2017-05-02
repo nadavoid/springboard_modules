@@ -195,7 +195,18 @@ function sba_quicksign_form_validate(&$form, &$form_state) {
       return;
     }
 
-    // Load user profile from email.
+    // If profile data is present in the Springboard cookie, use that data
+    // for the webform fields.
+    $sb_cookie = FALSE;
+    if(module_exists('springboard_cookie')) {
+      $sb_cookie = springboard_cookie_get_cookie();
+      // If the submitted email doesn't match the cookie email, then we have
+      // the wrong data in the cookie and will revert to the standard user lookup.
+      if((isset($sb_cookie['email']) && $sb_cookie['email'] != $mail) || empty($sb_cookie['profile'])) {
+        $sb_cookie = FALSE;
+      }
+    }
+
     $account = user_load_by_mail($mail);
 
     // Compile list of webform required fields.
@@ -207,59 +218,72 @@ function sba_quicksign_form_validate(&$form, &$form_state) {
     $missing_message_fields = sba_quicksign_check_message_fields($form, $form_state);
     foreach ($required_non_profile_fields as $form_key) {
       $field = _sba_quicksign_find_field_form_state($form_state['values'], $component_hierarchy[$form_key]);
-      if (empty($field)) {
+      if (empty($field) && empty($account->$form_key)) {
         $missing_non_profile_fields = TRUE;
       }
     }
 
     $missing_fields = FALSE;
     $profile = array();
-    foreach ($map as $webform_field => $profile_field) {
-      $field_value =_sba_quicksign_find_field_form_state($form_state['values'], $component_hierarchy[$webform_field]);
-      if (!empty($field_value)) {
-        $profile[$webform_field] = $field_value;
+    if($sb_cookie) {
+      // Loop through each profile field and update the key to match what is
+      // expected by webform.
+      foreach($sb_cookie['profile'] as $key => $value) {
+        $profile['sbp_' . $key] = $value;
       }
-      else {
-        if ($webform_field != 'mail') {
-          $items = field_get_items('user', $account, $profile_field);
-          $profile[$webform_field] = !empty($items[0]['value']) ? $items[0]['value'] : FALSE;
-        }
-        else {
-          // Special handling for mail.
-          if (valid_email_address($mail)) {
-            $profile['mail'] = $mail;
-          }
-        }
+      // zip code key is special.
+      if(isset($profile['sbp_zip'])) {
+        $profile['sbp_zip_plus_four'] = $profile['sbp_zip'];
+      }
+    }
+    else {
+      // Load user profile from email.
+      foreach ($map as $webform_field => $profile_field) {
+        $field_value = _sba_quicksign_find_field_form_state($form_state['values'], $component_hierarchy[$webform_field]);
 
-        if (in_array($webform_field, $required_fields)) {
-          if (empty($profile[$webform_field])) {
-            // One or more required fields are missing.
-            $profile[$webform_field] = '';
-            $missing_fields = TRUE;
+        if (!empty($field_value)) {
+          $profile[$webform_field] = $field_value;
+        } else {
+          if ($webform_field != 'mail') {
+            $items = field_get_items('user', $account, $profile_field);
+            $profile[$webform_field] = !empty($items[0]['value']) ? $items[0]['value'] : FALSE;
+          } else {
+            // Special handling for mail.
+            if (valid_email_address($mail)) {
+              $profile['mail'] = $mail;
+            }
           }
         }
       }
     }
+    foreach($required_fields as $field_key) {
+      if (empty($profile[$field_key]) && $field_key != 'mail') {
+        // One or more required fields are missing.
+        $profile[$field_key] = '';
+        $missing_fields = TRUE;
+      }
+    }
+
     // No profile available.
-    if (!$account) {
+    if (!$sb_cookie && !$account) {
       if ($missing_fields || $missing_non_profile_fields) {
-        drupal_set_message(t("We're sorry, we did not find an account with the email address !mail. Please fill out the full form.", array('!mail' => $mail)));
+        drupal_set_message(t("We could not find a match for !mail. Please re-enter your email address, or sign the petition using the full form below.", array('!mail' => $mail)));
       }
       form_set_value($quicksign_field, '', $form_state);
     }
 
-    if ($account && ($missing_fields || $missing_non_profile_fields)) {
+    if (($sb_cookie || $account) && ($missing_fields || $missing_non_profile_fields)) {
       drupal_set_message(t("Unfortunately, we don't have enough information on file to submit this form. Please complete the form below."));
       form_set_value($quicksign_field, '', $form_state);
     }
 
-    if ($account && (!$missing_fields && !$missing_non_profile_fields) && $missing_message_fields) {
+    if (($sb_cookie || $account) && (!$missing_fields && !$missing_non_profile_fields) && $missing_message_fields) {
       form_set_value($quicksign_field, '', $form_state);
       $form_state['storage']['quicksign_validated'] = TRUE;
       sba_quicksign_remove_required_attr($form, $form_state);
     }
 
-    if ($account && (!$missing_fields && !$missing_non_profile_fields && !$missing_message_fields)) {
+    if (($sb_cookie || $account) && (!$missing_fields && !$missing_non_profile_fields && !$missing_message_fields)) {
       // If everything has gone smoothly to this point package up the
       // loaded profile and pass it off for use during the submit callback.
       $form_state['node'] = $node;
@@ -269,6 +293,12 @@ function sba_quicksign_form_validate(&$form, &$form_state) {
       form_set_value($quicksign_field, '', $form_state);
       if (!empty($quicksign_flag)) {
         form_set_value($quicksign_flag, 1, $form_state);
+      }
+      // Set watchdog messages for tracking use of this feature.
+      if($sb_cookie) {
+        watchdog('sba_quicksign_cookie', 'Form %nid submitted via Quicksign using springboard cookie with email %mail.', array('%nid' => $node->nid, '%mail'=> $sb_cookie['email']));
+      } elseif ($account) {
+        watchdog('sba_quicksign', 'Form %nid submitted via Quicksign using database user %uid.', array('%nid' => $node->nid, '%uid'=> $account->uid));
       }
     }
   }
@@ -819,4 +849,29 @@ function sba_quicksign_clone_node_alter(&$node, $context) {
     $node->quicksign_description['format'] = $original_settings['quicksign_description_format'];
     $node->quicksign_button_text = $original_settings['quicksign_button_text'];
   }
+}
+
+
+/**
+ * Implements hook_webform_user_session_storage_cancel().
+ *
+ * Don't allow session storage when forms are submitted via quicksign.
+ */
+function sba_quicksign_webform_user_session_storage_cancel($form_state) {
+  if (isset($form_state['triggering_element'])) {
+    if (in_array('sba_quicksign', $form_state['triggering_element']['#parents'])) {
+      return FALSE;
+    }
+  }
+  return TRUE;
+}
+
+/**
+ * Implements hook_springboard_cookie_should_store_profile_values().
+ *
+ * Don't allow profile values in cookie when forms are submitted via quicksign.
+ */
+function sba_quicksign_springboard_cookie_should_store_profile_values($form_state) {
+  // Using the webform_user hook since this looks for the same item.
+  return sba_quicksign_webform_user_session_storage_cancel($form_state);
 }
