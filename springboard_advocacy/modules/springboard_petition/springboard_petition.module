@@ -593,3 +593,35 @@ function springboard_petition_springboard_twig_variable_replacements_alter($node
     'recent_signers' => views_embed_view('recent_petition_signatures', 'default', $vars['node']->nid),
   );
 }
+
+function springboard_petition_springboard_views_springboard_dashboard_panes_alter(&$webform_types, &$fundraiser_types) {
+  foreach ($webform_types as $key => $type) {
+    if ($type == 'springboard_petition') {
+      unset($webform_types[$key]);
+    }
+  }
+}
+
+/**
+ * Implements hook_springboard_admin_form_page_types_alter().
+ *
+ * Don't allow petition forms to appear on the Springboard Dashboard
+ * "all forms" page.
+ */
+function springboard_petition_springboard_admin_form_page_types_alter(&$display_types, $springboard_type) {
+  if (isset($display_types['springboard_petition'])) {
+    unset($display_types['springboard_petition']);
+  }
+}
+
+/**
+ * Implements hook_springboard_admin_enabled_form_types_alter().
+ *
+ * Don't allow petitions to appear in the
+ * "Springboard Admin Allowed Forms" settings form element.
+ */
+function springboard_petition_springboard_admin_enabled_form_types_alter(&$types) {
+  if (isset($types['springboard_petition'])) {
+    unset($types['springboard_petition']);
+  }
+}

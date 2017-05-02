@@ -363,21 +363,21 @@ function springboard_admin_menu() {
   $items['admin/springboard/donation-forms/all'] = array(
     'title' => 'Donation Forms',
     'type' => MENU_NORMAL_ITEM,
-    'access arguments' => array('access springboard dashboard'),
+    'access callback' => 'springboard_admin_access_donation_form_pages',
     'page callback' => 'springboard_admin_forms_page',
     'page arguments' => array('fundraiser')
   );
   $items['admin/springboard/forms/all'] = array(
     'title' => 'Forms',
     'type' => MENU_NORMAL_ITEM,
-    'access arguments' => array('access springboard dashboard'),
+    'access callback' =>'springboard_admin_access_form_pages',
     'page callback' => 'springboard_admin_forms_page',
     'page arguments' => array('webform_user')
   );
   $items['admin/springboard/marketing-analytics'] = array(
     'title' => 'Marketing & Analytics',
     'type' => MENU_NORMAL_ITEM,
-    'access arguments' => array('access springboard dashboard'),
+    'access callback' => 'springboard_admin_access_marketing_overview',
     'page callback' => 'springboard_admin_aggregate_links_page',
     'page arguments' => array('admin/springboard/marketing-analytics'),
    );
@@ -391,7 +391,7 @@ function springboard_admin_menu() {
    $items['admin/springboard/reports/integration-reports'] = array(
     'title' => 'Integration Reports',
     'type' => MENU_NORMAL_ITEM,
-    'access arguments' => array('access springboard dashboard'),
+    'access callback' => 'springboard_admin_access_integration_overview',
     'page callback' => 'springboard_admin_aggregate_links_page',
     'page arguments' => array('admin/springboard/reports/integration-reports', array('admin/springboard/reports')),
    );
@@ -445,6 +445,130 @@ function springboard_admin_menu_title_callback($original_title, $new_title) {
 
   return $original_title;
 }
+
+/**
+ * Check user if a user should have access to the marketing menu item.
+ *
+ * This could be replaced by a named permission rather than relying
+ * on subsets of other named permissions.
+ *
+ * @return bool
+ */
+function springboard_admin_access_donation_form_pages($type = NULL) {
+  if (user_access("administer springboard")
+    || user_access('administer springboard dashboard')
+    || user_access('administer fundraiser')
+    || user_access('bypass node access')
+    || user_access('edit any donation form')
+  ) {
+    return TRUE;
+  }
+  $types = array();
+  if (!isset($type)) {
+    $types = variable_get('springboard_admin_allowed_form_types', array_keys(_springboard_admin_enabled_form_types()));
+    foreach ($types as $type) {
+      if (fundraiser_is_donation_type($type)) {
+        if (user_access('edit any ' . $type . ' content')
+        || user_access('edit any donation form')
+        || node_access('create', $type)) {
+          return TRUE;
+        }
+      }
+    }
+  }
+  $check_types = isset($type) ? $type : $types;
+  $access = module_invoke_all('springboard_admin_access_donation_form_pages', $check_types);
+  if (!empty(array_filter($access))) {
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/**
+ * Check user if a user should have access to the marketing menu item.
+ *
+ * This could be replaced by a named permission rather than relying
+ * on subsets of other named permissions.
+ *
+ * @return bool
+ */
+function springboard_admin_access_form_pages($type = NULL) {
+
+  if (user_access("administer springboard")
+    || user_access('administer springboard dashboard')
+    || user_access('administer fundraiser')
+    || user_access('bypass node access')
+  ) {
+    return TRUE;
+  }
+
+  $webform_types = array();
+
+  if (!isset($type)) {
+    $webform_types = variable_get('springboard_admin_allowed_form_types', array_keys(_springboard_admin_enabled_form_types()));
+    foreach ($webform_types as $type) {
+      if ((user_access('edit any ' . $type . ' content')
+        || node_access('create', $type))
+        && !fundraiser_is_donation_type($type)
+      ) {
+        return TRUE;
+      }
+    }
+  }
+
+  $check_types = isset($type) ? $type : $webform_types;
+  $access = module_invoke_all('springboard_admin_access_form_pages', $check_types);
+  if (!empty(array_filter($access))) {
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/**
+ * Check user if a user should have access to the marketing menu item.
+ *
+ * This could be replaced by a named permission rather than relying
+ * on subsets of other named permissions.
+ *
+ * @return bool
+ */
+function springboard_admin_access_marketing_overview() {
+  if (
+    user_access('administer market source')
+    || user_access('administer webform_ab')
+    || user_access('manage webform goals')
+    || user_access('administer springboard social')
+    || user_access('administer springboard tags')
+    || user_access('administer springboard')
+    || user_access('administer springboard dashboard')
+    || user_access('bypass node access')
+  ) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+/**
+ * Check if a user should have access to the reports menu item.
+ *
+ * This could be replaced by a named permission rather than relying
+ * on subsets of other named permissions.
+ *
+ * @return bool
+ */
+function springboard_admin_access_integration_overview() {
+  if (user_access('bypass node access')
+    || user_access('administer springboard')
+    || user_access('administer springboard dashboard')
+    || user_access('view salesforce batch logs')
+  ) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
 
 /**
  * Page callback used to redirect from /admin to /springboard when the
@@ -777,16 +901,19 @@ function springboard_admin_aggregate_links_page($path, $parents = array()) {
   $links = array();
   if (isset($item['_children'])) {
     foreach ($item['_children'] as $child) {
-      $options = array();
-      if (isset($child['external'])) {
-        $options['external'] = $child['external'];
+      $child_item = menu_get_item($child['link_path']);
+      if ($child_item['access']) {
+        $options = array();
+        if (isset($child['external'])) {
+          $options['external'] = $child['external'];
+        }
+        $links[] = array(
+          'title' => $child['link_title'],
+          'href' => $child['link_path'],
+          'options' => $options,
+          'weight' => $child['weight'],
+        );
       }
-      $links[] = array(
-        'title' => $child['link_title'],
-        'href' => $child['link_path'],
-        'options' => $options,
-        'weight' => $child['weight'],
-      );
     }
   }
   if (!empty($links)) {
@@ -827,28 +954,29 @@ function springboard_admin_forms_page($springboard_type) {
     switch ($springboard_type) {
       case 'fundraiser':
         if (fundraiser_is_donation_type($type->type)) {
-          $display_types[$type->type] = $type;
+          if (springboard_admin_access_donation_form_pages($type->type)) {
+            $display_types[$type->type] = $type;
+          }
         }
-      break;
+        break;
+
       case 'webform_user':
-        if (module_exists('springboard_advocacy')) {
-          $action = springboard_advocacy_is_action_type($type->type);
-        }
-        if (module_exists('springboard_petition')) {
-          $petition = springboard_petition_is_petition_type($type->type);
-        }
-        // Only create the item if the node type uses Webform User but not Fundraiser or Advocacy.
+        // Only create the item if the node type uses Webform User but not
+        // Fundraiser.
         if ($type && _webform_user_is_webform_user_node_type($type->type)
           && !fundraiser_is_donation_type($type->type)
-          && empty($action)
-          && empty($petition)
         ) {
-          $display_types[$type->type] = $type;
+          if (springboard_admin_access_form_pages($type->type)) {
+            $display_types[$type->type] = $type;
+          }
         }
       break;
+
       default:
         if (!_webform_user_is_webform_user_node_type($type->type) && !fundraiser_is_donation_type($type->type)) {
-          $display_types[$type->type] = $type;
+          if (springboard_admin_access_form_pages($type->type)) {
+            $display_types[$type->type] = $type;
+          }
         }
       break;
     }
@@ -877,6 +1005,7 @@ function springboard_admin_forms_page($springboard_type) {
       }
     }
   }
+
   return theme('springboard_admin_forms_page', array('types' => $display_types, 'springboard_type' => $springboard_type, 'tables' => $tables));
 }
 
@@ -889,6 +1018,25 @@ function springboard_admin_springboard_admin_form_page_types_alter(&$display_typ
   foreach ($display_types as $type => $info) {
     if (!in_array($type, $allowed_types)) {
       unset($display_types[$type]);
+    }
+  }
+}
+
+
+/**
+ * Implements hook_springboard_views_springboard_dashboard_panes_alter().
+ */
+function springboard_admin_springboard_views_springboard_dashboard_panes_alter(&$webform_types, &$fundraiser_types) {
+  // Remove types not checked to display in the settings.
+  $allowed_types = array_filter(variable_get('springboard_admin_allowed_form_types', array_keys(_springboard_admin_enabled_form_types())));
+  foreach ($webform_types as $type) {
+    if (!in_array($type, $allowed_types)) {
+      unset($webform_types[$type]);
+    }
+  }
+  foreach ($fundraiser_types as $type) {
+    if (!in_array($type, $allowed_types)) {
+      unset($fundraiser_types[$type]);
     }
   }
 }
@@ -1585,6 +1733,9 @@ function _springboard_admin_enabled_form_types() {
       $sb_types[$type->type] = $type->name;
     }
   }
+
+  // Allow modules to remove types from the options list in admin settings.
+  drupal_alter('springboard_admin_enabled_form_types', $sb_types);
 
   return $sb_types;
 }

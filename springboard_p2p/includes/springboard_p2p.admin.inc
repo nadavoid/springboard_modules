@@ -9,44 +9,51 @@
  * Page callback for the p2p dashboard.
  */
 function springboard_p2p_dashboard() {
-
   if (springboard_p2p_no_content_types_enabled()) {
     drupal_set_message('No content types have been enabled for peer to peer.  Please visit the settings and configure them.', 'error');
   }
   
-  $views = array(
-    'p2p_campaigns' => array (
-      'header' => t('Active peer to peer campaigns'),
-      'content' => views_embed_view('p2p_campaigns', 'block'),
-      'create_link' => array('title' => t('Create a new campaign'), 'href' => 'node/add/p2p-campaign'),
-      'viewmore_link' => array('title' => t('See all campaigns'), 'href' => 'admin/springboard/p2p/campaign')
-    ),
-    'p2p_categories' => array(
-      'header' => t('Campaign categories'),
-      'content' => views_embed_view('p2p_categories', 'block'),
-      'create_link' => array('title' => t('Create a new category'), 'href' => 'node/add/p2p-category'),
-      'viewmore_link' => array('title' => t('See all categories'), 'href' => 'admin/springboard/p2p/category'),
-    ),
-    'p2p_user_approval' => array(
-      'header' => t('Users awaiting approval'),
-      'content' => views_embed_view('p2p_user_approval', 'dashboard_page'),
-      'viewmore_link' => array('title' => t('Open approval queue'), 'href' => 'admin/springboard/p2p/approval/user'),
-    ),
-    'p2p_personal_campaigns_admin' => array(
-      'header' => t('Personal campaigns'),
-      'content' => views_embed_view('p2p_personal_campaigns_admin', 'block_1'),
-      'viewmore_link' => array('title' => t('View all personal campaigns'), 'href' => 'admin/springboard/p2p/personal-campaigns'),
-    ),
-    'p2p_landing_pages' => array(
-      'header' => t('Landing pages'),
-      'content' => views_embed_view('p2p_landing_pages', 'block'),
-      'create_link' => array('title' => t('Create a new landing page'), 'href' => 'node/add/p2p-campaign-landing'),
-      'viewmore_link' => array('title' => t('View all landing pages'), 'href' => 'admin/springboard/p2p/landing-pages'),
-    ),
+  $views = array();
+  $views['p2p_campaigns'] = array(
+    'header' => t('Active peer to peer campaigns'),
+    'content' => views_embed_view('p2p_campaigns', 'block'),
+    'viewmore_link' => array('title' => t('See all campaigns'), 'href' => 'admin/springboard/p2p/campaign'),
   );
+  if (node_access('create', 'p2p_campaign')) {
+    $views['p2p_campaigns']['create_link'] = array('title' => t('Create a new campaign'), 'href' => 'node/add/p2p-campaign');
+  }
+
+  $views['p2p_categories'] = array(
+    'header' => t('Campaign categories'),
+    'content' => views_embed_view('p2p_categories', 'block'),
+    'viewmore_link' => array('title' => t('See all categories'), 'href' => 'admin/springboard/p2p/category'),
+  );
+  if (node_access('create', 'p2p_category')) {
+    $views['p2p_categories']['create_link'] = array('title' => t('Create a new category'), 'href' => 'node/add/p2p-category');
+  }
+
+  $views['p2p_user_approval'] = array(
+    'header' => t('Users awaiting approval'),
+    'content' => views_embed_view('p2p_user_approval', 'dashboard_page'),
+    'viewmore_link' => array('title' => t('Open approval queue'), 'href' => 'admin/springboard/p2p/approval/user'),
+  );
+
+  $views['p2p_personal_campaigns_admin'] = array(
+    'header' => t('Personal campaigns'),
+    'content' => views_embed_view('p2p_personal_campaigns_admin', 'block_1'),
+    'viewmore_link' => array('title' => t('View all personal campaigns'), 'href' => 'admin/springboard/p2p/personal-campaigns'),
+  );
+
+  $views['p2p_landing_pages'] = array(
+    'header' => t('Landing pages'),
+    'content' => views_embed_view('p2p_landing_pages', 'block'),
+    'viewmore_link' => array('title' => t('View all landing pages'), 'href' => 'admin/springboard/p2p/landing-pages'),
+  );
+  if (node_access('create', 'p2p_campaign_landing')) {
+    $views['p2p_landing_pages']['create_link'] = array('title' => t('Create a new landing page'), 'href' => 'node/add/p2p-campaign-landing');
+  }
   
   return theme('springboard_p2p_dashboard', array('views' => $views));
-
 }
 
 /**

@@ -19,15 +19,69 @@ function springboard_views_views_pre_render(&$view) {
     'sbv_retry_queue' => 'Retry',
     'sbv_permanent_failure' => 'Failed',
   );
-  if (!array_key_exists($view->name, $sbv_views)) {
-    return;
+  if (array_key_exists($view->name, $sbv_views)) {
+    $view->attachment_before .= t('!status Items: !count items',
+      array(
+        '!status' => $sbv_views[$view->name],
+        '!count' => $view->total_rows,
+      ));
   }
-  $view->attachment_before .= t('!status Items: !count items',
-    array('!status' => $sbv_views[$view->name], '!count' => $view->total_rows));
+
+  if ($view->name == 'sbv_forms') {
+    springboard_views_filter_sbv_forms($view);
+  }
+}
+
+/**
+ * Apply access filters to the sbv_forms view result.
+ *
+ * The sbv_forms view result has to be filtered by user_access to
+ * each content type in the result, removing rows to which the user does not
+ * have edit or create access for the *content type* (not the node) displayed.
+ * Removing is easy, but that makes the pager count wrong, requiring the
+ * following to correct it.
+ *
+ * @param object $view
+ *   The sbv_forms view.
+ */
+function springboard_views_filter_sbv_forms(&$view) {
+  // Re-execute the view without a page limit to get a full count of
+  // user_access filtered results.
+  $counting_view = views_get_view($view->name);
+  $counting_view->set_display($view->current_display);
+  $counting_view->set_items_per_page('');
+  $counting_view->set_arguments($view->args);
+  $counting_view->execute();
+
+  // Iterate through the un-paged result and filter by access.
+  foreach ($counting_view->result as $index => $count_result) {
+    if (!empty($count_result->nid)) {
+      $node = node_load($count_result->nid);
+      if (!node_access('update', $node) && !node_access('create', $count_result->node_type)) {
+        unset($counting_view->result[$index]);
+      }
+    }
+  }
+
+  // Remove the user_access filtered results, this time
+  // from the original pre-rendered view.
+  foreach ($view->result as $index => $result) {
+    if (!empty($result->nid)) {
+      $node = node_load($count_result->nid);
+      if (!node_access('update', $node) && !node_access('create', $result->node_type)) {
+        unset($view->result[$index]);
+      }
+    }
+  }
+
+  // Reset the pager to match the filtered results.
+  $view->query->pager->total_items = count($counting_view->result);
+  $view->query->pager->update_page_info();
 }
 
 /**
  * Implements hook_date_api_tables().
+ *
  * Tell Date which tables to look for date fields in.
  */
 function springboard_views_date_api_tables() {
@@ -400,28 +454,57 @@ function springboard_views_springboard_dashboard_panes() {
     }
   }
 
-  drupal_alter('springboard_views_springboard_dashboard_panes', $webform_types);
+  drupal_alter('springboard_views_springboard_dashboard_panes', $webform_types, $fundraiser_types);
 
-  $panes['springboard_recent_donation_forms'] = array(
-   'label' => t('Recent donation forms'),
-   'description' => t('Configuration and submissions summary for recently created or updated springboard donation forms.'),
-   'content' => '<h2>' . t('Recent donation forms ') .  '</h2>' .
-     (module_exists('webform') ? l(t('Create donation form'), $base_url . '/node/add/donation-form', array('attributes' => array('class' => array('button', 'add-button')))) : '' ) .
-     (module_exists('views') ? views_embed_view('sbv_forms', 'block_4', implode('+', $fundraiser_types)) : t('Please enable the Views module to improve your Springboard experience.')) .
-     l(t('View All Donation Forms'), 'admin/springboard/donation-forms/all', array('attributes' => array('class' => array('more-link button more-button')))),
-   'position' => 'column_left',
-   'weight' => 0,
-  );
-  $panes['springboard_recent_forms'] = array(
-    'label' => t('Recent forms'),
-    'description' => t('Configuration and submissions summary for recently created or updated springboard forms.'),
-    'content' => '<h2>' . t('Recent forms ') .   '</h2>' .
-      (module_exists('fundraiser') ? l(t('Create form'), $base_url . '/node/add/webform', array('attributes' => array('class' => array('button', 'add-button')))) : '')  .
-      (module_exists('views') ? views_embed_view('sbv_forms', 'block_3', implode('+', $webform_types)) : t('Please enable the Views module to improve your Springboard experience.')) .
-      l(t('View All Forms'), 'admin/springboard/forms/all', array('attributes' => array('class' => array('more-link button more-button')))),
-    'position' => 'column_left',
-    'weight' => 2,
-  );
+  $donation_pane_access = FALSE;
+  if (module_exists('springboard_admin') && springboard_admin_access_donation_form_pages()) {
+    $donation_pane_access = TRUE;
+  }
+
+  if ($donation_pane_access) {
+    $panes['springboard_recent_donation_forms'] = array(
+      'label' => t('Recent donation forms'),
+      'description' => t('Configuration and submissions summary for recently created or updated springboard donation forms.'),
+      'content' => '<h2>' . t('Recent donation forms') . '</h2>' .
+        (module_exists('webform') && user_access('create donation_form content') ? l(t('Create donation form'), $base_url . '/node/add/donation-form', array(
+          'attributes' => array(
+            'class' => array(
+              'button',
+              'add-button',
+            ),
+          ),
+        )) : '') .
+        (module_exists('views') ? views_embed_view('sbv_forms', 'block_4', implode('+', $fundraiser_types)) : t('Please enable the Views module to improve your Springboard experience.')) .
+        l(t('View All Donation Forms'), 'admin/springboard/donation-forms/all', array('attributes' => array('class' => array('more-link button more-button')))),
+      'position' => 'column_left',
+      'weight' => 0,
+    );
+  }
+
+  $webform_pane_access = FALSE;
+  if (module_exists('springboard_admin') && springboard_admin_access_form_pages()) {
+    $webform_pane_access = TRUE;
+  }
+
+  if ($webform_pane_access) {
+    $panes['springboard_recent_forms'] = array(
+      'label' => t('Recent forms'),
+      'description' => t('Configuration and submissions summary for recently created or updated springboard forms.'),
+      'content' => '<h2>' . t('Recent forms') . '</h2>' .
+        (module_exists('fundraiser') && user_access('create webform content') ? l(t('Create form'), $base_url . '/node/add/webform', array(
+          'attributes' => array(
+            'class' => array(
+              'button',
+              'add-button',
+            ),
+          ),
+        )) : '') .
+        (module_exists('views') ? views_embed_view('sbv_forms', 'block_3', implode('+', $webform_types)) : t('Please enable the Views module to improve your Springboard experience.')) .
+        l(t('View All Forms'), 'admin/springboard/forms/all', array('attributes' => array('class' => array('more-link button more-button')))),
+      'position' => 'column_left',
+      'weight' => 2,
+    );
+  }
   return $panes;
 }
 
