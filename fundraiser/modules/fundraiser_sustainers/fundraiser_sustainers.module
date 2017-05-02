@@ -3404,6 +3404,9 @@ function fundraiser_sustainers_donation_retry($donation) {
  *   Standard fundraiser donation data structure.
  */
 function fundraiser_sustainers_donation_fail($donation) {
+  // Let others know the donation has failed.
+  fundraiser_donation_decline($donation);
+
   // Set the sustainer record up in a failed state.
   $recurring = array(
     'did' => $donation->did,
@@ -3415,9 +3418,6 @@ function fundraiser_sustainers_donation_fail($donation) {
   watchdog('fundraiser_sustainers', 'Payment for recurring donation @id has
     failed @count times. The donation will not be submitted for payment again. Gateway message: @message',
     array('@id' => $donation->did, '@count' => variable_get('fundraiser_sustainers_max_processing_attempts', 3), '@message' => $donation->result['message']), WATCHDOG_DEBUG);
-
-  // Let others know the donation has failed.
-  fundraiser_donation_decline($donation);
 
   // Fire a hook so that other modules can respond to the failure.
   module_invoke_all('fundraiser_sustainers_donation_fail', $donation);
