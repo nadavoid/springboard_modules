@@ -679,7 +679,15 @@ function email_wrappers_render_email_body($eid, $message, $settings = array()) {
   }
   $html_raw = token_replace($html_raw, $token_set, array('clear' => TRUE));
   $text_raw = token_replace($text_raw, $token_set, array('clear' => TRUE));
-  $multi_body  = "
+
+  $data = array(
+    'html_raw' => &$html_raw,
+    'text_raw' => &$text_raw,
+    'message' => &$message,
+  );
+  drupal_alter('email_wrappers_email_body_messages', $data);
+
+  $multi_body = "
 
 This is a multi-part message in MIME format.
 
@@ -703,13 +711,6 @@ $html_raw
   if (isset($message['params']['donation'])) {
     $token_set['donation'] = $message['params']['donation'];
   }
-
-  $data = array(
-    'html_raw' => &$html_raw,
-    'text_raw' => &$text_raw,
-    'message' => &$message,
-  );
-  drupal_alter('email_wrappers_email_body_messages', $data);
 
   $multi_body = token_replace($multi_body, $token_set, array('clear' => TRUE));
   if ($eid) {

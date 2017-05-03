@@ -169,12 +169,12 @@ function _springboard_twig_process_text($text, array $replacements) {
       // Add website variables.
       $site_url = str_replace(request_path(), '', url(current_path(), array('absolute' => TRUE)));
       $replacements['website'] = array(
-        'website.mail' => variable_get('site_mail'),
-        'website.login_url' => $site_url . 'user',
-        'website.name' => variable_get('site_name'),
-        'website.slogan' => variable_get('site_slogan'),
-        'website.url' => $site_url,
-        'website.url_brief' => rtrim(preg_replace('/https?:\/\//i', '', $site_url), '/'),
+        'mail' => variable_get('site_mail'),
+        'login_url' => $site_url . 'user',
+        'name' => variable_get('site_name'),
+        'slogan' => variable_get('site_slogan'),
+        'url' => $site_url,
+        'url_brief' => rtrim(preg_replace('/https?:\/\//i', '', $site_url), '/'),
       );
 
       $time = time();
