@@ -65,6 +65,22 @@ function springboard_group_og_permission() {
     'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
   );
 
+  $orders_grouped = og_get_group_audience_fields('commerce_order', 'commerce_order', 'node', 'springboard_group');
+  if (!empty($orders_grouped)) {
+    $items['manage group orders'] = array(
+      'title' => t('Manage orders in a group'),
+      'description' => t('Update or delete orders in a group.'),
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+    );
+    $items['view group orders'] = array(
+      'title' => t('View orders in a group'),
+      'description' => t('View orders in a group.'),
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+    );
+
+  }
+
+
   return $items;
 
 }

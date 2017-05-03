@@ -53,7 +53,6 @@ function springboard_group_views_query_alter(&$view, &$query) {
     // we skip the query alteration.
     //$grouped = springboard_group_views_query_check_content_type($query);
 
-
     $entity_type = 'node';
     $entity_table = 'node';
     $entity_field = 'nid';
@@ -170,7 +169,7 @@ function springboard_group_views_query_check_content_type($query) {
 
 
 function springboard_group_views_pre_execute(&$view) {
-  dpq($view->build_info['query']);
+  //dpq($view->build_info['query']);
 }
 
 /**
