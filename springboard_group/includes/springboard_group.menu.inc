@@ -189,6 +189,14 @@ function springboard_group_menu_alter(&$items) {
       $items[$path]['access callback'] = 'springboard_group_rules_payment_method_overview_access';
     }
   }
+
+  $grouped_types = springboard_group_get_grouped_types();
+  foreach ($grouped_types as $entity_type => $bundle) {
+    $function = 'springboard_group_' . $entity_type . '__menu_alter';
+    if (function_exists($function)) {
+      $function($items);
+    }
+  }
 }
 
 function springboard_group_rules_payment_method_overview_access($orig_args) {

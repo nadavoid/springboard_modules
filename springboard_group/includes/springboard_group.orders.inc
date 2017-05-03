@@ -4,22 +4,47 @@
  * Orders definitions and hooks for Springboard Group.
  */
 
+function springboard_group_commerce_orders_are_grouped($fields = FALSE) {
+  $group_enabled_field = &drupal_static(__FUNCTION__);
+  if (!isset($group_enabled_field)) {
+    $group_enabled_field = og_get_group_audience_fields('commerce_order', 'commerce_order', 'node', 'springboard_group');
+  }
+  if (!$fields) {
+    return (bool) $group_enabled_field;
+  }
+  else {
+    return $group_enabled_field;
+  }
+}
+
+/**
+ * Permission Checker.
+ *
+ * @param $gid
+ * @param $permission
+ *
+ * @return bool
+ */
+function springboard_group_commerce_order_check_group_perms($gid, $permission) {
+  //@todo cache. send uid?
+  if ($roles = og_get_user_roles('node', $gid)) {
+    $perms = og_role_permissions($roles);
+    foreach ($perms as $perm_array) {
+      if (in_array($permission, $perm_array)) {
+        return TRUE;
+      }
+    }
+  }
+  return FALSE;
+}
 
 /**
  * Add the group widget to the commerce order form.
  */
 function springboard_group_form_commerce_order_ui_order_form_alter(&$form, &$form_state) {
 
-  // Check that this entity has a groups field.
-  $childs = element_children($form);
-  $grouped = FALSE;
-  foreach ($childs as $child) {
-    if (strpos($child, 'og_group_ref') !== FALSE) {
-      $grouped = TRUE;
-    }
-  }
   // No groups field, do not proceed.
-  if (!$grouped) {
+  if (!springboard_group_commerce_orders_are_grouped()) {
     return;
   }
 
@@ -27,7 +52,7 @@ function springboard_group_form_commerce_order_ui_order_form_alter(&$form, &$for
   // See springboard_group_field_widget_form_alter() and
   // springboard_group_set_single_selector() for details about
   // why this is necessary.
-  $fields = og_get_group_audience_fields('commerce_order', 'commerce_order', 'node', 'springboard_group');
+  $fields = springboard_group_commerce_orders_are_grouped(TRUE);
 
   if (!empty($fields)) {
     springboard_group_set_single_selector($form, $fields);
@@ -65,23 +90,31 @@ function springboard_group_commerce_order_form__validate(&$form, &$form_state, $
  * Implements hook_fundraiser_donation_create().
  */
 function springboard_group_fundraiser_donation_create($donation) {
-  // Get basic information from the donation node.
-  $fields = og_get_group_audience_fields('commerce_order', 'commerce_order', 'node', 'springboard_group');
-  if (!empty($fields)) {
+  // Check if commerce orders are grouped.
+  if (springboard_group_commerce_orders_are_grouped()) {
+    // If commerce orders are grouped, set the group id on new orders,
+    // based on group ownership of the donation form.
     $node_wrapper = entity_metadata_wrapper('node', $donation->node);
     $group_field_name = 'og_group_ref_' . substr($donation->node->type, 0, 19);
-    $node_group = $node_wrapper->{$group_field_name}->value();
-    $node_group_id = $node_group[0]->nid;
-    // Get the original order.
-    $order = commerce_order_load($donation->did);
-    $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
-    $order_wrapper->og_group_ref_commerce_order->set(array('target_id' => $node_group_id));
-    $order_wrapper->save();
+    if (!empty($node_wrapper->{$group_field_name})) {
+      $node_group = $node_wrapper->{$group_field_name}->value();
+      $node_group_id = $node_group[0]->nid;
+      // Get the original order.
+      if (!empty($node_group_id)) {
+        $order = commerce_order_load($donation->did);
+        $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+        $order_wrapper->og_group_ref_commerce_order->set(array('target_id' => $node_group_id));
+        $order_wrapper->save();
+      }
+    }
   }
 }
 
 /**
- * @param $order
+ * Implements hook_commerce_order_presave().
+ *
+ * Update group membership on commerce orders when admin edits order and
+ * changes group affiliation.
  */
 function springboard_group_commerce_order_presave($order) {
 
@@ -94,47 +127,50 @@ function springboard_group_commerce_order_presave($order) {
     $new_group_gid = $new_group[0]->nid;
     $old_group_gid = $old_group[0]->nid;
     if ($new_group_gid != $old_group_gid) {
-      // grab associated sustainer orders and update them too
+      // @todo grab associated sustainer orders and update them too
     }
   }
 }
 
 /**
- * @param $op
- * @param $entity
- * @param $account
- * @param $entity_type
- * @return bool
+ * Implements hook_commerce_entity_access().
+ *
+ * Limit access to orders and payments based on group ownership of the order.
  */
 function springboard_group_commerce_entity_access($op, $entity, $account, $entity_type) {
-  $fields = og_get_group_audience_fields('commerce_order', 'commerce_order', 'node', 'springboard_group');
-  if (!empty($fields)) {
-    // Check for group permissions.
+
+  // Check if orders are configured as groupable.
+  if (springboard_group_commerce_orders_are_grouped()) {
+
+    // Check for group update and delete permissions on the order entity.
+    // View permissions are handled elsewhere.
     if (isset($entity)) {
+
       if (($op == 'update' || $op == 'delete')) {
+
         if ($entity_type == 'commerce_order') {
           $group = og_get_entity_groups('commerce_order', $entity);
         }
-        elseif ($entity_type == 'commerce_payment') {
-          // @todo probably not needed due to commerce permissions cascading.
-        }
+        // If the order has a group, check if the current user has access
+        // in that group.
         if (!empty($group)) {
-          $access = FALSE;
           // Check for global permissions.
-          if (user_access('administer groups')
+          if (user_access('administer group')
+          && user_access('administer orders')
           ) {
             return TRUE;
           }
           $gid = reset($group['node']);
-          if ($roles = og_get_user_roles('node', $gid)) {
-            $perms = og_role_permissions($roles);
-            foreach ($perms as $perm_array) {
-              if (in_array('manage group orders', $perm_array)) {
-                return TRUE;
-              }
-            }
+          return springboard_group_commerce_order_check_group_perms($gid, 'manage group orders');
+        }
+        // The order isn't grouped. Only group admins can manage
+        // non-grouped items.
+        else {
+          if (!user_access('administer group')
+            && !user_access('administer orders')
+          ) {
+            return FALSE;
           }
-          return $access;
         }
       }
     }
@@ -142,52 +178,60 @@ function springboard_group_commerce_entity_access($op, $entity, $account, $entit
 }
 
 /**
- * limit view access
+ * Implements hook_query_TAG_alter().
+ *
+ * Limit view access to commerce orders by group ownsership.
  */
 function springboard_group_query_commerce_order_access_alter(&$query) {
-  if (!user_access('administer group')) {
-    $fields = og_get_group_audience_fields('commerce_order', 'commerce_order', 'node', 'springboard_group');
-    if (!empty($fields)) {
 
+  // Skip this if a user is a group admin.
+  if (!user_access('administer group')) {
+    // Check if orders are grouped.
+    if (springboard_group_commerce_orders_are_grouped()) {
+
+      // Check if the query contains an Order ID.
       foreach ($query->conditions() as $condition) {
         if (!empty($condition['field']) && is_string($condition['field']) && $condition['field'] == 'order_id') {
           $id = $condition['value'];
         }
       }
 
+      // Get the users groups.
       $groups = og_get_groups_by_user(NULL, 'node');
       $allowed_gids = array(0);
 
       if (!empty($groups)) {
         foreach ($groups as $gid) {
-          if ($roles = og_get_user_roles('node', $gid)) {
-            $perms = og_role_permissions($roles);
-            foreach ($perms as $perm_array) {
-              if (in_array('view group orders', $perm_array)) {
-                $allowed_gids[] = $gid;
-              }
-            }
+          // Get the users roles in their groups and check
+          // for view access in each group.
+          if (springboard_group_commerce_order_check_group_perms($gid, 'view group orders')) {
+            // Groups in which the user has view access.
+            $allowed_gids[] = $gid;
           }
         }
       }
-
       $allowed_gids = implode(',', $allowed_gids);
 
+      // If this is a listing, there is no order Id to check. We have to load
+      // all orders in a group and check against the array.
+      // @todo: really?
       if (empty($id)) {
         $allowed_order_ids = array(0);
         $order_ids = db_query('SELECT order_id FROM {commerce_order} co
         INNER JOIN {og_membership} om on co.order_id = om.etid AND om.field_name = :name
-        WHERE om.gid IN (' . $allowed_gids . ')',
-          array(':name' => "og_group_ref_commerce_order")
+        WHERE om.gid IN (:gids)',
+          array(':name' => "og_group_ref_commerce_order", ':gids' => $allowed_gids)
         )->fetchAllAssoc('order_id');
 
         if (!empty($order_ids)) {
           $allowed_order_ids = array_keys($order_ids);
         }
+
         $query->condition('commerce_order.order_id', $allowed_order_ids, 'IN');
 
       }
       else {
+        // There's an order id in the query. Check to see if it's in the groups.
         $is_in_allowed_group = db_query('SELECT etid FROM {og_membership} om
         WHERE om.gid IN (' . $allowed_gids . ')
         AND om.field_name = :name
@@ -196,11 +240,137 @@ function springboard_group_query_commerce_order_access_alter(&$query) {
           ':name' => "og_group_ref_commerce_order",
           ':id' => $id
         ))->fetchField();
+
         if (empty($is_in_allowed_group)) {
           $query->condition('commerce_order.order_id', array('-1'), 'IN');
         }
       }
-
     }
   }
+}
+
+
+/**
+ * Menu alter helper.
+ *
+ * The order payment paths are controlled by access functions which are not
+ * alterable in the way we need, so we have to wrap the original access
+ * functions in a custom access function.
+ *
+ * @param $items
+ */
+function springboard_group_commerce_order__menu_alter(&$items) {
+  if (springboard_group_commerce_orders_are_grouped()) {
+    $items['admin/commerce/orders/%commerce_order/payment']['access callback'] = 'springboard_group_commerce_payment_transaction_order_access';
+    $items['admin/commerce/orders/%commerce_order/payment/%commerce_payment_transaction']['access callback'] = 'springboard_group_commerce_payment_transaction_access';
+    $items['admin/commerce/orders/%commerce_order/payment/%commerce_payment_transaction/edit']['access callback'] = 'springboard_group_commerce_payment_transaction_access';
+    $items['admin/commerce/orders/%commerce_order/payment/%commerce_payment_transaction/delete']['access callback'] = 'springboard_group_commerce_payment_transaction_access';
+
+  }
+}
+
+/**
+ * A commerce_payment_transaction_order_access() wrapper.
+ *
+ * Manipulate the commerce payment transaction entity permissions.
+ *
+ * @param $op
+ * @param $order
+ * @param null $account
+ * @return bool
+ */
+function springboard_group_commerce_payment_transaction_order_access($op, $order, $account = NULL) {
+  global $user;
+
+  if (empty($account)) {
+    $account = clone($user);
+  }
+
+  //@todo update to check group perms.
+  switch ($op) {
+    // Viewing payment transactions.
+    case 'view':
+      if (user_access('view payments', $account)) {
+        if (commerce_order_access('view', $order, $account)) {
+          return TRUE;
+        }
+        else {
+          return FALSE;
+        }
+      }
+      break;
+
+    case 'update':
+      if (user_access('update payments', $account)) {
+        if (commerce_order_access('view', $order, $account)) {
+          return TRUE;
+        }
+        else {
+          return FALSE;
+        }
+      }
+      break;
+
+    case 'delete':
+      if (user_access('delete payments', $account)) {
+        if (commerce_order_access('update', $order, $account)) {
+          return TRUE;
+        }
+        else {
+          return FALSE;
+        }
+      }
+      break;
+  }
+
+  return commerce_payment_transaction_order_access($op, $order, $account);
+}
+
+/**
+ * A commerce_payment_transaction_access() wrapper.
+ *
+ * Used in the update and delete paths for commerce payments.
+ *
+ * @param $op
+ * @param $transaction
+ * @param null $account
+ * @return bool
+ */
+function springboard_group_commerce_payment_transaction_access($op, $transaction, $account = NULL) {
+  if (isset($transaction->order_id)) {
+    $order = commerce_order_load($transaction->order_id);
+    if (!$order) {
+      return FALSE;
+    }
+  }
+  else {
+    $order = NULL;
+  }
+  return springboard_group_commerce_payment_transaction_order_access($op, $order, $account);
+}
+
+
+/**
+ * @param \QueryAlterableInterface $query
+ */
+function springboard_group_query_commerce_payment_transaction_access_alter(QueryAlterableInterface $query) {
+  // Read the meta-data from the query.
+  if (!$account = $query->getMetaData('account')) {
+    global $user;
+    $account = $user;
+  }
+
+  if (user_access('view payments', $account)) {
+
+    //@todo not sure we need this.
+    //$query->where('1 = 0');
+
+  }
+}
+
+/**
+ * @param $query
+ */
+function springboard_group_query_commerce_payment_transaction_load_multiple_alter(&$query) {
+  //$query->condition('base.transaction_id', array('-1'), 'IN');
 }
