@@ -3305,6 +3305,7 @@ function fundraiser_sustainers_fundraiser_donation_success($donation) {
           'did' => $donation->did,
           'uid' => $donation->uid,
           'amount' => $donation->donation['amount'],
+          'status' => 'active',
           'installments' => _fundraiser_sustainers_calculate_installments($donation),
         );
 
@@ -3412,6 +3413,9 @@ function fundraiser_sustainers_donation_retry($donation) {
  *   Standard fundraiser donation data structure.
  */
 function fundraiser_sustainers_donation_fail($donation) {
+  // Let others know the donation has failed.
+  fundraiser_donation_decline($donation);
+
   // Set the sustainer record up in a failed state.
   $recurring = array(
     'did' => $donation->did,
@@ -3423,9 +3427,6 @@ function fundraiser_sustainers_donation_fail($donation) {
   watchdog('fundraiser_sustainers', 'Payment for recurring donation @id has
     failed @count times. The donation will not be submitted for payment again. Gateway message: @message',
     array('@id' => $donation->did, '@count' => variable_get('fundraiser_sustainers_max_processing_attempts', 3), '@message' => $donation->result['message']), WATCHDOG_DEBUG);
-
-  // Let others know the donation has failed.
-  fundraiser_donation_decline($donation);
 
   // Fire a hook so that other modules can respond to the failure.
   module_invoke_all('fundraiser_sustainers_donation_fail', $donation);
@@ -3871,16 +3872,90 @@ function _fundraiser_sustainers_update_recurring($donation) {
     _fundraiser_sustainers_create_recurring($donation);
   }
   else {
+
     // Merge data together so we get everything in the record.
     $record = array_merge((array) $original, $donation);
     drupal_write_record('fundraiser_sustainers', $record, 'did');
-
     $log = fundraiser_sustainers_log();
     $log->log($donation, $original);
   }
 
+  // Update the series entity.
+  if (!empty($record['master_did'])) {
+    fundraiser_sustainers_update_recurring_series_entity($record['master_did']);
+  }
+
   // Fire a hook so that other modules can respond to the update.
   module_invoke_all('fundraiser_sustainers_update_recurring', $donation);
+}
+
+/**
+ * Update the status of the sustainer series entity.
+ *
+ * @param int $master_did
+ *   The id of the entity series to update.
+ */
+function fundraiser_sustainers_update_recurring_series_entity($master_did) {
+  // Check if there are remaining recurring donations.
+  $recur_remain = _fundraiser_sustainers_get_donations_recurr_remaining($master_did);
+  $fundraiser_sustainers_series = entity_load_single('fundraiser_sustainers_series', $master_did);
+
+  // Change the status if no remaining charges and the status is set to active.
+  if (
+    empty($recur_remain)
+    && $fundraiser_sustainers_series->status == 'active'
+  ) {
+    $statuses = fundraiser_sustainers_series_entity_statuses();
+
+    // Load the last donation object to get the final order status.
+    $all_recuring = _fundraiser_sustainers_get_donations_recurr_by_masterdid($master_did);
+    $last_charge = array_pop($all_recuring);
+    $last_donation = fundraiser_donation_get_donation($last_charge->did, TRUE);
+    foreach ($statuses as $key => $status_arr) {
+      // Match the order status to the array of series entity statuse.
+      if (in_array($last_donation->status, $status_arr)) {
+        $status = $key;
+      }
+    }
+
+    // If the status is canceled, check if its auto_canceled.
+    if (
+      !empty($status)
+      && $status == 'canceled'
+      && $last_donation->recurring->gateway_resp == 'auto_canceled'
+    ) {
+      $status = 'auto_canceled';
+    }
+
+    if (!empty($status)) {
+      $fundraiser_sustainers_series->status = $status;
+      $fundraiser_sustainers_series->save();
+    }
+  }
+}
+
+/**
+ * Returns an array of statuses for the sustainer series entity.
+ *
+ * The array is keyed by series status values and contains matching commerce
+ * order statuses.
+ *
+ * @return array
+ *   Array of status values.
+ */
+function fundraiser_sustainers_series_entity_statuses() {
+  return array(
+    // Active series with remaining sustainers.
+    'active' => array('pending_future_payment'),
+    // Series has no pending charges, status of final charge is "Payment Received".
+    'expired' => array('payment_received', 'offline_check'),
+    // Series has no pending charges, status of final charge is "Canceled".
+    'canceled' => array('canceled', 'omitted'),
+    // Series has no pending charges, status of final charge is "Auto-canceled".
+    'auto_canceled' => array('auto_canceled'),
+    // Series has no pending charges, status of final charge is "Payment Failed".
+    'failed' => array('failed', 'unknown'),
+  );
 }
 
 /**
