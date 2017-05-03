@@ -327,8 +327,20 @@ function fundraiser_sustainers_check_access($did) {
   if (!$donations) {
     return FALSE;
   }
+
   // Then check if the user is allowed.
-  return user_access('administrate recurring donations');
+  $access = user_access('administrate recurring donations');
+
+  // Allow other modules to grant / deny access.
+  $access_alter = module_invoke_all('fundraiser_sustainers_check_access', $did);
+  if (in_array(FALSE, $access_alter, TRUE)) {
+    $access = FALSE;
+  }
+  elseif (in_array(TRUE, $access_alter, TRUE)) {
+    $access = TRUE;
+  }
+
+  return $access;
 }
 
 /**

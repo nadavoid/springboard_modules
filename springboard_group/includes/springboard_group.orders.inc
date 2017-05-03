@@ -176,7 +176,6 @@ function springboard_group_commerce_entity_access($op, $entity, $account, $entit
     }
   }
 }
-
 /**
  * Implements hook_query_TAG_alter().
  *
@@ -373,4 +372,37 @@ function springboard_group_query_commerce_payment_transaction_access_alter(Query
  */
 function springboard_group_query_commerce_payment_transaction_load_multiple_alter(&$query) {
   //$query->condition('base.transaction_id', array('-1'), 'IN');
+}
+
+
+/**
+ * Implements hook_fundraiser_sustainers_check_access().
+ *
+ * Check access to the recurring donation admin pages.
+ */
+function springboard_group_fundraiser_sustainers_check_access($did) {
+  if (springboard_group_commerce_orders_are_grouped()) {
+    $order = commerce_order_load($did);
+    $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+    $group = $order_wrapper->og_group_ref_commerce_order->value();
+    if (!empty($group[0]->nid)) {
+      if (arg(4) == 'recurring'
+        && empty(arg(5))
+      ) {
+        return springboard_group_commerce_order_check_group_perms($group[0]->nid, 'view group orders');
+      }
+
+      elseif (arg(4) == 'recurring'
+        && empty(arg(5) == 'edit')
+      ) {
+        return springboard_group_commerce_order_check_group_perms($group[0]->nid, 'manage group orders');
+      }
+    }
+
+    else {
+      if (!user_access('administer group') && !user_access('administrate recurring donations')) {
+        return FALSE;
+      }
+    }
+  }
 }
