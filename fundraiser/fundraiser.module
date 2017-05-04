@@ -4463,7 +4463,7 @@ function fundraiser_springboard_twig_form_twig_info_field_variables_alter($node_
  * Implements hook_springboard_twig_variable_replacements_alter().
  */
 function fundraiser_springboard_twig_variable_replacements_alter($node_type, &$vars) {
-  if (!fundraiser_is_donation_type($node_type)) {
+  if (!fundraiser_is_donation_type($node_type) || empty($vars['submission'])) {
     return;
   }
 
