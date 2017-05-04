@@ -2511,7 +2511,18 @@ function fundraiser_sustainers_update_billing_form_submit($form, &$form_state) {
   $username = isset($user->name) ? $user->name : 'Anonymous';
   // We only update donations to come, not ones already processed.
   $donations = _fundraiser_sustainers_get_donations_recurr_remaining($master_did);
-  fundraiser_sustainers_update_billing_info_in_series($donations, $submission_fields, $username, $form_state['donation']->updating_billing, $form_state['donation']->update_payment);
+
+  $update_billing = TRUE;
+  if (isset($form_state['donation']->update_billing)) {
+    $update_billing = $form_state['donation']->update_billing;
+  }
+
+  $update_payment = TRUE;
+  if (isset($form_state['donation']->update_payment)) {
+    $update_payment = $form_state['donation']->update_payment;
+  }
+
+  fundraiser_sustainers_update_billing_info_in_series($donations, $submission_fields, $username, $update_billing, $update_payment);
 
   // Use the first future donation for a template of new future donations.
   $source_donation = reset($donations);
