@@ -1327,23 +1327,27 @@ function fundraiser_commerce_fundraiser_donation_after_process($donation) {
     }
 
     // Update other recurring donations that use this card id.
-    $results = db_query('SELECT fs.master_did AS master_did, fd.did AS did, fd.status AS status FROM {fundraiser_donation} fd LEFT JOIN {fundraiser_sustainers} fs ON fd.did = fs.did WHERE fd.card_id = :card_id ORDER BY did', array(
+    $results = db_query('SELECT DISTINCT(fs.master_did) FROM {fundraiser_sustainers} fs LEFT JOIN {fundraiser_donation} fd ON fd.did = fs.did WHERE fd.card_id = :card_id', array(
       ':card_id' => $donation->data['cardonfile'],
-    ))->fetchAll(PDO::FETCH_ASSOC);
+    ))->fetchAll();
 
     if (empty($results)) {
       return;
     }
 
     foreach ($results as $result) {
-      if (empty($result['master_did'])) {
-        continue;
-      }
+      $remaining = _fundraiser_sustainers_get_donations_recurr_remaining($result->master_did);
 
-      // Update other recurring donations.
-      $masters_done[$result['master_did']] = fundraiser_donation_get_donation($result['master_did']);
-      $source_donation = fundraiser_donation_get_donation($result['did']);
-      fundraiser_sustainers_update_billing_info_create_new_donations($masters_done[$result['master_did']], $source_donation, $donation->donation);
+      if (!empty($remaining)) {
+        // Load the master donation.
+        $master_donation = fundraiser_donation_get_donation($result->master_did);
+
+        // Use the first future donation for a template of new future donations.
+        $source_donation = fundraiser_donation_get_donation($remaining[0]->did);
+
+        // Create the new donations.
+        fundraiser_sustainers_update_billing_info_create_new_donations($master_donation, $source_donation, $donation->donation);
+      }
     }
   }
 }
