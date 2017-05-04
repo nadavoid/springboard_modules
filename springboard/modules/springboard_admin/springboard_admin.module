@@ -559,6 +559,12 @@ function springboard_admin_access_marketing_overview() {
   ) {
     return TRUE;
   }
+
+  $access = module_invoke_all('springboard_admin_access_marketing_overview');
+  if (!empty(array_filter($access))) {
+    return TRUE;
+  }
+
   return FALSE;
 }
 
@@ -578,6 +584,12 @@ function springboard_admin_access_integration_overview() {
   ) {
     return TRUE;
   }
+
+  $access = module_invoke_all('springboard_admin_access_integration_overview');
+  if (!empty(array_filter($access))) {
+    return TRUE;
+  }
+
   return FALSE;
 }
 
