@@ -481,11 +481,15 @@ function springboard_dw_queue_legacy_message($messages, $operation_details, $idl
       $message_item['queue_type'] = 'advocacy message';
       $message_item['message_id'] = $message['_id']['$id'];
       $message_item['action_id'] = $message['alertId'];
-      $queue->createItem($message_item);
-      springboard_dw_log_queue_item($message_item);
-      springboard_dw_track_item_warehouse_queued('advocacy message', $message['_id']['$id']);
-      // Mark message as tracked in Advocacy.
-      $metrics = springboard_dw_queue_legacy_get_endpoint($message['_id']['$id'], 'warehouse/track');
+      $tracking_response = springboard_dw_queue_legacy_get_endpoint($message['_id']['$id'], 'warehouse/track');
+      if (isset($tracking_response['warehoused']) && $tracking_response['warehoused'] == TRUE) {
+        $queue->createItem($message_item);
+        springboard_dw_log_queue_item($message_item);
+        springboard_dw_track_item_warehouse_queued('advocacy message', $message['_id']['$id']);
+      }
+      else {
+        drush_log('Attempted to track message ' . $message['_id']['$id'] . ' at warehouse/track but there was a problem. Skipping it this run.', 'warning');
+      }
     }
     else {
       drush_log('Attempted to queue message ' . $message['_id']['$id'] . ' but it is already warehoused', 'warning');
@@ -559,9 +563,14 @@ function springboard_dw_queue_legacy_get_advocacy_messages($limit = FALSE) {
       if ($metrics['warehousedMessages'] < $metrics['totalCount']) {
         $api_params = ($limit !== FALSE) ? array('limit' => $limit) : array();
         $messages = springboard_dw_queue_legacy_get_endpoint($node->advocacy_id, 'warehouse/untracked', $api_params);
-        // We found messages to queue, so break out of this foreach. To get the
-        // rest of the messages, keep running this drush commend.
-        break;
+        if ($messages !== FALSE) {
+          // We found messages to queue, so break out of this foreach. To get
+          // the rest of the messages, keep running this drush commend.
+          break;
+        }
+        else {
+          drush_log(dt('There was a problem retrieving untracked messages for action: @action_id', array('@action_id' => $node->advocacy_id)), 'error');
+        }
       }
     }
   }
@@ -571,8 +580,9 @@ function springboard_dw_queue_legacy_get_advocacy_messages($limit = FALSE) {
 /**
  * GET a single page of untracked messages.
  *
- * @return array
- *   Return an array of message data for a specified pagination offset.
+ * @return mixed
+ *   Return FALSE on failure or an array of message data for a specified
+ *   pagination offset.
  *
  * @todo add limit param.
  */
@@ -595,8 +605,15 @@ function springboard_dw_queue_legacy_get_endpoint($id, $endpoint, $additional_pa
   $params['query'] += $additional_params;
   $endpoint = variable_get('springboard_dw_advocacy_api_endpoint') . '/api/v1/messages/' . $id . '/' . $endpoint;
   $response = $guzzle->request('GET', $endpoint, $params);
-  $body = $response->getBody();
-  return json_decode($body->getContents(), TRUE);
+  $status_code = $response->getStatusCode();
+  if ($response->getStatusCode() == 200) {
+    $body = $response->getBody();
+    return json_decode($body->getContents(), TRUE);
+  }
+  else {
+    drush_log(dt('GET response code: @code', array('@code' => $response->getStatusCode())), 'error');
+    return FALSE;
+  }
 }
 
 /**
