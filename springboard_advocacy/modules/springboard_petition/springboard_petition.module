@@ -577,7 +577,7 @@ function springboard_petition_springboard_twig_form_twig_info_field_variables_al
   }
 
   $vars['petition'] = array(
-    'recent_signers' => t('A list of recent signers of this petition.'),
+    'petition.recent_signers' => t('A list of recent signers of this petition.'),
   );
 }
 

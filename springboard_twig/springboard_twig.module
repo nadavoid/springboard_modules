@@ -169,12 +169,12 @@ function _springboard_twig_process_text($text, array $replacements) {
       // Add website variables.
       $site_url = str_replace(request_path(), '', url(current_path(), array('absolute' => TRUE)));
       $replacements['website'] = array(
-        'website.mail' => variable_get('site_mail'),
-        'website.login_url' => $site_url . 'user',
-        'website.name' => variable_get('site_name'),
-        'website.slogan' => variable_get('site_slogan'),
-        'website.url' => $site_url,
-        'website.url_brief' => rtrim(preg_replace('/https?:\/\//i', '', $site_url), '/'),
+        'mail' => variable_get('site_mail'),
+        'login_url' => $site_url . 'user',
+        'name' => variable_get('site_name'),
+        'slogan' => variable_get('site_slogan'),
+        'url' => $site_url,
+        'url_brief' => rtrim(preg_replace('/https?:\/\//i', '', $site_url), '/'),
       );
 
       $time = time();
@@ -296,4 +296,63 @@ function springboard_twig_webform_confirmations_confirmation_message_alter(&$con
   );
 
   $confirmation_message = _springboard_twig_process_text($confirmation_message, $replacements);
+}
+
+/**
+ * Returns internal path, query and fragment from external URL
+ */
+function _springboard_twig_get_path_from_url($url, $normal_path = TRUE) {
+  global $base_path;
+  preg_match("/^(https?:\/\/)?([^\/]+)/i", $url, $domain);
+  $base = (isset($domain[0]) ? $domain[0] : '') . $base_path;
+  if (strpos($url, $base) === 0) {
+    $path = str_replace($base, '', $url);
+  }
+  else {
+    $path = $url;
+  }
+  // Parse the path (without $base).
+  $result = drupal_parse_url($path);
+  // Get normal path.
+  if ($normal_path) {
+    $result['path'] = drupal_get_normal_path($result['path']);
+  }
+
+  return $result;
+}
+
+/**
+ * Implements hook_preprocess_status_messages().
+ */
+function springboard_twig_preprocess_status_messages(&$variables) {
+  if (empty($_SESSION['messages']['status'])) {
+    return;
+  }
+
+  $messages = &$_SESSION['messages']['status'];
+  $referrer = $_SERVER['HTTP_REFERER'];
+  // Only want to try and parse a status message with the Twig processor if
+  // we're coming from a different page from the site.
+  if (empty($referrer)) {
+    return;
+  }
+
+  $referrer = _springboard_twig_get_path_from_url($referrer);
+  if (empty($referrer['path'])) {
+    return;
+  }
+
+  if (preg_match('/node\/([0-9]+)/', $referrer['path'], $nid) === FALSE) {
+    return;
+  }
+
+  $nid = $nid[1];
+
+  foreach ($messages as &$message) {
+    if (preg_match('/\{\%[.\n\s]*\%\}/', $message) !== FALSE || preg_match('/\{\{[.\n\s]*\}\}/', $message) !== FALSE) {
+      $message = _springboard_twig_process_text($message, array(
+        'node' => node_load($nid),
+      ));
+    }
+  }
 }
