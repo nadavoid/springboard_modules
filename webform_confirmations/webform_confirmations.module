@@ -534,23 +534,9 @@ function _webform_confirmation_send_confirmation_mail($settings, $donation) {
 }
 
 function _webform_confirmation_send_confirmation_mail_helper($settings, $donation, $node, $eid, $account, $params) {
-  module_load_include('inc', 'webform', 'includes/webform.submissions');
+  // Add the donation object to the couple of the places its expected.
+  $params['message']['params']['donation'] = $params['donation'] = $donation;
   $message = $params['message'];
-  $params['donation'] = $donation;
-  // Email Templates handles webform token replacement so all we need to do is pick off order tokens.
-  $token_set = array(
-    'node' => $node,
-    'donation' => $donation,
-  );
-  $params['settings']['html_message'] = token_replace($params['settings']['html_message'], $token_set);
-  $params['settings']['text_message'] = token_replace($params['settings']['text_message'], $token_set);
-  $params['subject'] = token_replace($params['subject'], $token_set, array('clear' => TRUE));
-  $data = array(
-    'html_raw' => &$params['settings']['html_message'],
-    'text_raw' => &$params['settings']['text_message'],
-    'message' => &$message,
-  );
-  drupal_alter('email_wrappers_email_body_messages', $data);
   drupal_mail('email_wrappers', 'wf_submission', $message['to'], user_preferred_language($account), $params);
 }
 
