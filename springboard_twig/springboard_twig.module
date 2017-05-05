@@ -320,39 +320,3 @@ function _springboard_twig_get_path_from_url($url, $normal_path = TRUE) {
 
   return $result;
 }
-
-/**
- * Implements hook_preprocess_status_messages().
- */
-function springboard_twig_preprocess_status_messages(&$variables) {
-  if (empty($_SESSION['messages']['status'])) {
-    return;
-  }
-
-  $messages = &$_SESSION['messages']['status'];
-  $referrer = $_SERVER['HTTP_REFERER'];
-  // Only want to try and parse a status message with the Twig processor if
-  // we're coming from a different page from the site.
-  if (empty($referrer)) {
-    return;
-  }
-
-  $referrer = _springboard_twig_get_path_from_url($referrer);
-  if (empty($referrer['path'])) {
-    return;
-  }
-
-  if (preg_match('/node\/([0-9]+)/', $referrer['path'], $nid) === FALSE) {
-    return;
-  }
-
-  $nid = $nid[1];
-
-  foreach ($messages as &$message) {
-    if (preg_match('/\{\%[.\n\s]*\%\}/', $message) !== FALSE || preg_match('/\{\{[.\n\s]*\}\}/', $message) !== FALSE) {
-      $message = _springboard_twig_process_text($message, array(
-        'node' => node_load($nid),
-      ));
-    }
-  }
-}
