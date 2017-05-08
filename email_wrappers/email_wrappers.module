@@ -670,14 +670,6 @@ function email_wrappers_mail_alter(&$message) {
  *   Email message body, formatted for multipart MIME.
  */
 function email_wrappers_render_email_body($eid, $message, $settings = array()) {
-  $token_set = array();
-  if (isset($message['params']['node'])) {
-    $token_set['node'] = $message['params']['node'];
-  }
-  if (isset($message['params']['donation'])) {
-    $token_set['donation'] = $message['params']['donation'];
-  }
-  drupal_alter('email_wrappers_token_set', $token_set, $message);
   $eid = isset($message['params']['email']['eid']) ? $message['params']['email']['eid'] : FALSE;
   $boundary = $message['params']['boundary'];
   // TODO: filter HTML by field input type where appropriate.
@@ -689,9 +681,8 @@ function email_wrappers_render_email_body($eid, $message, $settings = array()) {
     $html_raw = $message['params']['mail']->html_message;
     $text_raw = $message['params']['mail']->text_message;
   }
-  $html_raw = token_replace($html_raw, $token_set, array('clear' => TRUE));
-  $text_raw = token_replace($text_raw, $token_set, array('clear' => TRUE));
 
+  // Allow modules to alter the email message parts.
   $data = array(
     'html_raw' => &$html_raw,
     'text_raw' => &$text_raw,
@@ -717,12 +708,15 @@ $html_raw
 
 ";
 
-  $token_set = array(
-    'node' => isset($message['params']['node']) ? $message['params']['node'] : NULL,
-  );
+  // Replace tokens in the email body.
+  $token_set = array();
+  if (isset($message['params']['node'])) {
+    $token_set['node'] = $message['params']['node'];
+  }
   if (isset($message['params']['donation'])) {
     $token_set['donation'] = $message['params']['donation'];
   }
+  drupal_alter('email_wrappers_token_set', $token_set, $message);
 
   $multi_body = token_replace($multi_body, $token_set, array('clear' => TRUE));
   if ($eid) {
