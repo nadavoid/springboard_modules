@@ -1032,6 +1032,14 @@ function fundraiser_commerce_fundraiser_donation_create($donation) {
         'roles' => array(),
         'status' => 1,
       );
+
+      if (module_exists('email_registration')) {
+        // Strip off everything after the @ sign.
+        $name = preg_replace('/@.*$/', '', $fields['mail']);
+        $name = email_registration_cleanup_username($name);
+        $fields['name'] = email_registration_unique_username($name);
+      }
+
       $user = user_save('', $fields);
     }
   }
