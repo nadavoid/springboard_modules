@@ -626,7 +626,7 @@ function springboard_dw_queue_legacy_get_records($type, $limit = FALSE, $highwat
       $query = db_select('users', 'u', array('target' => 'slave'));
       $query->addField('u', 'uid', 'id');
       $query->addField('u', 'created', 'created');
-      $query->orderBy('created', 'ASC');
+      $query->orderBy('uid', 'ASC');
       $query->condition('uid', 0, '<>');
       if ($idlist) {
         $query->condition('uid', $idlist, 'IN');
@@ -641,7 +641,7 @@ function springboard_dw_queue_legacy_get_records($type, $limit = FALSE, $highwat
       $query->addField('f', 'did', 'id');
       $query->addField('f', 'nid');
       $query->addField('f', 'created');
-      $query->orderBy('created', 'ASC');
+      $query->orderBy('did', 'ASC');
       if ($idlist) {
         $query->condition('did', $idlist, 'IN');
       }
@@ -660,7 +660,7 @@ function springboard_dw_queue_legacy_get_records($type, $limit = FALSE, $highwat
       $query->addField('n', 'type');
       $query->join('node', 'n', 's.nid = n.nid');
       $query->condition('n.type', array('sba_message_action', 'sba_social_action', 'springboard_petition'), 'IN');
-      $query->orderBy('submitted', 'ASC');
+      $query->orderBy('sid', 'ASC');
       if ($idlist) {
         $query->condition('sid', $idlist, 'IN');
       }
@@ -681,7 +681,7 @@ function springboard_dw_queue_legacy_get_records($type, $limit = FALSE, $highwat
       $query->addField('s', 'submitted', 'created');
       $query->join('node', 'n', 's.nid = n.nid');
       $query->condition('n.type', 'springboard_petition', '=');
-      $query->orderBy('submitted', 'ASC');
+      $query->orderBy('sid', 'ASC');
       if ($idlist) {
         $query->condition('sid', $idlist, 'IN');
       }
@@ -694,7 +694,7 @@ function springboard_dw_queue_legacy_get_records($type, $limit = FALSE, $highwat
       $query = db_select('node', 'n', array('target' => 'slave'));
       $query->addField('n', 'nid', 'id');
       $query->addField('n', 'created');
-      $query->orderBy('created', 'ASC');
+      $query->orderBy('n.nid', 'ASC');
       $query->join('webform', 'w', 'n.nid = w.nid');
       if ($idlist) {
         $query->condition('n.nid', $idlist, 'IN');
@@ -717,7 +717,7 @@ function springboard_dw_queue_legacy_get_records($type, $limit = FALSE, $highwat
       $query->addField('s', 'submitted', 'created');
       $query->join('node', 'n', 's.nid = n.nid');
       $query->condition('n.type', $excluded_types, 'NOT IN');
-      $query->orderBy('submitted', 'ASC');
+      $query->orderBy('sid', 'ASC');
       if ($idlist) {
         $query->condition('sid', $idlist, 'IN');
       }
@@ -741,7 +741,7 @@ function springboard_dw_queue_legacy_get_records($type, $limit = FALSE, $highwat
       $query->addField('c', 'remote_status');
       $query->addField('c', 'created');
       $query->addField('c', 'changed');
-      $query->orderBy('created', 'ASC');
+      $query->orderBy('transaction_id', 'ASC');
       if ($idlist) {
         $query->condition('transaction_id', $idlist, 'IN');
       }
