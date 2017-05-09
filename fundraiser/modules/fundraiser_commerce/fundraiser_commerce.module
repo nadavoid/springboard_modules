@@ -964,8 +964,10 @@ function fundraiser_commerce_fundraiser_donation_get_donation($donation) {
       $profile = commerce_customer_profile_load($profile_id);
     }
   }
-  elseif (isset($order->commerce_customer_billing[LANGUAGE_NONE][0]['profile_id'])) {
-    $profile = commerce_customer_profile_load($order->commerce_customer_billing[LANGUAGE_NONE][0]['profile_id']);
+
+  // If no profile was loaded from cardonfile, use the one on the order.
+  if (empty($profile)) {
+    $profile = $order_wrapper->commerce_customer_billing->value();
   }
 
   if (!empty($profile)) {
