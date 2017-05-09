@@ -87,16 +87,58 @@ function springboard_group_webform_user_submission_insert($node, $submission, $a
 /**
  * Menu alter helper.
  *
- * The order payment paths are controlled by access functions which are not
- * alterable in the way we need, so we have to wrap the original access
- * functions in a custom access function.
- *
- * @param $items
+ * @param $items.
  */
 function springboard_group_user__menu_alter(&$items) {
   if (springboard_group_users_are_grouped()) {
-
+    $items['user/%user']['access callback'] = 'springboard_group_user_view_access';
+    $items['user/%user/cancel']['access callback'] = 'springboard_group_user_cancel_access';
+    $items['user/%user/cancel/confirm/%/%']['access callback'] = 'springboard_group_user_cancel_access';
+    $items['user/%user/edit']['access callback'] = 'springboard_group_user_edit_access';
   }
+}
+
+/**
+ * User view access callback.
+ *
+ * @param $account
+ *   Can either be a full user object or a $uid.
+ */
+function springboard_group_user_view_access($account) {
+  $uid = is_object($account) ? $account->uid : (int) $account;
+
+  // Never allow access to view the anonymous user account.
+  if ($uid) {
+    // Admins can view all, users can view own profiles at all times.
+    if ($GLOBALS['user']->uid == $uid || user_access('administer users')) {
+      return TRUE;
+    }
+    elseif (user_access('access user profiles')) {
+      // At this point, load the complete account object.
+      if (!is_object($account)) {
+        $account = user_load($uid);
+      }
+      return (is_object($account) && $account->status);
+    }
+  }
+  return FALSE;
+}
+
+/**
+ * Access callback for user account editing.
+ */
+function springboard_group_user_edit_access($account) {
+  return (($GLOBALS['user']->uid == $account->uid) || user_access('administer users')) && $account->uid > 0;
+}
+
+/**
+ * Menu access callback; limit access to account cancellation pages.
+ *
+ * Limit access to users with the 'cancel account' permission or administrative
+ * users, and prevent the anonymous user from cancelling the account.
+ */
+function springboard_group_user_cancel_access($account) {
+  return ((($GLOBALS['user']->uid == $account->uid) && user_access('cancel account')) || user_access('administer users')) && $account->uid > 0;
 }
 
 
@@ -106,20 +148,26 @@ function springboard_group_user__menu_alter(&$items) {
 function springboard_group_form_user_profile_form_alter(&$form, &$form_state) {
   // We don't need to see the group membership field on the user edit page.
   // It is large and obstructive and not very useful.
-  $form['og_user_node']['#access'] = FALSE;
-  $account = user_load(arg(1));
-  $groups = og_get_entity_groups('user', $account);
-  $titles = [];
-  if (!empty($groups['node'])) {
-    foreach ($groups['node'] as $group_id) {
-      $group = node_load($group_id);
-      $titles[] = check_plain($group->title);
+  $profile_edit_form = arg(3);
+  if (empty($profile_edit_form)) {
+    $form['og_user_node']['#access'] = FALSE;
+    $account = user_load(arg(1));
+    $groups = og_get_entity_groups('user', $account);
+    $titles = [];
+    if (!empty($groups['node'])) {
+      foreach ($groups['node'] as $group_id) {
+        $group = node_load($group_id);
+        $titles[] = check_plain($group->title);
+      }
+      $form['user_group_display']['#markup'] = theme('item_list', array(
+        'items' => $titles,
+        'title' => 'Group Membership',
+      ));
     }
-    $form['user_group_display']['#markup'] = theme('item_list', array('items' => $titles, 'title' => 'Springboard Groups Membership'));
   }
 
   // No groups field, do not proceed.
-  if (!springboard_group_users_are_grouped()) {
+  if (!springboard_group_users_are_grouped() || !empty($profile_edit_form)) {
     return;
   }
 
@@ -134,9 +182,10 @@ function springboard_group_form_user_profile_form_alter(&$form, &$form_state) {
 
     // Add ajax callback to the groups field so we can validate newly
     // selected groups.
-    $language = $form['og_group_ref_' . 'user']['#language'];
-    $form['og_group_ref_' . 'user']['#title'] =  t('Springboard groups ownership');
-    $form['og_group_ref_' . 'user'][$language][0]['default']['#ajax'] = array(
+    $language = $form['og_group_ref_user']['#language'];
+    $form['og_group_ref_user']['#title'] = t('Contact owners');
+    $form['og_group_ref_user'][$language][0]['default']['#description'] = t('The groups this contact is owned by.');
+    $form['og_group_ref_user'][$language][0]['default']['#ajax'] = array(
       'callback' => 'springboard_group_og_group_field_ajax_callback',
     );
 

@@ -18,7 +18,7 @@ Organic Groups' group selector widget is complex, with multiple input fields and
 Organic groups allows for a myriad of configuration options for group types, group content,
 group roles, group fields and group permissions. Springboard Groups provides a stripped down admin UI,
 and menu alters the native OG configuration pages to be hidden with a custom access permission. Springboard
-Groups does not provide a UI for custom roles, custom fields, multiple group types, etc.
+Groups does not provide a UI for custom fields, multiple group types, etc.
 
 Extending:
 
