@@ -4,7 +4,10 @@ core = 7.x
 package = Springboard
 files[] = includes/views/handlers/springboard_group_views_handler_groups.inc
 files[] = includes/views/handlers/springboard_group_views_handler_groups_orders.inc
-
+files[] = includes/views/handlers/springboard_group_views_handler_groups_users.inc
+files[] = includes/views/handlers/springboard_group_views_handler_field_user_link.inc
+files[] = includes/views/handlers/springboard_group_views_handler_field_user_link_edit.inc
+files[] = includes/views/handlers/springboard_group_views_handler_field_user_link_cancel.inc
 
 dependencies[] = og
 dependencies[] = og_ui

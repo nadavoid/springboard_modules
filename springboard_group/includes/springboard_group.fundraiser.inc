@@ -171,3 +171,13 @@ function springboard_group_fundraiser_filter_gateways($gateways, $gid = NULL) {
 
   return $gateways;
 }
+
+function springboard_group_fundraiser_donation_create($donation) {
+  $grouped_types = springboard_group_get_grouped_types();
+  foreach ($grouped_types as $entity_type => $bundle) {
+    $function = 'springboard_group__' . $entity_type . '__fundraiser_donation_create';
+    if (function_exists($function)) {
+      $function($donation);
+    }
+  }
+}

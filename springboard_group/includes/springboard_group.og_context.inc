@@ -219,6 +219,9 @@ function springboard_group_context_menu_paths() {
         array_push($paths, 'admin/commerce/orders');
         array_push($paths, 'admin/reports/salesforce/donations');
       }
+      if (isset($groups_enabled_types['user'])) {
+        array_push($paths, 'admin/springboard/reports/contacts');
+      }
       foreach ($groups_enabled_types['node'] as $type => $field) {
         if (fundraiser_is_donation_type($type)) {
           array_push($paths, 'admin/springboard');

@@ -80,6 +80,18 @@ function springboard_group_og_permission() {
 
   }
 
+  if (springboard_group_users_are_grouped()) {
+    $items['manage group contacts'] = array(
+      'title' => t('Manage contacts in a group'),
+      'description' => t('Update or delete contacts in a group.'),
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+    );
+    $items['view group contacts'] = array(
+      'title' => t('View contacts in a group'),
+      'description' => t('View contacts in a group.'),
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+    );
+  }
 
   return $items;
 

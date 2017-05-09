@@ -159,7 +159,7 @@ function springboard_group_entity_settings_form() {
   $entity_type_options = [];
   foreach ($fieldable_entities as $key => $type) {
     foreach ($type as $info => $name) {
-      if (strpos($info, 'node') === FALSE && strpos($info, 'og_') === FALSE && strpos($info, 'line_item') === FALSE && strpos($info, 'user') === FALSE && strpos($info, 'user') === FALSE) {
+      if (strpos($info, 'node') === FALSE && strpos($info, 'og_') === FALSE && strpos($info, 'line_item') === FALSE) {
         $entity_type_options[$info] = $name . ' (' . substr($info, 0, strpos($info, ':')) . ')';
       }
     }
@@ -176,6 +176,7 @@ function springboard_group_entity_settings_form() {
 
   // Get the already-enabled entities.
   $groups_enabled_types = springboard_group_get_grouped_types();
+
   $entity_defaults = !empty($groups_enabled_types) ? $groups_enabled_types : [];
   $group_enabled_entities = [];
   foreach ($entity_defaults as $entity_type => $bundle_group) {
@@ -185,7 +186,6 @@ function springboard_group_entity_settings_form() {
       }
     }
   }
-
   $disallowed = array(
     'sba_message:sba_message_action_message',
     'sba_message:sba_social_action_twitter_message',
@@ -198,6 +198,7 @@ function springboard_group_entity_settings_form() {
 
   foreach ($entity_type_options as $type => $name) {
     if (!in_array($type, $disallowed)) {
+
       $name = str_replace('Rules configuration', 'Payment Gateways', $name);
       $form['springboard_group_entities'][$type] = array(
         '#type' => 'container',
@@ -283,10 +284,11 @@ function springboard_group_entities_settings_form_submit($form, $form_state) {
     if (in_array($key, array('', 'actions'))) {
       continue;
     }
-
     list($entity_type, $bundle) = explode(':', $key);
     if (!empty($status[$key]) && !empty($form_state['input']['springboard_group_entities'][$key])) {
       springboard_group_add_group_reference_field($bundle, $entity_type);
+      springboard_group_add_group_activate_views_alter($bundle);
+
     }
 
     if (isset($form_state['values']['springboard_group_entities'][$key]['og_' . $key . '_multiple'])) {
@@ -304,7 +306,6 @@ function springboard_group_entities_settings_form_submit($form, $form_state) {
  *   The entity type name.
  */
 function springboard_group_add_group_reference_field($bundle, $type) {
-
   $og_field = og_fields_info('og_group_ref');
   $og_field['field']['settings']['target_bundles'] = array('springboard_group' => 'springboard_group');
   $og_field['instance']['settings']['behaviors']['og_widget']['admin']['widget_type'] = 'options_select';
@@ -393,6 +394,7 @@ function springboard_group_advanced_settings() {
     'sbv_email_templates',
     'commerce_orders',
     'sbv_donations',
+    'sbv_contacts',
   );
 
   $form['altered_views']['group_restricted_views'] = array(
@@ -423,6 +425,15 @@ function springboard_group_add_group_activate_views_alter($type) {
 
     case 'webform_ab':
       $restricted = array_merge($restricted, drupal_map_assoc(array('webform_ab_tests')));
+      break;
+
+    case 'user':
+      $restricted = array_merge($restricted, drupal_map_assoc(array('sbv_contacts')));
+      break;
+
+    case 'commerce_order':
+      $restricted = array_merge($restricted, drupal_map_assoc(array('commerce_orders')));
+      $restricted = array_merge($restricted, drupal_map_assoc(array('sbv_donations')));
       break;
 
     case 'springboard_petition':

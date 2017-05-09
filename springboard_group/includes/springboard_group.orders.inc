@@ -89,7 +89,8 @@ function springboard_group_commerce_order_form__validate(&$form, &$form_state, $
 /**
  * Implements hook_fundraiser_donation_create().
  */
-function springboard_group_fundraiser_donation_create($donation) {
+function springboard_group__commerce_order__fundraiser_donation_create($donation) {
+
   // Check if commerce orders are grouped.
   if (springboard_group_commerce_orders_are_grouped()) {
     // If commerce orders are grouped, set the group id on new orders,
@@ -103,7 +104,7 @@ function springboard_group_fundraiser_donation_create($donation) {
       if (!empty($node_group_id)) {
         $order = commerce_order_load($donation->did);
         $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
-        $order_wrapper->og_group_ref_commerce_order->set(array('target_id' => $node_group_id));
+        $order_wrapper->og_group_ref_commerce_order->set(array($node_group_id));
         $order_wrapper->save();
       }
     }

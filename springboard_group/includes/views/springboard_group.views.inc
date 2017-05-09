@@ -47,7 +47,6 @@ function springboard_group_views_query_alter(&$view, &$query) {
 
   // Array of alterable views.
   $alter = variable_get('group_restricted_views', []);
-
   if (in_array($view->name, $alter)) {
     // First check if the query is selecting a groupable entity. If it isn't,
     // we skip the query alteration.
@@ -56,18 +55,26 @@ function springboard_group_views_query_alter(&$view, &$query) {
     $entity_type = 'node';
     $entity_table = 'node';
     $entity_field = 'nid';
+
     switch ($view->name) {
+      case 'sbv_contacts':
+        $entity_type = 'user';
+        $entity_table = 'users';
+        $entity_field = 'uid';
+        break;
 
       case 'commerce_orders':
         $entity_type = 'commerce_order';
         $entity_table = 'commerce_order';
         $entity_field = 'order_id';
         break;
+
       case 'sbv_donations':
         $entity_type = 'commerce_order';
         $entity_table = 'fundraiser_donation';
         $entity_field = 'did';
         Break;
+
     }
 
     // Get the current active group ID.
@@ -85,7 +92,8 @@ function springboard_group_views_query_alter(&$view, &$query) {
         $condition->isNull('og_membership.gid');
       }
       else {
-        // If context is all, and user is an admin, show "none" along with "all"
+        // If context is all, and user is an admin, show "none"
+        // along with "all".
         if ($context == '_all') {
           $condition = db_or();
           $and = db_and();
@@ -233,6 +241,12 @@ function springboard_group_views_default_views_alter(&$views) {
             $index = 1;
             break;
 
+          case 'sbv_contacts':
+            $table = 'users';
+            $label = t('Owners');
+            $index = 1;
+            break;
+
           default:
             $table = 'node';
         }
@@ -314,6 +328,7 @@ function springboard_group_views_pre_render(&$view) {
  * Actual group lookup query is performed in the custom field handler.
  */
 function springboard_group_views_data_alter(&$data) {
+
   $data['node']['springboard_groups'] = array(
     'title' => t('Node Groups'),
     'help' => t('Show all the Springboard groups a node belongs to, with a link back to the group.'),
@@ -324,23 +339,42 @@ function springboard_group_views_data_alter(&$data) {
     'group' => t('Springboard Groups'),
   );
 
-  $data['commerce_order']['springboard_groups'] = array(
-    'title' => t('Order Groups'),
-    'help' => t('Show all the Springboard groups an order belongs to, with a link back to the group.'),
-    'real field' => 'order_id',
-    'field' => array(
-      'handler' => 'springboard_group_views_handler_groups_orders',
-    ),
-    'group' => t('Springboard Groups'),
-  );
+  if (springboard_group_commerce_orders_are_grouped()) {
+    $data['commerce_order']['springboard_groups'] = array(
+      'title' => t('Order Groups'),
+      'help' => t('Show all the Springboard groups an order belongs to, with a link back to the group.'),
+      'real field' => 'order_id',
+      'field' => array(
+        'handler' => 'springboard_group_views_handler_groups_orders',
+      ),
+      'group' => t('Springboard Groups'),
+    );
 
-  $data['fundraiser_donation']['springboard_groups'] = array(
-    'title' => t('Donation Groups'),
-    'help' => t('Show all the springboard groups an donation belongs to, with a link back to the group.'),
-    'real field' => 'did',
-    'field' => array(
-      'handler' => 'springboard_group_views_handler_groups_orders',
-    ),
-    'group' => t('Springboard Groups'),
-  );
+    $data['fundraiser_donation']['springboard_groups'] = array(
+      'title' => t('Donation Groups'),
+      'help' => t('Show all the springboard groups an donation belongs to, with a link back to the group.'),
+      'real field' => 'did',
+      'field' => array(
+        'handler' => 'springboard_group_views_handler_groups_orders',
+      ),
+      'group' => t('Springboard Groups'),
+    );
+  }
+
+  if (springboard_group_users_are_grouped()) {
+    $data['users']['springboard_groups'] = array(
+      'title' => t('Contacts Groups'),
+      'help' => t('Show all the Springboard groups a contact belongs to, with a link back to the group.'),
+      'real field' => 'uid',
+      'field' => array(
+        'handler' => 'springboard_group_views_handler_groups_users',
+      ),
+      'group' => t('Springboard Groups'),
+    );
+
+    $data['users']['view_user']['field']['handler'] = 'springboard_group_views_handler_field_user_link';
+    $data['users']['edit_node']['field']['handler'] = 'springboard_group_views_handler_field_user_link_edit';
+    $data['users']['cancel_node']['field']['handler'] = 'springboard_group_views_handler_field_user_link_cancel';
+  }
+
 }
