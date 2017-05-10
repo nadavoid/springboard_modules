@@ -98,6 +98,10 @@ function springboard_group__user__menu_alter(&$items) {
     $items['user/%user/cancel']['access callback'] = 'springboard_group_user_cancel_access';
     $items['user/%user/cancel/confirm/%/%']['access callback'] = 'springboard_group_user_cancel_access';
     $items['user/%user/edit']['access callback'] = 'springboard_group_user_edit_access';
+    $items['user/%user/recurring_overview'] = 'springboard_group_user_edit_access';
+    $items['user/%user/donation-history']['access callback'] = 'springboard_group_user_edit_access';
+    $items['user/%user/donation-history/summary/%']['access callback'] = 'springboard_group_user_edit_access';
+    $items['user/%user/donation-history/receipt/%']['access callback'] = 'springboard_group_user_edit_access';
   }
 }
 
@@ -106,13 +110,39 @@ function springboard_group__user__menu_alter(&$items) {
  */
 function springboard_group_user_view_access($account) {
   $uid = is_object($account) ? $account->uid : (int) $account;
+  if ($GLOBALS['user']->uid != $uid) {
+    if ($uid) {
+      $contact_gids = springboard_group_get_contact_group_gids($uid);
+      if (!empty($contact_gids)) {
+        $groups = springboard_group_get_user_group_ids(FALSE);
+        foreach ($contact_gids as $gid) {
+          if (in_array($gid, $groups) && springboard_group_user_check_group_perms($gid, 'view group contacts')) {
+            return TRUE;
+          }
+          if (user_access('administer groups') && user_access('administer users')) {
+            return TRUE;
+          }
+        }
+        // If the user is grouped at all, return false, even if the admin has
+        // administer permissions but not group admin permissions?
+        // return FALSE;
+      }
+    }
+  }
+  // Use the normal access check if we get here.
+  return user_view_access($account);
+}
 
-  if ($uid) {
-    $contact_gids = springboard_group_get_contact_group_gids($uid);
+/**
+ * Access callback for user account editing.
+ */
+function springboard_group_user_edit_access($account) {
+  if ($GLOBALS['user']->uid != $account->uid) {
+    $contact_gids = springboard_group_get_contact_group_gids($account->uid);
     if (!empty($contact_gids)) {
       $groups = springboard_group_get_user_group_ids(FALSE);
       foreach ($contact_gids as $gid) {
-        if (in_array($gid, $groups) && springboard_group_user_check_group_perms($gid, 'view group contacts')) {
+        if (in_array($gid, $groups) && springboard_group_user_check_group_perms($gid, 'manage group contacts')) {
           return TRUE;
         }
         if (user_access('administer groups') && user_access('administer users')) {
@@ -125,29 +155,6 @@ function springboard_group_user_view_access($account) {
     }
   }
   // Use the normal access check if we get here.
-  return user_view_access($account);
-}
-
-/**
- * Access callback for user account editing.
- */
-function springboard_group_user_edit_access($account) {
-  $contact_gids = springboard_group_get_contact_group_gids($account->uid);
-  if (!empty($contact_gids)) {
-    $groups = springboard_group_get_user_group_ids(FALSE);
-    foreach ($contact_gids as $gid) {
-      if (in_array($gid, $groups) && springboard_group_user_check_group_perms($gid, 'manage group contacts')) {
-        return TRUE;
-      }
-      if (user_access('administer groups') && user_access('administer users')) {
-        return TRUE;
-      }
-    }
-    // If the user is grouped at all, return false, even if the admin has
-    // administer permissions but not group admin permissions?
-    // return FALSE;
-  }
-  // Use the normal access check if we get here.
   return user_edit_access($account);
 }
 
@@ -155,20 +162,22 @@ function springboard_group_user_edit_access($account) {
  * Menu access callback; limit access to account cancellation pages.
  */
 function springboard_group_user_cancel_access($account) {
-  $contact_gids = springboard_group_get_contact_group_gids($account->uid);
-  if (!empty($contact_gids)) {
-    $groups = springboard_group_get_user_group_ids(FALSE);
-    foreach ($contact_gids as $gid) {
-      if (in_array($gid, $groups) && springboard_group_user_check_group_perms($gid, 'manage group contacts')) {
-        return TRUE;
+  if ($GLOBALS['user']->uid != $account->uid) {
+    $contact_gids = springboard_group_get_contact_group_gids($account->uid);
+    if (!empty($contact_gids)) {
+      $groups = springboard_group_get_user_group_ids(FALSE);
+      foreach ($contact_gids as $gid) {
+        if (in_array($gid, $groups) && springboard_group_user_check_group_perms($gid, 'manage group contacts')) {
+          return TRUE;
+        }
+        if (user_access('administer groups') && user_access('administer users')) {
+          return TRUE;
+        }
       }
-      if (user_access('administer groups') && user_access('administer users')) {
-        return TRUE;
-      }
+      // If the user is grouped at all, return false, even if the admin has
+      // administer permissions but not group admin permissions?
+      // return FALSE;
     }
-    // If the user is grouped at all, return false, even if the admin has
-    // administer permissions but not group admin permissions?
-    // return FALSE;
   }
   // Use the normal access check if we get here.
   return user_cancel_access($account);
