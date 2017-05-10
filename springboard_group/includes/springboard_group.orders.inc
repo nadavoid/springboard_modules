@@ -5,7 +5,7 @@
  */
 
 function springboard_group_commerce_orders_are_grouped($fields = FALSE) {
-  $group_enabled_field = &drupal_static(__FUNCTION__);
+  $group_enabled_field = &drupal_static(__FUNCTION__ . $fields);
   if (!isset($group_enabled_field)) {
     $group_enabled_field = og_get_group_audience_fields('commerce_order', 'commerce_order', 'node', 'springboard_group');
   }
@@ -197,7 +197,8 @@ function springboard_group_query_commerce_order_access_alter(&$query) {
       }
 
       // Get the users groups.
-      $groups = og_get_groups_by_user(NULL, 'node');
+      $groups = springboard_group_get_user_group_ids(FALSE);
+
       $allowed_gids = array(0);
 
       if (!empty($groups)) {
@@ -259,7 +260,7 @@ function springboard_group_query_commerce_order_access_alter(&$query) {
  *
  * @param $items
  */
-function springboard_group_commerce_order__menu_alter(&$items) {
+function springboard_group__commerce_order__menu_alter(&$items) {
   if (springboard_group_commerce_orders_are_grouped()) {
     $items['admin/commerce/orders/%commerce_order/payment']['access callback'] = 'springboard_group_commerce_payment_transaction_order_access';
     $items['admin/commerce/orders/%commerce_order/payment/%commerce_payment_transaction']['access callback'] = 'springboard_group_commerce_payment_transaction_access';

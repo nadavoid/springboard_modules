@@ -192,7 +192,7 @@ function springboard_group_menu_alter(&$items) {
 
   $grouped_types = springboard_group_get_grouped_types();
   foreach ($grouped_types as $entity_type => $bundle) {
-    $function = 'springboard_group_' . $entity_type . '__menu_alter';
+    $function = 'springboard_group__' . $entity_type . '__menu_alter';
     if (function_exists($function)) {
       $function($items);
     }

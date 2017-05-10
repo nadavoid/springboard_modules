@@ -5,7 +5,7 @@
  */
 
 function springboard_group_users_are_grouped($fields = FALSE) {
-  $group_enabled_field = &drupal_static(__FUNCTION__);
+  $group_enabled_field = &drupal_static(__FUNCTION__ . $fields);
   if (!isset($group_enabled_field)) {
     $group_enabled_field = og_get_group_audience_fields('user', 'user', 'node', 'springboard_group');
   }
@@ -18,7 +18,10 @@ function springboard_group_users_are_grouped($fields = FALSE) {
 }
 
 /**
- * Permission Checker.
+ * Permission checker for current user.
+ *
+ * Takes a group ID and a permission string and determines whether the current
+ * user has that permission in the group.
  *
  * @param $gid
  * @param $permission
@@ -89,7 +92,7 @@ function springboard_group_webform_user_submission_insert($node, $submission, $a
  *
  * @param $items.
  */
-function springboard_group_user__menu_alter(&$items) {
+function springboard_group__user__menu_alter(&$items) {
   if (springboard_group_users_are_grouped()) {
     $items['user/%user']['access callback'] = 'springboard_group_user_view_access';
     $items['user/%user/cancel']['access callback'] = 'springboard_group_user_cancel_access';
@@ -100,47 +103,76 @@ function springboard_group_user__menu_alter(&$items) {
 
 /**
  * User view access callback.
- *
- * @param $account
- *   Can either be a full user object or a $uid.
  */
 function springboard_group_user_view_access($account) {
   $uid = is_object($account) ? $account->uid : (int) $account;
 
-  // Never allow access to view the anonymous user account.
   if ($uid) {
-    // Admins can view all, users can view own profiles at all times.
-    if ($GLOBALS['user']->uid == $uid || user_access('administer users')) {
-      return TRUE;
-    }
-    elseif (user_access('access user profiles')) {
-      // At this point, load the complete account object.
-      if (!is_object($account)) {
-        $account = user_load($uid);
+    $contact_gids = springboard_group_get_contact_group_gids($uid);
+    if (!empty($contact_gids)) {
+      $groups = springboard_group_get_user_group_ids(FALSE);
+      foreach ($contact_gids as $gid) {
+        if (in_array($gid, $groups) && springboard_group_user_check_group_perms($gid, 'view group contacts')) {
+          return TRUE;
+        }
+        if (user_access('administer groups') && user_access('administer users')) {
+          return TRUE;
+        }
       }
-      return (is_object($account) && $account->status);
+      // If the user is grouped at all, return false, even if the admin has
+      // administer permissions but not group admin permissions?
+      // return FALSE;
     }
   }
-  return FALSE;
+  // Use the normal access check if we get here.
+  return user_view_access($account);
 }
 
 /**
  * Access callback for user account editing.
  */
 function springboard_group_user_edit_access($account) {
-  return (($GLOBALS['user']->uid == $account->uid) || user_access('administer users')) && $account->uid > 0;
+  $contact_gids = springboard_group_get_contact_group_gids($account->uid);
+  if (!empty($contact_gids)) {
+    $groups = springboard_group_get_user_group_ids(FALSE);
+    foreach ($contact_gids as $gid) {
+      if (in_array($gid, $groups) && springboard_group_user_check_group_perms($gid, 'manage group contacts')) {
+        return TRUE;
+      }
+      if (user_access('administer groups') && user_access('administer users')) {
+        return TRUE;
+      }
+    }
+    // If the user is grouped at all, return false, even if the admin has
+    // administer permissions but not group admin permissions?
+    // return FALSE;
+  }
+  // Use the normal access check if we get here.
+  return user_edit_access($account);
 }
 
 /**
  * Menu access callback; limit access to account cancellation pages.
- *
- * Limit access to users with the 'cancel account' permission or administrative
- * users, and prevent the anonymous user from cancelling the account.
  */
 function springboard_group_user_cancel_access($account) {
-  return ((($GLOBALS['user']->uid == $account->uid) && user_access('cancel account')) || user_access('administer users')) && $account->uid > 0;
+  $contact_gids = springboard_group_get_contact_group_gids($account->uid);
+  if (!empty($contact_gids)) {
+    $groups = springboard_group_get_user_group_ids(FALSE);
+    foreach ($contact_gids as $gid) {
+      if (in_array($gid, $groups) && springboard_group_user_check_group_perms($gid, 'manage group contacts')) {
+        return TRUE;
+      }
+      if (user_access('administer groups') && user_access('administer users')) {
+        return TRUE;
+      }
+    }
+    // If the user is grouped at all, return false, even if the admin has
+    // administer permissions but not group admin permissions?
+    // return FALSE;
+  }
+  // Use the normal access check if we get here.
+  return user_cancel_access($account);
 }
-
 
 /**
  * Implements hook_form_FORM_ID_alter().
@@ -195,4 +227,21 @@ function springboard_group_form_user_profile_form_alter(&$form, &$form_state) {
     // Add the validation handlers to the form.
     springboard_group_load_ajax_validation_handlers($form, $form_state);
   }
+}
+
+
+function springboard_group_get_contact_group_gids($uid) {
+  $contact_gids = &drupal_static(__FUNCTION__ . $uid);
+  if (!isset($contact_gids)) {
+    $contact = user_load($uid);
+    $contact_gids = array();
+    if (!empty($contact->og_group_ref_user)) {
+      $contact_wrapper = entity_metadata_wrapper('user', $contact);
+      $groups = $contact_wrapper->og_group_ref_user->value();
+      foreach ($groups as $group) {
+        $contact_gids[] = $group->nid;
+      }
+    }
+  }
+  return $contact_gids;
 }

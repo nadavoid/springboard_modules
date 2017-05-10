@@ -602,6 +602,9 @@ function springboard_group_page_alter(&$page) {
  * Implements hook_clone_access_alter().
  */
 function springboard_group_clone_access_alter(&$access, $node) {
+  springboard_group_get_user_group_ids(FALSE);
+  springboard_group_get_user_group_ids(TRUE);
+
   global $user;
   if (empty($user->uid)) {
     return;
@@ -628,6 +631,20 @@ function springboard_group_clone_access_alter(&$access, $node) {
       $access = FALSE;
     }
   }
+}
+
+
+function springboard_group_get_user_group_ids($check_admin = TRUE) {
+  $groups = &drupal_static(__FUNCTION__ . $check_admin);
+  if (!isset($groups)) {
+    if (user_access('administer group') && $check_admin) {
+      $groups = springboard_group_get_all_springboard_groups();
+    }
+    else {
+      $groups = og_get_groups_by_user(NULL, 'node');
+    }
+  }
+  return $groups;
 }
 
 /**

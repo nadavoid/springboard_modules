@@ -39,12 +39,7 @@ function springboard_group_og_context_handler($item = NULL) {
   global $user;
   $ret = array();
   if ($user->uid) {
-    if (user_access('administer group')) {
-      $groups = springboard_group_get_all_springboard_groups();
-    }
-    else {
-      $groups = og_get_groups_by_user(NULL, 'node');
-    }
+    $groups = springboard_group_get_user_group_ids();
     if (!empty($groups)) {
       // If the user only belongs to one group, return it.
       if (count($groups) === 1) {

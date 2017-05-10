@@ -38,3 +38,16 @@ Springboard Groups improves the node-specific Group Membership UI by altering th
 navigation structure to be more compact.
 
 Springboard Groups provides a bulk-add members option.
+
+On installation:
+
+The springboard group install function creates an “affiliate editor” role,
+grants it a small set of springboard permissions, and also confers a minimal
+set of groups-related permissions to the existing springboard roles, i.e.,
+makes the sbadmin role a groups administrator, and confers access to the groups
+dashboard to the other roles. Inside the group, there are two roles by default,
+member and administrator member, and each of those roles gets a small set of
+in-group permissions by default.
+
+None of the content types or entities are group-enabled by default. When you enable groups on a type,
+the configuration is updated to make any Springboard Views used by that type group-aware.
