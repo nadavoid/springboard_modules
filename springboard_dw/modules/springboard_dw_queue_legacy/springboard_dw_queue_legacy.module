@@ -213,21 +213,20 @@ function springboard_dw_queue_legacy_get_highwater_mark($type) {
  *
  * @param string $type
  *   Type of queue record to create. eg contact, petition, message action, etc.
- * @param int $timestamp
- *   of seconds since the Unix Epoch.
- *   Number of seconds since the Unix Epoch.
- *  @param  mixed $idlist
+ * @param int $highwater_id
+ *   The id of the most recently processed record.
+ * @param mixed $idlist
  *   False or array if IDs that are being specifically queued.
  *
  * @return mixed
  *   FALSE on error. Otherwise, SAVED_NEW or SAVED_UPDATED.
  */
-function springboard_dw_queue_legacy_set_highwater_mark($type, $timestamp, $idlist = FALSE) {
+function springboard_dw_queue_legacy_set_highwater_mark($type, $highwater_id, $idlist = FALSE) {
   // If we are working with a specific set of IDs, don't move highwater mark.
   if ($idlist) {
     return;
   }
-  $record = array('type' => $type, 'highwater' => $timestamp);
+  $record = array('type' => $type, 'highwater' => $highwater_id);
   return drupal_write_record('springboard_data_warehouse_queue_legacy', $record, 'type');
 }
 
