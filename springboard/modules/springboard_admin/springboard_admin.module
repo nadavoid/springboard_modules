@@ -465,10 +465,10 @@ function springboard_admin_access_donation_form_pages($type = NULL) {
   $types = array();
   if (!isset($type)) {
     $types = variable_get('springboard_admin_allowed_form_types', array_keys(_springboard_admin_enabled_form_types()));
-    foreach ($types as $type) {
-      if (fundraiser_is_donation_type($type)) {
-        if (user_access('edit any ' . $type . ' content')
-        || node_access('create', $type)) {
+    foreach ($types as $donation_type) {
+      if (fundraiser_is_donation_type($donation_type)) {
+        if (user_access('edit any ' . $donation_type . ' content')
+        || node_access('create', $donation_type)) {
           return TRUE;
         }
       }
@@ -512,10 +512,10 @@ function springboard_admin_access_form_pages($type = NULL) {
 
   if (!isset($type)) {
     $webform_types = variable_get('springboard_admin_allowed_form_types', array_keys(_springboard_admin_enabled_form_types()));
-    foreach ($webform_types as $type) {
-      if ((user_access('edit any ' . $type . ' content')
-        || node_access('create', $type))
-        && !fundraiser_is_donation_type($type)
+    foreach ($webform_types as $webform_type) {
+      if ((user_access('edit any ' . $webform_type . ' content')
+        || node_access('create', $webform_type))
+        && !fundraiser_is_donation_type($webform_type)
       ) {
         return TRUE;
       }
