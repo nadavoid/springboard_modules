@@ -40,13 +40,6 @@ function springboard_group_og_permission() {
 
   $items = array();
 
-  $items['edit payment method'] = array(
-    'title' => t('Administer group payment methods'),
-    'description' => t("Edit a group's payments methods."),
-    'roles' => array(OG_AUTHENTICATED_ROLE),
-    'default role' => array(),
-  );
-
   $items['access all webform results'] = array(
     'title' => t('Access all webform results in group'),
     'description' => t('Grants access to the "Results" tab on all webforms in this group.'),
@@ -65,48 +58,93 @@ function springboard_group_og_permission() {
     'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
   );
 
-  $orders_grouped = og_get_group_audience_fields('commerce_order', 'commerce_order', 'node', 'springboard_group');
-  if (!empty($orders_grouped)) {
-    $items['manage group orders'] = array(
-      'title' => t('Manage orders in a group'),
-      'description' => t('Update or delete orders in a group.'),
-      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
-    );
-    $items['view group orders'] = array(
-      'title' => t('View orders in a group'),
-      'description' => t('View orders in a group.'),
-      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
-    );
-
-  }
-
-  if (springboard_group_users_are_grouped()) {
-    $items['manage group contacts'] = array(
-      'title' => t('Manage contacts in a group'),
-      'description' => t('Update or delete contacts in a group.'),
-      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
-    );
-    $items['view group contacts'] = array(
-      'title' => t('View contacts in a group'),
-      'description' => t('View contacts in a group.'),
-      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
-    );
+  $grouped_types = springboard_group_get_grouped_types();
+  // Entity types = Order, user, node, rules_config.
+  foreach ($grouped_types as $entity_type => $bundle) {
+    $function = 'springboard_group__' . $entity_type . '__og_permissions';
+    if (function_exists($function)) {
+      $function($items);
+    }
   }
 
   return $items;
-
 }
 
 /**
  * Implements hook_og_permission_alter().
  *
- * Remove some default permissions for features we're not using.
+ * Remove some default permissions for features we're not using. Rename/move.
  */
 function springboard_group_og_permission_alter(&$perms) {
   $perms['subscribe']['default role'] = array();
   $perms['unsubscribe']['default role'] = array();
   $perms['administer group']['default role'] = array();
   $perms['approve and deny subscription']['default role'] = array();
+
+  // Make OG think that another module owns the permissions we set in
+  // springboard_group_og_permissions(), so that they are themed/categorized
+  // correctly, rather than appearing to belong to this module.
+  foreach ($perms as $key => $perm) {
+    if ($perm['module'] == 'springboard_group') {
+      switch ($key) {
+        case strpos($key, 'webform') !== FALSE:
+          $perms[$key]['module'] = 'webform';
+          break;
+
+        case strpos($key, 'order') !== FALSE:
+          $perms[$key]['module'] = 'commerce_order';
+          break;
+
+        case strpos($key, 'payment') !== FALSE:
+          $perms[$key]['module'] = 'commerce_payment';
+          break;
+
+        case strpos($key, 'product') !== FALSE:
+          $perms[$key]['module'] = 'commerce_product';
+          break;
+
+        case strpos($key, 'contact') !== FALSE:
+          $perms[$key]['module'] = 'user';
+          break;
+
+        case strpos($key, 'user') !== FALSE:
+          $perms[$key]['module'] = 'user';
+          break;
+
+        case strpos($key, 'account') !== FALSE:
+          $perms[$key]['module'] = 'user';
+          break;
+
+        case strpos($key, 'profile') !== FALSE:
+          $perms[$key]['module'] = 'user';
+          break;
+
+        case strpos($key, 'card') !== FALSE:
+          $perms[$key]['module'] = 'commerce_cardonfile';
+          break;
+
+        case strpos($key, 'customer') !== FALSE:
+          $perms[$key]['module'] = 'commerce_customer';
+          break;
+
+        case strpos($key, 'fundraiser') !== FALSE:
+          $perms[$key]['module'] = 'fundraiser';
+          break;
+
+        case strpos($key, 'donations') !== FALSE:
+          $perms[$key]['module'] = 'fundraiser';
+          break;
+
+        case strpos($key, 'upsell') !== FALSE:
+          $perms[$key]['module'] = 'fundraiser';
+          break;
+
+        case strpos($key, 'sustainer') !== FALSE:
+          $perms[$key]['module'] = 'fundraiser';
+          break;
+      }
+    }
+  }
 }
 
 /**
@@ -152,7 +190,6 @@ function springboard_group_preprocess_og_ui_admin_permissions(&$vars) {
     $form = $vars['form'];
     foreach (element_children($form['permission']) as $key) {
       if (is_numeric($key)) {
-        // Rename the categories.
         switch ($vars['form']['permission'][$key]['#id']) {
           case 'og':
             $vars['form']['permission'][$key]['#markup'] = t('Groups Content');
@@ -167,7 +204,7 @@ function springboard_group_preprocess_og_ui_admin_permissions(&$vars) {
             break;
 
           case 'springboard_group':
-            $vars['form']['permission'][$key]['#markup'] = t('Other');
+            unset($vars['form']['permission'][$key]);
             break;
 
           case 'springboard_group_advocacy':
@@ -340,6 +377,8 @@ function springboard_group_form_og_ui_admin_global_permissions_alter(&$form, &$f
  * Implements hook_form_alter().
  */
 function springboard_group_form_og_ui_admin_permissions_alter(&$form, &$form_state, $form_id) {
+  dpm($form);
+
   if (arg(2) == 'group') {
     $path = drupal_get_path('module', 'springboard_group') . '/js/springboard-groups-groups-permissions.js';
     $form['#attached']['js'][] = $path;
@@ -375,3 +414,4 @@ function springboard_group_get_group_member_perms($gid, $account = NULL) {
   }
   return $in_group_perms;
 }
+

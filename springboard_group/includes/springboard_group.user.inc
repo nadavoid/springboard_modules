@@ -98,7 +98,7 @@ function springboard_group__user__menu_alter(&$items) {
     $items['user/%user/cancel']['access callback'] = 'springboard_group_user_cancel_access';
     $items['user/%user/cancel/confirm/%/%']['access callback'] = 'springboard_group_user_cancel_access';
     $items['user/%user/edit']['access callback'] = 'springboard_group_user_edit_access';
-    $items['user/%user/recurring_overview'] = 'springboard_group_user_edit_access';
+    $items['user/%user/recurring_overview']['access callback'] = 'springboard_group_user_edit_access';
     $items['user/%user/donation-history']['access callback'] = 'springboard_group_user_edit_access';
     $items['user/%user/donation-history/summary/%']['access callback'] = 'springboard_group_user_edit_access';
     $items['user/%user/donation-history/receipt/%']['access callback'] = 'springboard_group_user_edit_access';
@@ -253,4 +253,40 @@ function springboard_group_get_contact_group_gids($uid) {
     }
   }
   return $contact_gids;
+}
+
+function springboard_group__user__og_permissions(&$items) {
+  if (springboard_group_users_are_grouped()) {
+    $items['manage group contacts'] = array(
+      'title' => t('Manage contacts in a group'),
+      'description' => t('Update or delete contacts in a group.'),
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+    );
+    $items['view group contacts'] = array(
+      'title' => t('View contacts in a group'),
+      'description' => t('View contacts in a group.'),
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+    );
+
+    $items['cancel account'] = array(
+      'title' => t('Cancel accounts'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+    );
+    $items['administer users'] = array(
+      'title' => t('Administer users'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+    );
+
+    $items['access user profiles'] = array(
+      'title' => t('View user profiles'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+    );
+
+  }
 }

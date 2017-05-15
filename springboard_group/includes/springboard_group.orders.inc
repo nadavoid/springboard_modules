@@ -408,3 +408,131 @@ function springboard_group_fundraiser_sustainers_check_access($did) {
     }
   }
 }
+
+
+/**
+ * Add the order-related permissions.
+ *
+ * Sub-hook to springboard_group_og_permissions() hook.
+ */
+function springboard_group__commerce_order__og_permissions(&$items) {
+  $orders_grouped = og_get_group_audience_fields('commerce_order', 'commerce_order', 'node', 'springboard_group');
+  if (!empty($orders_grouped)) {
+    $items['manage group orders'] = array(
+      'title' => t('Manage orders in a group'),
+      'description' => t('Update or delete orders in a group.'),
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+    );
+    $items['view group orders'] = array(
+      'title' => t('View orders in a group'),
+      'description' => t('View orders in a group.'),
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+    );
+
+    $items['create commerce_order entities'] = array(
+      'title' => t('Create orders'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+    );
+    $items['edit any commerce_order entity'] = array(
+      'title' => t('Edit any order'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+    );
+    $items['view any commerce_order entity'] = array(
+      'title' => t('View any order'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+    );
+
+    $items['view payments'] = array(
+      'title' => t('View payments'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+    );
+
+    $items['create payments'] = array(
+      'title' => t('Create payments'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+    );
+
+    $items['delete payments'] = array(
+      'title' => t('Delete payments'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+    );
+    $items['update payments'] = array(
+      'title' => t('Update payments'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+    );
+
+    $items['edit any card data'] = array(
+      'title' => t('Edit any card data'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+    );
+
+    $items['view any card data'] = array(
+      'title' => t('View any card data'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+    );
+
+    $items['create any card data'] = array(
+      'title' => t('Create any card data'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+    );
+
+    $items['delete any card data'] = array(
+      'title' => t('Delete any card data'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+    );
+    $items['submit donations offline'] = array(
+      'title' => t('Submit donations offline'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+    );
+
+    $items['cancel future donations'] = array(
+      'title' => t('Cancel future donations'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+    );
+    $items['fastforward recurring donations'] = array(
+      'title' => t('Fast-forward recurring donations'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+    );
+    $items['administer commerce_order entities'] = array(
+      'title' => t('Administer orders'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+    );
+
+//  $items['administrate recurring donations'] = array(
+//    'title' => t('Administer recurring donations'),
+//    'description' => '',
+//    'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+//    'default role' => array(),
+//  );
+  }
+}

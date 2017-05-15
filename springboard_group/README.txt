@@ -51,3 +51,14 @@ in-group permissions by default.
 
 None of the content types or entities are group-enabled by default. When you enable groups on a type,
 the configuration is updated to make any Springboard Views used by that type group-aware.
+
+Technical Details:
+
+In standard organic groups, group audience fields have an entity reference selection plugin "OgSelectionHandler".
+In Springboard Groups, when you enable grouping of an entity type in the alternative admin UI, the group audience
+field gets a custom entity reference selection handler "OgSpringboardOgSelectionHandler". This handler makes it possible
+to replace the OG "complex" (two fields) group selection field with a simple single field.
+
+Adding the group field through the alternative UI also creates a machine name for the group field:
+"og_group_ref_[bundle_name]." The default behavior in OG is to share a single machine name "og_group_ref". It also
+makes "springboard_group" the only reference-able bundle for the reference field.
