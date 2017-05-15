@@ -760,3 +760,87 @@ EOT;
   }
   return $output;
 }
+
+
+function springboard_group_springboard_advocacy_user_can_access_type($type) {
+  $access = springboard_group_user_can_access_type_in_group($type);
+  return $access;
+}
+
+function springboard_group_springboard_admin_access_donation_form_pages($types) {
+  if (is_array($types)) {
+    foreach ($types as $type) {
+      if (fundraiser_is_donation_type($type)) {
+        if(springboard_group_user_can_access_type_in_group($type)) {
+          return TRUE;
+        }
+      }
+    }
+  }
+  else {
+    if (fundraiser_is_donation_type($types)) {
+      if (springboard_group_user_can_access_type_in_group($types)) {
+        return TRUE;
+      }
+    }
+  }
+}
+
+function springboard_group_springboard_admin_access_form_pages($types) {
+  if (is_array($types)) {
+    foreach ($types as $type) {
+      if (!fundraiser_is_donation_type($type)) {
+        if(springboard_group_user_can_access_type_in_group($type)) {
+          return TRUE;
+        }
+      }
+    }
+  }
+  else {
+    if (!fundraiser_is_donation_type($types)) {
+      if(springboard_group_user_can_access_type_in_group($types)) {
+        return TRUE;
+      }
+    }
+  }
+}
+
+function springboard_group_springboard_admin_access_marketing_overview() {
+
+}
+
+function springboard_group_springboard_admin_access_integration_overview() {
+
+}
+
+function springboard_group_user_can_access_type_in_group($type, $account = NULL) {
+  $access = FALSE;
+  global $user;
+  if (empty($account)) {
+    $account = $user;
+  }
+  $groups = og_get_entity_groups('user', $account);
+  if (!empty($groups['node'])) {
+    foreach ($groups['node'] as $gid) {
+      if ($roles = og_get_user_roles('node', $gid)) {
+        $perms = og_role_permissions($roles);
+        $role_permissions = [];
+        foreach ($perms as $perm) {
+          $role_permissions = array_merge($role_permissions, array_keys(array_filter($perm)));
+        }
+        $content_perms = array(
+          'create ' . $type . 'content',
+          'update any ' . $type . ' content',
+        );
+        foreach ($content_perms as $content_perm) {
+          if (in_array($content_perm, $role_permissions)) {
+            $access = TRUE;
+          }
+        }
+      }
+    }
+  }
+  return $access;
+}
+
+

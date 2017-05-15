@@ -145,7 +145,10 @@ function springboard_advocacy_user_can_create_advocacy_type() {
   // Any new advocacy types will have to be added here in the future.
   $access = user_access('create sba_social_action content') || user_access('create sba_message_action content') || user_access('create springboard_petition content');
 
-  drupal_alter('springboard_advocacy_user_can_create_advocacy_type', $access);
+  $check_access = module_invoke_all('springboard_advocacy_user_can_create_advocacy_type');
+  if(in_array(TRUE, $check_access, TRUE)) {
+    $access = TRUE;
+  }
 
   return $access;
 
@@ -157,11 +160,18 @@ function springboard_advocacy_user_can_create_advocacy_type() {
  */
 function springboard_advocacy_user_can_edit_any_advocacy_type() {
   // Any new advocacy types will have to be added here in the future.
-  return (user_access('edit any sba_message_action content')
+  $access = user_access('edit any sba_message_action content')
     || user_access('edit any springboard_petition content')
-    || user_access('edit any sba_social_action content')
-  );
+    || user_access('edit any sba_social_action content');
+
+  $check_access = module_invoke_all('springboard_advocacy_user_can_edit_any_advocacy_type');
+  if(in_array(TRUE, $check_access, TRUE)) {
+    $access = TRUE;
+  }
+
+  return $access;
 }
+
 
 /**
  * Check advocacy dashboard access.
@@ -196,8 +206,8 @@ function springboard_advocacy_user_can_access_type($type) {
   }
   $access = FALSE;
   $check_access = module_invoke_all('springboard_advocacy_user_can_access_type', $type);
-  if (!empty($check_access)) {
-    $access = $check_access;
+  if(in_array(TRUE, $check_access, TRUE)) {
+    $access = TRUE;
   }
   return $access;
 }

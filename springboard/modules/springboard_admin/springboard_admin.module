@@ -499,7 +499,6 @@ function springboard_admin_access_donation_form_pages($type = NULL) {
  * @return bool
  */
 function springboard_admin_access_form_pages($type = NULL) {
-
   if (user_access("administer springboard")
     || user_access('administer springboard dashboard')
     || user_access('administer fundraiser')
@@ -509,7 +508,6 @@ function springboard_admin_access_form_pages($type = NULL) {
   }
 
   $webform_types = array();
-
   if (!isset($type)) {
     $webform_types = variable_get('springboard_admin_allowed_form_types', array_keys(_springboard_admin_enabled_form_types()));
     foreach ($webform_types as $webform_type) {
@@ -528,7 +526,6 @@ function springboard_admin_access_form_pages($type = NULL) {
       return TRUE;
     }
   }
-
   $check_types = isset($type) ? $type : $webform_types;
   $access = module_invoke_all('springboard_admin_access_form_pages', $check_types);
   if (!empty(array_filter($access))) {
