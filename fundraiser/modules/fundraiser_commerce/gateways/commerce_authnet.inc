@@ -582,7 +582,7 @@ function fundraiser_commerce_commerce_authnet_aim_request_alter(&$nvp) {
   unset($fields[0]);
   $i = 1;
   foreach ($fields as $field) {
-    if (isset($config['commerce_authnet_webform_field_' . $i]) && isset($donation->submission_data[$config['commerce_authnet_webform_field_' . $i]])) {
+    if (!empty($config['commerce_authnet_webform_field_' . $i]) && !empty($donation->submission_data[$config['commerce_authnet_webform_field_' . $i]])) {
       if (isset($nvp[$fields[$config['commerce_authnet_authorize_field_' . $i]]])) {
         unset($nvp[$fields[$config['commerce_authnet_authorize_field_' . $i]]]);
       }

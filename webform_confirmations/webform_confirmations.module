@@ -99,6 +99,10 @@ function webform_confirmations_preprocess_webform_confirmation(&$vars) {
       if (!empty($vars['node']->confirmation_page_title)) {
         drupal_set_title($vars['node']->confirmation_page_title);
       }
+
+      // Allow modules to alter the confirmation message.
+      drupal_alter('webform_confirmations_confirmation_message', $vars['confirmation_message'], $vars);
+
       // Replace webform tokens for the submission.
       module_load_include('inc', 'webform', 'includes/webform.submissions');
       $submission = webform_get_submission($vars['node']->nid, $vars['sid']);
@@ -530,17 +534,9 @@ function _webform_confirmation_send_confirmation_mail($settings, $donation) {
 }
 
 function _webform_confirmation_send_confirmation_mail_helper($settings, $donation, $node, $eid, $account, $params) {
-  module_load_include('inc', 'webform', 'includes/webform.submissions');
+  // Add the donation object to the couple of the places its expected.
+  $params['message']['params']['donation'] = $params['donation'] = $donation;
   $message = $params['message'];
-  $params['donation'] = $donation;
-  // Email Templates handles webform token replacement so all we need to do is pick off order tokens.
-  $token_set = array(
-    'node' => $node,
-    'donation' => $donation,
-  );
-  $params['settings']['html_message'] = token_replace($params['settings']['html_message'], $token_set);
-  $params['settings']['text_message'] = token_replace($params['settings']['text_message'], $token_set);
-  $params['subject'] = token_replace($params['subject'], $token_set, array('clear' => TRUE));
   drupal_mail('email_wrappers', 'wf_submission', $message['to'], user_preferred_language($account), $params);
 }
 

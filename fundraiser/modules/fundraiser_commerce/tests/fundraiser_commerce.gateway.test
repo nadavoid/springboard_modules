@@ -13,8 +13,6 @@ abstract class FundraiserCommerceGatewayTestSetup extends FundraiserSetup {
     $permissions = array_merge($permissions, array(
       'administer site configuration',
       'administer nodes',
-      'create donation form',
-      'edit any donation form',
       'configure store',
       'administer payment methods',
       'administer payments',

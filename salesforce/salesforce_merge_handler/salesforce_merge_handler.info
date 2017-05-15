@@ -1,0 +1,6 @@
+name = Salesforce Merge Handler
+description = Handle sync failures that result from merged SF records.
+package = Salesforce
+core = 7.x
+
+dependencies[] = salesforce_queue

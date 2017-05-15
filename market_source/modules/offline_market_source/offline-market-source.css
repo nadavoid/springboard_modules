@@ -1,0 +1,4 @@
+#edit-market-source-global-fields tr.odd .form-item,
+#edit-market-source-global-fields tr.even .form-item {
+  white-space: normal;
+}

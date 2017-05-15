@@ -146,7 +146,7 @@ function email_wrappers_mail_form($edit, $params = array()) {
  * Checks email addresses look valid.
  */
 function email_wrappers_mail_form_validate(&$form, $form_state) {
-  if (!email_wrappers_validate_address($form_state['values']['from_mail'])) {
+  if (!springboard_validate_email($form_state['values']['from_mail'])) {
     form_set_error('from_mail', t('You have entered an invalid email address in the "from mail" field: %mail', array('%mail' => $form_state['values']['from_mail'])));
   }
 
@@ -156,7 +156,7 @@ function email_wrappers_mail_form_validate(&$form, $form_state) {
       $recipients = array($recipients);
     }
     foreach ($recipients as $recipient) {
-      if (!email_wrappers_validate_address($recipient)) {
+      if (!springboard_validate_email($recipient)) {
         form_set_error('recipients', t('You have entered an invalid email address in the "recipients" field: %mail', array('%mail' => $recipient)));
       }
     }
@@ -168,7 +168,7 @@ function email_wrappers_mail_form_validate(&$form, $form_state) {
       $ccs = array($ccs);
     }
     foreach ($ccs as $cc) {
-      if (!email_wrappers_validate_address($cc)) {
+      if (!springboard_validate_email($cc)) {
         form_set_error('cc', t('You have entered an invalid email address in the "cc" field: %mail', array('%mail' => $cc)));
       }
     }
@@ -180,7 +180,7 @@ function email_wrappers_mail_form_validate(&$form, $form_state) {
       $bccs = array($bccs);
     }
     foreach ($bccs as $bcc) {
-      if (!email_wrappers_validate_address($bcc)) {
+      if (!springboard_validate_email($bcc)) {
         form_set_error('bcc', t('You have entered an invalid email address in the "bcc" field: %mail', array('%mail' => $bcc)));
       }
     }
@@ -205,19 +205,6 @@ function email_wrappers_mail_form_submit($form, $form_state) {
   else {
     email_wrappers_update($settings);
   }
-}
-
-/**
- * Filters email addresses.
- *
- * @param string $mail
- *   The email address to validate.
- *
- * @return string|bool
- *   The filtered email address, or FALSE if the filter fails.
- */
-function email_wrappers_validate_address($mail) {
-  return filter_var($mail, FILTER_VALIDATE_EMAIL);
 }
 
 /**

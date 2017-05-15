@@ -3,7 +3,7 @@
         $('.draggable').each(function(){
             if ($('td:nth-child(2):contains("Hidden")', this).length > 0) {
                 console.log($.cookie('Drupal.webformUI.showHidden'));
-                if ($.cookie('Drupal.webformUI.showHidden') === 0 || $.cookie('Drupal.webformUI.showHidden') === null) {
+                if ($.cookie('Drupal.webformUI.showHidden') == 0 || $.cookie('Drupal.webformUI.showHidden') === null) {
                     //$(this).removeClass('draggable tabledrag-leaf')
                     //$(this).find('a.tabledrag-handle').remove();
                     if (!$(this).hasClass('webform-add-form')) {
@@ -21,7 +21,7 @@
 
         var addForm = $('tr.webform-add-form');
         $('#webform-components tbody').append(addForm);
-        if ($.cookie('Drupal.webformUI.showHidden') === 0 || $.cookie('Drupal.webformUI.showHidden') === null) {
+        if ($.cookie('Drupal.webformUI.showHidden') == 0 || $.cookie('Drupal.webformUI.showHidden') === null) {
             $('#webform-components-form').prepend('<a href="#" class = "show-hidden-fields show-hidden-fields-off" style="float:left">Show hidden fields</a>');
         }
         else {

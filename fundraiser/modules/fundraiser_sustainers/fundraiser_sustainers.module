@@ -419,7 +419,7 @@ function fundraiser_sustainers_skip_submit($form, &$form_state) {
     salesforce_genmap_send_object_to_queue('salesforce_donation', 'update', $donation->node, $donation->did, $donation, 'donation');
   }
 
-  drupal_set_message(t('The recurring donation has been cancelled.'));
+  drupal_set_message(t('The recurring donation has been canceled.'));
   // Afterwards return where we came from.
   drupal_goto(drupal_get_destination());
 }
@@ -860,7 +860,7 @@ function fundraiser_sustainers_form_node_form_alter(&$form, &$form_state, $form_
       '#title' => t('Minimum donation amount'),
       '#description' => t('The minimum acceptable donation amount.'),
       '#default_value' => isset($node->recurring_minimum_donation_amount) ?
-        number_format($node->recurring_minimum_donation_amount, 2) : variable_get('fundraiser_default_minimum', 10.00),
+        number_format($node->recurring_minimum_donation_amount, 2, '.', "") : variable_get('fundraiser_default_minimum', 10.00),
     );
     foreach ($form['#validate'] as $index => $callback) {
       if ($callback == '_fundraiser_form_amounts_validate') {
@@ -1181,7 +1181,7 @@ function fundraiser_sustainers_salesforce_sync_complete_item($item, $result) {
  */
 function fundraiser_sustainers_fundraiser_donation_delete($donation) {
   if ($donation->donation['recurs_monthly'] == TRUE) {
-    // If a recurring donation has been cancelled, we should drop it out of the recurring table.
+    // If a recurring donation has been canceled, we should drop it out of the recurring table.
     _fundraiser_sustainers_delete_recurring($donation->did);
   }
 }
@@ -2092,7 +2092,7 @@ function fundraiser_sustainers_form_fundraiser_admin_settings_alter(&$form, &$fo
   $form['fundraiser_sustainers']['fundraiser_recurring_auto_cancel']['fundraiser_recurring_autocancel_enabled'] = array(
     '#type' => 'checkbox',
     '#title' => t('Cancel recurring donation series after multiple consecutive permanent failures?'),
-    '#description' => t('If this option is enabled, recurring donation series which consistently fail will be permanently cancelled.'),
+    '#description' => t('If this option is enabled, recurring donation series which consistently fail will be permanently canceled.'),
     '#default_value' => variable_get('fundraiser_recurring_autocancel_enabled', 0),
   );
   $form['fundraiser_sustainers']['fundraiser_recurring_auto_cancel']['fundraiser_recurring_autocancel_threshold'] = array(
@@ -2277,12 +2277,12 @@ function fundraiser_sustainers_edit_form($did) {
   $future_orders .
   '</div>';
 
-  // Check if this order is already cancelled.
-  $cancelled = isset($next_donation->recurring->cancellation_reason) ? $next_donation->recurring->cancellation_reason : '';
+  // Check if this order is already canceled.
+  $canceled = isset($next_donation->recurring->cancellation_reason) ? $next_donation->recurring->cancellation_reason : '';
 
   // Generate forms, or error messages as needed.
   $remaining_donation_count = _fundraiser_sustainers_count_donations_recurr_remaining($did);
-  if ($remaining_donation_count > 0 && empty($cancelled)) {
+  if ($remaining_donation_count > 0 && empty($canceled)) {
     $donation_amount_form_array = drupal_get_form('fundraiser_sustainers_donation_amount_form', $donation, $next_donation);
     $donation_amount_form = drupal_render($donation_amount_form_array);
     if (user_access('set new recurring charge date')) {
@@ -2305,11 +2305,17 @@ function fundraiser_sustainers_edit_form($did) {
     $donation_date_form = '';
   }
   else {
-    $donation_amount_form = t('This recurring donation has been cancelled.');
+    $donation_amount_form = t('This recurring donation has been canceled.');
   }
   $donation_amount_form = '<div id="donation-amount-form"><h2>Update Donation Amount</h2>' . $donation_amount_form . '</div>';
 
-  if ($remaining_donation_count > 0 && empty($cancelled)) {
+  list($method_id, $rule_name) = explode('|', $next_donation->gateway['id']);
+  $incompatible_gateway = $method_id == 'braintree_paypal' || $method_id == 'braintree_applepay';
+
+  if ($incompatible_gateway) {
+    $billing_update_form = '';
+  }
+  elseif ($remaining_donation_count > 0 && empty($canceled)) {
     $data = array(
       'donation' => $next_donation,
       'calling module' => 'fundraiser_sustainers',
@@ -2345,13 +2351,14 @@ function fundraiser_sustainers_edit_form($did) {
     $billing_update_form = $no_remaining_message;
   }
   else {
-    $billing_update_form = t('This recurring donation has been cancelled.');
+    $billing_update_form = t('This recurring donation has been canceled.');
   }
+
   if (!empty($billing_update_form)) {
     $billing_update_form = '<div id="donation-billing-form"><h2>Update Your Payment Information</h2>' . $billing_update_form . '</div>';
   }
 
-  if ($remaining_donation_count > 0 && empty($cancelled)) {
+  if ($remaining_donation_count > 0 && empty($canceled)) {
     $cancel_form_array = drupal_get_form('fundraiser_sustainers_cancel_form', $next_donation);
     $cancel_form = drupal_render($cancel_form_array);
   }
@@ -2359,7 +2366,7 @@ function fundraiser_sustainers_edit_form($did) {
     $cancel_form = $no_remaining_message;
   }
   else {
-    $cancel_form = t('This recurring donation has been cancelled. Your reason given was: %reason', array('%reason' => $cancelled));
+    $cancel_form = t('This recurring donation has been canceled. Your reason given was: %reason', array('%reason' => $canceled));
   }
   if (user_access('cancel future donations')) {
     $cancel_form = '<div id="donation-cancel-form"><h2>Cancel Future Donations</h2>' . $cancel_form . '</div>';
@@ -2504,7 +2511,18 @@ function fundraiser_sustainers_update_billing_form_submit($form, &$form_state) {
   $username = isset($user->name) ? $user->name : 'Anonymous';
   // We only update donations to come, not ones already processed.
   $donations = _fundraiser_sustainers_get_donations_recurr_remaining($master_did);
-  fundraiser_sustainers_update_billing_info_in_series($donations, $submission_fields, $username);
+
+  $update_billing = TRUE;
+  if (isset($form_state['donation']->update_billing)) {
+    $update_billing = $form_state['donation']->update_billing;
+  }
+
+  $update_payment = TRUE;
+  if (isset($form_state['donation']->update_payment)) {
+    $update_payment = $form_state['donation']->update_payment;
+  }
+
+  fundraiser_sustainers_update_billing_info_in_series($donations, $submission_fields, $username, $update_billing, $update_payment);
 
   // Use the first future donation for a template of new future donations.
   $source_donation = reset($donations);
@@ -2903,8 +2921,10 @@ function fundraiser_sustainers_update_billing_info_create_new_donations($master_
  *   Fields that get merged into $donation->donation to update it.
  * @param string $name
  *   The name used in the donation comment.
+ * @param bool $update_payment
+ *   Default value for updating payment.
  */
-function fundraiser_sustainers_update_billing_info_in_series($donations, $submission_fields, $name = '') {
+function fundraiser_sustainers_update_billing_info_in_series($donations, $submission_fields, $name = '', $update_billing = TRUE, $update_payment = TRUE) {
   // Set a flag for other modules to respond to the first order being
   // updated in series.
   $sustainer_update_first = TRUE;
@@ -2916,10 +2936,10 @@ function fundraiser_sustainers_update_billing_info_in_series($donations, $submis
     $donation->donation = array_merge($donation->donation, $submission_fields);
 
     // Mark the billing information as needing to be updated.
-    $donation->update_billing = TRUE;
+    $donation->update_billing = $update_billing;
 
     // Mark the payment information as needing to be updated.
-    $donation->update_payment = TRUE;
+    $donation->update_payment = $update_payment;
 
     // Let other modules know this is a sustainer update.
     $donation->sustainer_update = TRUE;
@@ -3098,9 +3118,18 @@ function _fundraiser_sustainers_create_future_orders($donation, $month, $year, $
   global $user;
   foreach ($existing_recurring as $key => $recurring) {
     $this_donation = fundraiser_donation_get_donation($recurring->did);
+
+    // In an anonymous session use the user on the donation object for the log.
+    if (user_is_anonymous()) {
+      $name = $this_donation->user->name . ' (Anonymous) ';
+    }
+    else {
+      $name = $user->name;
+    }
+
     // Cancel the donation with an informative message.
     watchdog('fundraiser', 'Donation @id was deleted by @user while updating the card expiration date.',
-      array('@id' => $donation->did, '@user' => $user->name), WATCHDOG_DEBUG, NULL);
+      array('@id' => $donation->did, '@user' => $name), WATCHDOG_DEBUG, NULL);
 
     // Delete these donations so do won't appear in the list of recurring donations.
     // The sustainer record will get deleted and logged by
@@ -3200,11 +3229,11 @@ function fundraiser_sustainers_cancel_form_submit($form, &$form_state) {
     fundraiser_donation_cancel($donation);
 
     // Add a watchdog entry with the did and reason.
-    watchdog('fundraiser_sustainers', 'Donation cancelled for #@did. Reason: @reason',
+    watchdog('fundraiser_sustainers', 'Donation canceled for #@did. Reason: @reason',
       array('@did' => $donation->did, '@reason' => $reason));
   }
 
-  drupal_set_message(t('All future payments cancelled.'));
+  drupal_set_message(t('All future payments canceled.'));
 }
 
 /**
@@ -3296,6 +3325,7 @@ function fundraiser_sustainers_fundraiser_donation_success($donation) {
           'did' => $donation->did,
           'uid' => $donation->uid,
           'amount' => $donation->donation['amount'],
+          'status' => 'active',
           'installments' => _fundraiser_sustainers_calculate_installments($donation),
         );
 
@@ -3403,6 +3433,9 @@ function fundraiser_sustainers_donation_retry($donation) {
  *   Standard fundraiser donation data structure.
  */
 function fundraiser_sustainers_donation_fail($donation) {
+  // Let others know the donation has failed.
+  fundraiser_donation_decline($donation);
+
   // Set the sustainer record up in a failed state.
   $recurring = array(
     'did' => $donation->did,
@@ -3414,9 +3447,6 @@ function fundraiser_sustainers_donation_fail($donation) {
   watchdog('fundraiser_sustainers', 'Payment for recurring donation @id has
     failed @count times. The donation will not be submitted for payment again. Gateway message: @message',
     array('@id' => $donation->did, '@count' => variable_get('fundraiser_sustainers_max_processing_attempts', 3), '@message' => $donation->result['message']), WATCHDOG_DEBUG);
-
-  // Let others know the donation has failed.
-  fundraiser_donation_decline($donation);
 
   // Fire a hook so that other modules can respond to the failure.
   module_invoke_all('fundraiser_sustainers_donation_fail', $donation);
@@ -3526,7 +3556,7 @@ function fundraiser_sustainers_auto_cancel($donation) {
       array(':attempts' => $threshold, ':did' => $donation->did));
 
     // Add a watchdog entry with the did and reason.
-    watchdog('fundraiser_sustainers', 'Donation cancelled for #@did. Reason: @reason',
+    watchdog('fundraiser_sustainers', 'Donation canceled for #@did. Reason: @reason',
       array('@did' => $donation->did, '@reason' => $reason));
 
     // Add a log message into the subsequent revision caused when the main order's status is updated:
@@ -3581,14 +3611,14 @@ function fundraiser_sustainers_billing_update_form($form, &$form_state, $donatio
     '#suffix' => '</div>',
   );
 
-  // Build the generic billing update form, unless it's expired or cancelled.
-  $cancelled = isset($next_donation->recurring->cancellation_reason) ? $next_donation->recurring->cancellation_reason : '';
-  if (!empty($cancelled)) {
+  // Build the generic billing update form, unless it's expired or canceled.
+  $canceled = isset($next_donation->recurring->cancellation_reason) ? $next_donation->recurring->cancellation_reason : '';
+  if (!empty($canceled)) {
     $form['closed-message'] = array(
       '#type' => 'container',
     );
     $form['closed-message']['message'] = array(
-      '#markup' => t("This recurring donation has been cancelled."),
+      '#markup' => t("This recurring donation has been canceled."),
     );
   }
   elseif (empty($remaining)) {
@@ -3862,16 +3892,90 @@ function _fundraiser_sustainers_update_recurring($donation) {
     _fundraiser_sustainers_create_recurring($donation);
   }
   else {
+
     // Merge data together so we get everything in the record.
     $record = array_merge((array) $original, $donation);
     drupal_write_record('fundraiser_sustainers', $record, 'did');
-
     $log = fundraiser_sustainers_log();
     $log->log($donation, $original);
   }
 
+  // Update the series entity.
+  if (!empty($record['master_did'])) {
+    fundraiser_sustainers_update_recurring_series_entity($record['master_did']);
+  }
+
   // Fire a hook so that other modules can respond to the update.
   module_invoke_all('fundraiser_sustainers_update_recurring', $donation);
+}
+
+/**
+ * Update the status of the sustainer series entity.
+ *
+ * @param int $master_did
+ *   The id of the entity series to update.
+ */
+function fundraiser_sustainers_update_recurring_series_entity($master_did) {
+  // Check if there are remaining recurring donations.
+  $recur_remain = _fundraiser_sustainers_get_donations_recurr_remaining($master_did);
+  $fundraiser_sustainers_series = entity_load_single('fundraiser_sustainers_series', $master_did);
+
+  // Change the status if no remaining charges and the status is set to active.
+  if (
+    empty($recur_remain)
+    && $fundraiser_sustainers_series->status == 'active'
+  ) {
+    $statuses = fundraiser_sustainers_series_entity_statuses();
+
+    // Load the last donation object to get the final order status.
+    $all_recuring = _fundraiser_sustainers_get_donations_recurr_by_masterdid($master_did);
+    $last_charge = array_pop($all_recuring);
+    $last_donation = fundraiser_donation_get_donation($last_charge->did, TRUE);
+    foreach ($statuses as $key => $status_arr) {
+      // Match the order status to the array of series entity statuse.
+      if (in_array($last_donation->status, $status_arr)) {
+        $status = $key;
+      }
+    }
+
+    // If the status is canceled, check if its auto_canceled.
+    if (
+      !empty($status)
+      && $status == 'canceled'
+      && $last_donation->recurring->gateway_resp == 'auto_canceled'
+    ) {
+      $status = 'auto_canceled';
+    }
+
+    if (!empty($status)) {
+      $fundraiser_sustainers_series->status = $status;
+      $fundraiser_sustainers_series->save();
+    }
+  }
+}
+
+/**
+ * Returns an array of statuses for the sustainer series entity.
+ *
+ * The array is keyed by series status values and contains matching commerce
+ * order statuses.
+ *
+ * @return array
+ *   Array of status values.
+ */
+function fundraiser_sustainers_series_entity_statuses() {
+  return array(
+    // Active series with remaining sustainers.
+    'active' => array('pending_future_payment'),
+    // Series has no pending charges, status of final charge is "Payment Received".
+    'expired' => array('payment_received', 'offline_check'),
+    // Series has no pending charges, status of final charge is "Canceled".
+    'canceled' => array('canceled', 'omitted'),
+    // Series has no pending charges, status of final charge is "Auto-canceled".
+    'auto_canceled' => array('auto_canceled'),
+    // Series has no pending charges, status of final charge is "Payment Failed".
+    'failed' => array('failed', 'unknown'),
+  );
 }
 
 /**
@@ -3944,7 +4048,7 @@ function _fundraiser_sustainers_get_donation_sets() {
     $next_charge = _fundraiser_sustainers_get_donations_next_charge($donation_set->master_did);
     if (isset($next_charge->did)) {
       $donation_sets[$index]->next_charge = $next_charge->next_charge;
-      $donation_sets[$index]->status = empty($next_charge->cancellation_reason) ? t('active') : t('cancelled');
+      $donation_sets[$index]->status = empty($next_charge->cancellation_reason) ? t('active') : t('canceled');
     }
   }
   return $donation_sets;
@@ -4474,6 +4578,15 @@ function fundraiser_sustainers_action_info() {
       'triggers' => array('any'),
       'permissions' => array('administrate recurring donations'),
     ),
+    'fundraiser_sustainers_payment_received_action' => array(
+      'type' => 'fundraiser_sustainer_record',
+      'label' => t('Unlock sustainer and set status to payment received'),
+      'behavior' => array('changes_property'),
+      'configurable' => FALSE,
+      'vbo_configurable' => FALSE,
+      'triggers' => array('any'),
+      'permissions' => array('administrate recurring donations'),
+    ),
   );
 }
 
@@ -4568,6 +4681,54 @@ function fundraiser_sustainers_omit_sustainer_action(&$sustainer_record, $contex
       $sustainer_record->gateway_resp = FUNDRAISER_SUSTAINERS_OMITTED_STATUS;
       $log->logOmittedDonation($sustainer_record->did, $sustainer_record->gateway_resp);
       drupal_set_message(t('Omitted sustainer %did and left its status at %status', $replacements));
+      break;
+
+    case FUNDRAISER_SUSTAINERS_SUCCESS_STATUS:
+      // Fall through.
+    case FUNDRAISER_SUSTAINERS_FAILED_STATUS:
+      // Fall through.
+    case FUNDRAISER_SUSTAINERS_SKIPPED_STATUS:
+      // Fall through.
+    case FUNDRAISER_SUSTAINERS_CANCELED_STATUS:
+      // Fall through.
+    default:
+      drupal_set_message(t('Cannot unlock the sustainer %did because its status is %status', $replacements));
+      break;
+  }
+}
+
+/**
+ * The unlock sustainer action.
+ *
+ * Note that I'm including all gateway_resp cases in case this action gets used
+ * in other situations besides the stuck sustainer VBO.
+ *
+ * Also note that drupal saves the sustainer record entity on its own so that's
+ * why it's not happening here.
+ *
+ * @param Entity $sustainer_record
+ *   The fundraiser_sustainer_record entity.
+ */
+function fundraiser_sustainers_payment_received_action(&$sustainer_record, $context) {
+  $replacements = array(
+    '%did' => $sustainer_record->did,
+    '%status' => $sustainer_record->gateway_resp,
+  );
+
+  $log = fundraiser_sustainers_log();
+
+  switch ($sustainer_record->gateway_resp) {
+    case FUNDRAISER_SUSTAINERS_PROCESSING_STATUS:
+    case FUNDRAISER_SUSTAINERS_LOCKED_STATUS:
+    case FUNDRAISER_SUSTAINERS_RETRY_STATUS:
+    case FUNDRAISER_SUSTAINERS_SCHEDULED_STATUS:
+      $sustainer_record->lock_id = 0;
+      $sustainer_record->gateway_resp = FUNDRAISER_SUSTAINERS_SUCCESS_STATUS;
+      $donation = fundraiser_donation_get_donation($sustainer_record->did);
+      $donation->batch_operation = 'fundraiser_sustainers_payment_received_action';
+      fundraiser_donation_success($donation);
+      $log->logUnlockedDonation($sustainer_record->did, $sustainer_record->gateway_resp);
+      drupal_set_message(t('Unlocked sustainer %did and changed its status from %status to Success.', $replacements));
       break;
 
     case FUNDRAISER_SUSTAINERS_SUCCESS_STATUS:

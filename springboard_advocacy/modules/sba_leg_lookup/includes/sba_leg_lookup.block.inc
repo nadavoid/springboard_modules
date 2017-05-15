@@ -365,8 +365,8 @@ function sba_leg_lookup_legislator_roles() {
     'SS' => t('State Senator'),
     'SR' => t('State Representative'),
     'GOVNR' => t('Governor'),
-    'PRES01' => t('President'),
-    'PRES03' => t('Vice President'),
+    'PRES01' => t('Executive Office of the President'),
+    'PRES03' => t('Office of the Vice President'),
   );
 }
 

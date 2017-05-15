@@ -9,6 +9,7 @@ dependencies[] = token
 dependencies[] = commerce
 dependencies[] = list
 dependencies[] = entity
+dependencies[] = springboard
 
 ;Testing files
 files[] = tests/fundraiser.test

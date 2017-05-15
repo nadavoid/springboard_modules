@@ -385,6 +385,22 @@ function springboard_form_user_profile_form_alter(&$form, $form_state) {
 }
 
 /**
+ * Helper function, check if given string is an email format. Generically useful function.
+ * This function is used in place of valid_email_address() because we want to only accept
+ * domains with an extension.
+ *
+ * @param string $mail
+ *   The email address to validate.
+ *
+ * @return int|bool
+ *   Returns 1 for valid email, 0 for invalid, and FALSE for error.
+ */
+function springboard_validate_email($mail) {
+  // eregi is depr in PHP 5.3. Replaced with preg_match, adding lower case options.
+  return preg_match("/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,6}$/", $mail);
+}
+
+/**
  * Helper function.
  *
  * Useful for update scripts in any module that implements

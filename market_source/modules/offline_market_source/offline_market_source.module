@@ -1,0 +1,165 @@
+<?php
+
+/**
+ * @file
+ * Oflfline market source, provide a way for an administrative user to override market source fields
+ * on offline donation forms.
+ */
+
+/**
+ * Implements hook_module_implements_alter().
+ */
+function offline_market_source_module_implements_alter(&$implementations, $hook) {
+  // We need to run after fundraiser_offline
+  $hooks = array('form_alter');
+  if (in_array($hook, $hooks) && isset($implementations['offline_market_source'])) {
+    $group['offline_market_source'] = $implementations['offline_market_source'];
+    unset($implementations['offline_market_source']);
+    $implementations = $implementations + $group;
+  }
+}
+
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ * Add options for overriding market source values to market source admin configuration form.
+ */
+function offline_market_source_form_market_source_admin_settings_form_alter(&$form, &$form_state, $form_id) {
+  
+  // Add option for offline override to default market source fields
+  $default_fields_list = market_source_list_default_fields();
+  $default_field_values = variable_get('offline_market_source_default_fields', array());
+  foreach ($default_fields_list as $key => $field_name) {
+    $override = isset($default_field_values[$key]) ? $default_field_values[$key]['offline_override'] : 0;
+    $form['market_source_default_fields']['default_fields_wrapper'][$key]['offline_override'] = _offline_market_source_offline_override_field_populate($override);
+  }
+  
+  // Add option for offline override to custom market source fields
+  $custom_fields = &$form['market_source_global_fields']['custom_fields_wrapper']; 
+  $custom_field_values = &$form_state['values']['market_source_global_fields']['custom_fields_wrapper'];
+  $custom_fields_saved_state = variable_get('offline_market_source_custom_fields', array());
+  foreach ($custom_field_values as $i => $field_value) {
+    $key = isset($field_value['key']) ? $field_value['key'] : FALSE;
+    $override = ($key && isset($custom_fields_saved_state[$key])) ? $custom_fields_saved_state[$key]['offline_override'] : 0;
+    $custom_fields[$i]['offline_override'] = _offline_market_source_offline_override_field_populate($override);
+  }
+  // Fix table styling
+  $form['#attached']['css'] = array(
+    drupal_get_path('module', 'offline_market_source') . '/offline-market-source.css',
+  );
+  $form['#submit'][] = 'offline_market_source_form_market_source_admin_settings_form_submit';
+}
+
+/**
+ * Helper function for offline override checkbox.
+ */
+function _offline_market_source_offline_override_field_populate($default_value) {
+  $offline_override_field = array(
+    '#type' => 'checkbox',
+    '#title' => t('Offline Override'),
+    '#description' => t("Override this value on offline donations?"),
+    '#prefix' => '<div class="container-inline">',
+    '#suffix' => '</div>',
+    '#default_value' => $default_value,
+  );
+  return $offline_override_field;
+}
+
+/**
+ * Submit handler for market_source_admin_settings_form.
+ */
+function offline_market_source_form_market_source_admin_settings_form_submit($form, &$form_state) {
+  $values = &$form_state['values'];
+ // Save all the default fields 
+  $custom_fields = array();
+  if (!empty($values['market_source_global_fields']['custom_fields_wrapper'])) {
+    foreach ($values['market_source_global_fields']['custom_fields_wrapper'] as $i => $field) {
+      if (!empty($field['key']) && !empty($field['name'])) {
+        $custom_fields[$field['key']] = array(
+          'offline_override' => $field['offline_override'],
+        );
+      }
+    }
+  }
+  variable_set('offline_market_source_custom_fields', $custom_fields);
+  
+  // Save all the custom fields
+  $default_fields = array();
+  if (!empty($values['market_source_default_fields']['default_fields_wrapper'])) {
+    foreach ($values['market_source_default_fields']['default_fields_wrapper'] as $key => $field) {
+         $default_fields[$key] = array(
+           'offline_override' => $field['offline_override'],
+         );
+    }
+  }
+  variable_set('offline_market_source_default_fields', $default_fields);
+}
+
+
+/**
+ * Implements hook_form_alter().
+ * Expose market source fields on offline donation forms.
+ */
+function offline_market_source_form_alter(&$form, &$form_state, $form_id) {
+  // Current form is a webform...
+  if (strpos($form_id, 'webform_client_form_') !== FALSE && !empty($form['#node'])) {
+    $node = $form['#node'];
+    if (fundraiser_is_donation_type($node->type)) {
+      // This field is set by fundraiser offline, which performs the permission access checks.
+      $offline = isset($node->fundraiser_offline) && $node->fundraiser_offline == TRUE;
+      if ($offline) {
+        // $form['#submit'][] = 'offline_market_source_form_submit';
+        // Retrieve market source fields to expose on offline donation form.
+        $custom_field_values = variable_get('offline_market_source_custom_fields', array());
+        $default_field_values = variable_get('offline_market_source_default_fields', array());
+        $field_value_overrides = $custom_field_values + $default_field_values;
+        $overrides = array_keys(array_filter($field_value_overrides, '_filter_market_source_custom_overrides'));
+        
+        // Form keys for market_source and campaign on the donation form differ from the market source admin form.
+        $market_source = array_search('market_source', $overrides);
+        if ($market_source !== FALSE) {
+          $overrides[$market_source] = 'ms';
+        }
+        else {
+          // re-hide field exposed from fundraiser_offline
+          if (isset($form['submitted']['ms'])) {
+            $form['submitted']['ms']['#type'] = 'hidden';
+          }
+        }
+        $campaign = array_search('campaign', $overrides);
+        if ($campaign !== FALSE) {
+          $overrides[$campaign] = 'cid';
+        }
+        else {
+          // re-hide field exposed from fundraiser_offline
+          if (isset($form['submitted']['cid'])) {
+            $form['submitted']['cid']['#type'] = 'hidden';
+          }
+        }
+        
+        // Only work on fields that are available through the market source module.
+        $market_source_field_keys = _market_source_get_field_keys();
+        $overrides = array_intersect($market_source_field_keys, $overrides);
+        
+        // Expose any overridable ms fields and put them at the top of the form
+        foreach ($overrides as $key) {
+          if (isset($form['submitted'][$key])) {
+            $form['submitted'][$key]['#type'] = 'textfield';
+            $form['submitted'][$key]['#weight'] = 0;
+          }
+        }
+      }
+    }
+  }
+}
+
+function offline_market_source_form_submit($form, &$form_state) {
+ 
+}
+
+/**
+ * Helper function to filter market source fields enabled for override.
+ */
+function _filter_market_source_custom_overrides($field) {
+  return $field['offline_override'];
+}

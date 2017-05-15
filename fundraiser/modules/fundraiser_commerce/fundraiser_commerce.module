@@ -411,11 +411,14 @@ function _fundraiser_commerce_commerce_order_statuses_used() {
 /**
  * Implements hook_fundraiser_gateway_info().
  */
-function fundraiser_commerce_fundraiser_gateway_info() {
+function fundraiser_commerce_fundraiser_gateway_info($methods = NULL) {
   /// Load all the methods available.
-  $methods = new stdClass();
-  $methods->payment_methods = array();
-  rules_invoke_all('commerce_payment_methods', $methods);
+  if (empty($methods)) {
+    $methods = new stdClass();
+    $methods->payment_methods = array();
+    rules_invoke_all('commerce_payment_methods', $methods);
+  }
+
   $fundraiser_gateways = array();
   foreach ($methods->payment_methods as $id => $info) {
     $this_gateway = array();
@@ -717,14 +720,22 @@ function fundraiser_commerce_generic_credit_card_validate($value) {
     if ($valid !== TRUE && !empty($cvv)) {
       return array('card_cvv' => t('You have entered an invalid CVV number.'));
     }
-    $cc_expiration_month = $value['credit']['card_expiration_month'];
-    $cc_expiration_year = $value['credit']['card_expiration_year'];
-    $valid = commerce_payment_validate_credit_card_exp_date($cc_expiration_month, $cc_expiration_year);
-    if ($valid !== TRUE && !empty($cc_expiration_month) && !empty($cc_expiration_year)) {
-      return array(
-        'card_expiration_month' => t('The credit card you entered has expired.'),
-        'card_expiration_year' => '',
-      );
+    if (!empty($value['credit']['expiration_date'])) {
+      $cc_expiration_month = $value['credit']['expiration_date']['card_expiration_month'];
+      $cc_expiration_year = $value['credit']['expiration_date']['card_expiration_year'];
+    }
+    elseif (!empty($value['credit']['card_expiration_month']) && !empty($value['credit']['card_expiration_year'])) {
+      $cc_expiration_month = $value['credit']['card_expiration_month'];
+      $cc_expiration_year = $value['credit']['card_expiration_year'];
+    }
+    if (!empty($cc_expiration_month) && !empty($cc_expiration_year)) {
+      $valid = commerce_payment_validate_credit_card_exp_date($cc_expiration_month, $cc_expiration_year);
+      if ($valid !== TRUE && !empty($cc_expiration_month) && !empty($cc_expiration_year)) {
+        return array(
+          'card_expiration_month' => t('The credit card you entered has expired.'),
+          'card_expiration_year' => '',
+        );
+      }
     }
   }
 }
@@ -964,8 +975,10 @@ function fundraiser_commerce_fundraiser_donation_get_donation($donation) {
       $profile = commerce_customer_profile_load($profile_id);
     }
   }
-  elseif (isset($order->commerce_customer_billing[LANGUAGE_NONE][0]['profile_id'])) {
-    $profile = commerce_customer_profile_load($order->commerce_customer_billing[LANGUAGE_NONE][0]['profile_id']);
+
+  // If no profile was loaded from cardonfile, use the one on the order.
+  if (empty($profile)) {
+    $profile = $order_wrapper->commerce_customer_billing->value();
   }
 
   if (!empty($profile)) {
@@ -1021,6 +1034,14 @@ function fundraiser_commerce_fundraiser_donation_create($donation) {
         'roles' => array(),
         'status' => 1,
       );
+
+      if (module_exists('email_registration')) {
+        // Strip off everything after the @ sign.
+        $name = preg_replace('/@.*$/', '', $fields['mail']);
+        $name = email_registration_cleanup_username($name);
+        $fields['name'] = email_registration_unique_username($name);
+      }
+
       $user = user_save('', $fields);
     }
   }
@@ -1316,23 +1337,27 @@ function fundraiser_commerce_fundraiser_donation_after_process($donation) {
     }
 
     // Update other recurring donations that use this card id.
-    $results = db_query('SELECT fs.master_did AS master_did, fd.did AS did, fd.status AS status FROM {fundraiser_donation} fd LEFT JOIN {fundraiser_sustainers} fs ON fd.did = fs.did WHERE fd.card_id = :card_id ORDER BY did', array(
+    $results = db_query('SELECT DISTINCT(fs.master_did) FROM {fundraiser_sustainers} fs LEFT JOIN {fundraiser_donation} fd ON fd.did = fs.did WHERE fd.card_id = :card_id', array(
       ':card_id' => $donation->data['cardonfile'],
-    ))->fetchAll(PDO::FETCH_ASSOC);
+    ))->fetchAll();
 
     if (empty($results)) {
       return;
     }
 
     foreach ($results as $result) {
-      if (empty($result['master_did'])) {
-        continue;
-      }
+      $remaining = _fundraiser_sustainers_get_donations_recurr_remaining($result->master_did);
 
-      // Update other recurring donations.
-      $masters_done[$result['master_did']] = fundraiser_donation_get_donation($result['master_did']);
-      $source_donation = fundraiser_donation_get_donation($result['did']);
-      fundraiser_sustainers_update_billing_info_create_new_donations($masters_done[$result['master_did']], $source_donation, $donation->donation);
+      if (!empty($remaining)) {
+        // Load the master donation.
+        $master_donation = fundraiser_donation_get_donation($result->master_did);
+
+        // Use the first future donation for a template of new future donations.
+        $source_donation = fundraiser_donation_get_donation($remaining[0]->did);
+
+        // Create the new donations.
+        fundraiser_sustainers_update_billing_info_create_new_donations($master_donation, $source_donation, $donation->donation);
+      }
     }
   }
 }
@@ -1458,7 +1483,7 @@ function _fundraiser_commerce_fundraiser_donation_process_external_form_cancel($
   $order = commerce_order_load($donation->did);
   $info = _fundraiser_get_donation_gateway($donation->did);
   $method_instance = commerce_payment_method_instance_load($info['id']); // From commerce_payment.module.
-  $log = t('Payment cancelled at the gateway.');
+  $log = t('Payment canceled at the gateway.');
   // Check if we're in the wrong spot.
   if (!$method_instance || !$method_instance['offsite']) {
     if (!$method_instance) {
@@ -2952,7 +2977,7 @@ function fundraiser_commerce_commerce_authnet_cim_request_alter($api_request_ele
     unset($fields[0]);
     $i = 1;
     foreach ($fields as $field) {
-      if (isset($config['commerce_authnet_webform_field_' . $i]) && isset($donation->submission_data[$config['commerce_authnet_webform_field_' . $i]])) {
+      if (!empty($config['commerce_authnet_webform_field_' . $i]) && !empty($donation->submission_data[$config['commerce_authnet_webform_field_' . $i]])) {
         $name = $fields[$config['commerce_authnet_authorize_field_' . $i]];
         $value =  $donation->submission_data[$config['commerce_authnet_webform_field_' . $i]];
         $value = str_replace(array("&","'",'"',"|"), array("%26","%27","%22","%7C"), $value);
@@ -3027,11 +3052,11 @@ function fundraiser_commerce_form_rules_ui_edit_element_alter(&$form, &$form_sta
 /**
  * Implements hook_form_FORM_ID_alter().
  *
- * Prevent disabling of a gateway if it is in use on a donation form by
- * disabling the submit button on the confirmation form.
+ * Prevent disabling or deleting of a gateway if it is in use on a donation form
+ * by disabling the submit button on the confirmation form.
  */
 function fundraiser_commerce_form_rules_ui_form_rules_config_confirm_op_alter(&$form, &$form_state) {
-  if ($form_state['op'] == 'disable') {
+  if ($form_state['op'] == 'disable' || $form_state['op'] == 'delete') {
     // Seems like there should be a better way to find the rule id than arg()
     $rule = rules_config_load(arg(5));
     // Select all records so we can search inside the serizalied gateways field.
@@ -3249,4 +3274,19 @@ function fundraiser_commerce_update_billing_form_validate($form, &$form_state) {
       }
     }
   }
+}
+
+/**
+ * Implements hook_commerce_payment_method_info_alter().
+ *
+ * Include the gateways/commerce_payment_example.inc file so that adjustments to
+ * that gateways settings will be seen by the commerce_payment module.
+ */
+function fundraiser_commerce_commerce_payment_method_info_alter(&$payment_methods) {
+  module_load_include('inc', 'fundraiser_commerce', 'gateways/commerce_payment_example');
+  $payment_methods['commerce_payment_example']['cardonfile'] = array(
+    'charge callback' => 'commerce_payment_example_fundraiser_commerce_cardonfile_charge',
+    'update callback' => 'commerce_payment_example_fundraiser_commerce_cardonfile_update',
+    'delete callback' => 'commerce_payment_example_fundraiser_commerce_cardonfile_delete',
+  );
 }

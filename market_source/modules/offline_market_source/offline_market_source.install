@@ -1,0 +1,24 @@
+<?php
+
+/**
+ * @file
+ * Install offline_market_source.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function offline_market_source_install() {
+  // fundraiser offine currently exposes market_source (ms) and campaign (cid) fields
+  variable_set('offline_market_source_default_fields', array('market_source' => array('offline_override' => 1), 'campaign' => array('offline_override' => 1)));
+  variable_set('offline_market_source_custom_fields', array());
+}
+
+
+/**
+ * Implements hook_uninstall().
+ */
+function offline_market_source_uninstall() {
+  variable_del('offline_market_source_default_fields'); 
+  variable_del('offline_market_source_custom_fields'); 
+}
