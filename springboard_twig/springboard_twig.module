@@ -1,0 +1,322 @@
+<?php
+
+/**
+ * @file
+ * Module file for Springboard Twig.
+ */
+
+/**
+ * Implements hook_libraries_info().
+ *
+ * Define the Twig templating library.
+ */
+function springboard_twig_libraries_info() {
+  // A very simple library. No changing APIs (hence, no versions), no variants.
+  // Expected to be extracted into 'sites/all/libraries/simple'.
+  $libraries['twig'] = array(
+    'name' => 'Twig',
+    'vendor url' => 'http://twig.sensiolabs.org/',
+    'download url' => 'https://github.com/twigphp/Twig/archive/v1.33.0.tar.gz',
+    'version arguments' => array(
+      'file' => 'CHANGELOG',
+      'pattern' => '/(\d+\.\d+\.\d)/',
+      'lines' => 1,
+    ),
+    'files' => array(
+      'php' => array('lib/Twig/Autoloader.php'),
+    ),
+  );
+
+  return $libraries;
+}
+
+/**
+ * Implements hook_module_implements_alter().
+ *
+ * Reorder module weights so that springboard_twig will run last.
+ */
+function springboard_twig_module_implements_alter(&$implementations, $hook) {
+  $hooks = array(
+    'form_email_wrapper_node_form_alter',
+    'mail_alter',
+  );
+  $module_name = 'springboard_twig';
+  if (in_array($hook, $hooks) && !empty($implementations[$module_name])) {
+    $group = $implementations[$module_name];
+    unset($implementations[$module_name]);
+    $implementations[$module_name] = $group;
+  }
+}
+
+/**
+ * Generates an informative field to be inserted into forms.
+ *
+ * @return array
+ *   An array of form elements to be added to a form.
+ */
+function _springboard_twig_info_form_field($type) {
+  $twig_variables = array(
+    'node' => array(
+      'node.nid' => t('The node ID.'),
+      'node.title' => t('The node title.'),
+    ),
+    'submission' => array(
+      'submission.sid' => t('The submission ID.'),
+      'submission.nid' => t('The node ID.'),
+      'submission.uid' => t("The user's ID."),
+    ),
+    'website' => array(
+      'website.mail' => t("The website's email address."),
+      'website.login_url' => t("The website's login URL."),
+      'website.name' => t("The website's name."),
+      'website.slogan' => t("The website's slogan."),
+      'website.url' => t("The website's full URL."),
+      'website.url_brief' => t("The website's URL, excluding 'https://'."),
+    ),
+    'date' => array(
+      'date.long' => t('Current date, long format (Wednesday, September 23, 2015 - 09:06).'),
+      'date.medium' => t('Current date, medium format (Wed, 09/23/2015 - 09:06).'),
+      'date.short' => t('Current date, short format (09/23/2015 - 09:06).'),
+    ),
+  );
+
+  $available_types = '';
+  $last = count($twig_variables) - 1;
+  foreach (array_keys($twig_variables) as $index => $key) {
+    if ($index < $last) {
+      $available_types .= '<code>' . $key . '</code>, ';
+    }
+    else {
+      $available_types .= 'and <code>' . $key . '</code>';
+    }
+  }
+
+  $description_markup = t('You may also use the Twig templating language in your message. The available object variables are !types. For more information about Twig, visit !url.!breaks', array(
+    '!types' => $available_types,
+    '!url' => l(t('the Twig project page'), 'http://twig.sensiolabs.org/doc/1.x/', array(
+      'attributes' => array(
+        'target' => '_blank',
+      ),
+    )),
+    '!breaks' => '<br/><br/>',
+  ));
+
+  drupal_alter('springboard_twig_form_twig_info_field_description', $description_markup);
+
+  $twig_description = array(
+    'twig' => array(
+      '#type' => 'markup',
+      '#prefix' => '<br />',
+      '#markup' => $description_markup,
+    ),
+  );
+
+  drupal_alter('springboard_twig_form_twig_info_field_variables', $type, $twig_variables);
+
+  $header = array(
+    array('data' => 'Variable'),
+    array('data' => 'Description'),
+  );
+  $rows = array();
+  foreach ($twig_variables as $category => $children) {
+    $rows[] = array('<strong>' . $category . '</strong>');
+    foreach ($children as $variable_name => $description) {
+      $rows[] = array($variable_name, $description);
+    }
+  }
+
+  $twig_variables_fieldset = array(
+    'twig_variables' => array(
+      '#type' => 'fieldset',
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#title' => t('Twig Variables'),
+      'twig_variables_table' => array(
+        '#type' => 'markup',
+        '#markup' => theme('table', array(
+          'header' => $header,
+          'rows' => $rows,
+        )),
+      ),
+    ),
+  );
+
+  return $twig_description + $twig_variables_fieldset;
+}
+
+/**
+ * Helper function to process text through Twig.
+ *
+ * @param string $text
+ *   The text to process.
+ * @param array $replacements
+ *   An array of replacements to use when processing the text.
+ *
+ * @return string
+ *   The processed text.
+ */
+function _springboard_twig_process_text($text, array $replacements) {
+  $library_name = 'twig';
+  if (($library = libraries_load($library_name)) && !empty($library['installed'])) {
+    try {
+      Twig_Autoloader::register();
+      $loader = new Twig_Loader_Array();
+      $twig = new Twig_Environment($loader);
+      $twig->addExtension(new Twig_Extension_StringLoader());
+
+      $node_type = $replacements['node']->type;
+
+      // Add website variables.
+      $site_url = str_replace(request_path(), '', url(current_path(), array('absolute' => TRUE)));
+      $replacements['website'] = array(
+        'mail' => variable_get('site_mail'),
+        'login_url' => $site_url . 'user',
+        'name' => variable_get('site_name'),
+        'slogan' => variable_get('site_slogan'),
+        'url' => $site_url,
+        'url_brief' => rtrim(preg_replace('/https?:\/\//i', '', $site_url), '/'),
+      );
+
+      $time = time();
+      $replacements['date'] = array(
+        'long' => format_date($time, 'long'),
+        'medium' => format_date($time, 'medium'),
+        'short' => format_date($time, 'short'),
+      );
+
+      // Let other modules add or replace their own variables.
+      drupal_alter('springboard_twig_variable_replacements', $node_type, $replacements);
+
+      $text = html_entity_decode($text);
+      $text = $twig->createTemplate($text)->render($replacements);
+    }
+    catch (Twig_Error_Syntax $e) {
+      drupal_set_message($e->getMessage(), 'error');
+    }
+    catch (Exception $e) {
+      drupal_set_message($e->getMessage(), 'error');
+    }
+  }
+  else {
+    $error_message = $library['error message'];
+    drupal_set_message($error_message, 'warning');
+  }
+
+  return $text;
+}
+
+/**
+ * For email_wrappers.
+ */
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Adds description to email webform to inform user their ability to use Twig in
+ * their messages, and which variables are available to them.
+ */
+function springboard_twig_form_webform_email_edit_form_alter(&$form, &$form_state) {
+  if (!empty($form['#node'])) {
+    $node = $form['#node'];
+  }
+  elseif (!empty($form['node'])) {
+    $node = $form['node']['#value'];
+  }
+  else {
+    return;
+  }
+
+  // Insert text after the components token field.
+  $i = array_search('preview_url', array_keys($form['template']));
+  $twig = _springboard_twig_info_form_field($node->type);
+  $form['template'] = array_slice($form['template'], 0, $i, TRUE) + $twig + array_slice($form['template'], $i, NULL, TRUE);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function springboard_twig_form_email_wrapper_node_form_alter(&$form, &$form_state) {
+  if (empty($form['tokenset'])) {
+    $form['tokenset'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Available tokens'),
+      '#description' => t('Tokens may be used in the "Subject," "HTML Message" and "Text Message" Fields.'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#weight' => 15,
+    );
+  }
+
+  $form['tokenset']['twig'] = _springboard_twig_info_form_field($form['#node']->type);
+}
+
+/**
+ * Implements hook_email_wrappers_email_body_messages_alter().
+ *
+ * Process the email messages with the Twig templating language.
+ */
+function springboard_twig_email_wrappers_email_body_messages_alter(&$data) {
+  $replacements = array(
+    'node' => $data['message']['params']['node'],
+    'submission' => $data['message']['params']['submission'],
+  );
+  $data['html_raw'] = _springboard_twig_process_text($data['html_raw'], $replacements);
+  $data['text_raw'] = _springboard_twig_process_text($data['text_raw'], $replacements);
+}
+
+/**
+ * For fundraiser_webform.
+ */
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Adds description to email webform to inform user their ability to use Twig in
+ * their messages, and which variables are available to them.
+ */
+function springboard_twig_form_webform_configure_form_alter(&$form, &$form_state) {
+  if (empty($form['submission']['confirmation'])) {
+    return;
+  }
+
+  // Insert text after the components token field.
+  $i = array_search('confirmation', array_keys($form['submission']));
+  $twig = _springboard_twig_info_form_field($form['#node']->type);
+  $form['submission'] = array_slice($form['submission'], 0, $i + 1, TRUE) + $twig + array_slice($form['submission'], $i + 1, NULL, TRUE);
+}
+
+/**
+ * Implements hook_webform_confirmations_confirmation_message_alter().
+ */
+function springboard_twig_webform_confirmations_confirmation_message_alter(&$confirmation_message, $vars) {
+  module_load_include('inc', 'webform', 'includes/webform.submissions');
+  $replacements = array(
+    'node' => $vars['node'],
+    'submission' => webform_get_submission($vars['node']->nid, $vars['sid']),
+  );
+
+  $confirmation_message = _springboard_twig_process_text($confirmation_message, $replacements);
+}
+
+/**
+ * Returns internal path, query and fragment from external URL
+ */
+function _springboard_twig_get_path_from_url($url, $normal_path = TRUE) {
+  global $base_path;
+  preg_match("/^(https?:\/\/)?([^\/]+)/i", $url, $domain);
+  $base = (isset($domain[0]) ? $domain[0] : '') . $base_path;
+  if (strpos($url, $base) === 0) {
+    $path = str_replace($base, '', $url);
+  }
+  else {
+    $path = $url;
+  }
+  // Parse the path (without $base).
+  $result = drupal_parse_url($path);
+  // Get normal path.
+  if ($normal_path) {
+    $result['path'] = drupal_get_normal_path($result['path']);
+  }
+
+  return $result;
+}

@@ -26,7 +26,7 @@
       gateways_enabled();
 
       var disabled = false;
-      var wasChecked = $ocd.find('input[type=checkbox]').is(':checked');
+      var wasChecked = $ocd.find('input[type=checkbox].ocd').is(':checked');
       var checkGateway = function($this, type) {
         gateways_enabled();
 
@@ -64,28 +64,28 @@
         }
 
         if (!$gateways_enabled.credit || ($gateways_enabled.credit && !gateway_available.credit)) {
-          $ocd.find('input[type=checkbox]').attr('checked', false).attr('disabled', 'disabled');
-          $ocd.nextAll('.form-item, .form-wrapper').hide();
+          $ocd.find('input[type=checkbox].ocd').attr('checked', false).attr('disabled', 'disabled');
+          $ocd.nextAll('.form-item.ocd, .form-wrapper.ocd').hide();
           $('#edit-ocd-message-container').hide();
           $note.show();
         }
         else {
-          $ocd.find('input[type=checkbox]').removeAttr('disabled');
+          $ocd.find('input[type=checkbox].ocd').removeAttr('disabled');
           if (wasChecked) {
-            $ocd.find('input[type=checkbox]').attr('checked', wasChecked);
+            $ocd.find('input[type=checkbox].ocd').attr('checked', wasChecked);
           }
-          $ocd.nextAll('.form-item, .form-wrapper').show();
+          $ocd.nextAll('.form-item.ocd, .form-wrapper.ocd').show();
           $('#edit-ocd-message-container').show();
           $note.hide();
         }
 
         if (!$('#edit-ocd').is(':checked')) {
-          $ocd.nextAll('.form-item, .form-wrapper').hide();
+          $ocd.nextAll('.form-item.ocd, .form-wrapper.ocd').hide();
           $('#edit-ocd-message-container').hide();
         }
       };
 
-      $ocd.find('input[type=checkbox]').on('change', function() {
+      $ocd.find('input[type=checkbox].ocd').on('change', function() {
         wasChecked = $(this).is(':checked');
       });
 

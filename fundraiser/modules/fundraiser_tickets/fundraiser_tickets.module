@@ -474,7 +474,6 @@ function _fundraiser_tickets_update_quantity_sold($product) {
 function _fundraiser_tickets_ticket_settings_form_organize($form, $form_state){
   // Add donation-form admin CSS
   drupal_add_css(drupal_get_path('module', 'fundraiser_tickets') . '/css/ticketing_form.css');
-
   // Create fieldset
   $form['waitlist']  = array(
     '#type' => 'fieldset',
@@ -1417,4 +1416,33 @@ function fundraiser_tickets_form_action_submit($nid, $app_id = NULL, $submission
       return array('submission_id' => $sid);
     }
   }
+}
+
+
+/**
+ * Implements hook_publishcontent_publish_access().
+ *
+ * Don't let publishcontent interfere with the tickets settings.
+ */
+function fundraiser_tickets_publishcontent_publish_access($node, $account) {
+  if (fundraiser_tickets_is_ticket_type($node->type)) {
+    if ( arg(2) == 'tickets') {
+      return PUBLISHCONTENT_ACCESS_DENY;
+    }
+  }
+  return PUBLISHCONTENT_ACCESS_IGNORE;
+}
+
+/**
+ * Implements hook_publishcontent_unpublish_access().
+ *
+ * Don't let publishcontent interfere with the tickets settings.
+ */
+function fundraiser_tickets_publishcontent_unpublish_access($node, $account) {
+  if (fundraiser_tickets_is_ticket_type($node->type)) {
+    if ( arg(2) == 'tickets') {
+      return PUBLISHCONTENT_ACCESS_DENY;
+    }
+  }
+  return PUBLISHCONTENT_ACCESS_IGNORE;
 }

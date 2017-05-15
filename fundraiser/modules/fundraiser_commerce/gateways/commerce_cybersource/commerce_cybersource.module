@@ -218,6 +218,12 @@ function commerce_cybersource_soap_cc_settings_form($settings = NULL) {
     '#options' => commerce_payment_credit_card_types(),
     '#default_value' => $settings['credit_card']['card_types'],
   );
+  $form['credit_card']['ignore_avs'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Tell the gateway to ignore the AVS result on reference charges.'),
+    '#default_value' => $settings['credit_card']['ignore_avs'],
+    '#description' => t('If not checked, address verification will be applied to reference charges.'),
+  );
 
   $form['credit_card']['avs_codes'] = array(
     '#type' => 'checkboxes',
@@ -593,7 +599,7 @@ function commerce_cybersource_soap_cc_submit_form_submit($payment_method, $pane_
   $request->businessRules = (object) array(
     'decline_AVSFlags' => $declines,
   );
-  if (!empty($donation) && !empty($donation->reference_charge)) {
+  if (!empty($donation) && !empty($donation->reference_charge && !empty($payment_method['settings']['credit_card']['ignore_avs']))) {
     $request->businessRules->ignoreAVSResult = 'true';
   }
 

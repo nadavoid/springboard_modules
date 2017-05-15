@@ -22,7 +22,7 @@ $plugin = array(
 
 $use_addthis = variable_get('springboard_social_use_addthis', FALSE);
 if ($use_addthis) {
-  $plugin['js'] = 'plugins/social_networks/email/email.share.js';
+  $plugin['js'] = 'plugins/social_networks/twitter/twitter.share.js';
 }
 else {
   $plugin['js'] = FALSE;

@@ -237,36 +237,45 @@ function _fundraiser_designations_build_child_elements($id, &$element, $amounts,
     $amounts = fundraiser_designations_get_group_display_amounts($group, $node);
   }
 
-  // Determine whether the designation group overrides the form's default ask amounts, then determine
-  // the default ask option for both one-time and recurring based on either the form's settings or
+  // Determine whether the designation group overrides the form's default ask
+  // amounts, then determine the default ask option for both one-time and
+  // recurring based on either the form's settings or
   // the designation group's settings, as appropriate.
   $default_default_amount = false;
   $recurring_default_amount = false;
-  // Check the designation group for overrides
-  if(isset($group->fd_overrides['price_set']) && $group->fd_overrides['status'] == '1') {
+  // Check the designation group for overrides.
+  if (isset($group->fd_overrides['price_set']) && $group->fd_overrides['status'] == '1') {
     $price_set = unserialize($group->fd_overrides['price_set']);
-    // if there are overrides, determine the default option for one-time ask amounts.
-    foreach($price_set['default'] as $price) {
-      if($price['default_amount'] === 1) {
-        $default_default_amount = $price['amount'];
+    // If there are overrides, determine the default option for
+    // one-time ask amounts.
+    if (isset($price_set['default'])) {
+      foreach ($price_set['default'] as $price) {
+        if ($price['default_amount'] === 1) {
+          $default_default_amount = $price['amount'];
+        }
       }
     }
-    // if there are overrides, determine the default option for recurring ask amounts.
-    foreach($price_set['recurring'] as $price) {
-      //find the one that is set to default.
-      if($price['default_amount'] === 1) {
-        $recurring_default_amount = $price['amount'];
+
+    // If there are overrides, determine the default option for
+    // recurring ask amounts.
+    if (isset($price_set['recurring'])) {
+      foreach ($price_set['recurring'] as $price) {
+        // Find the one that is set to default.
+        if ($price['default_amount'] === 1) {
+          $recurring_default_amount = $price['amount'];
+        }
       }
     }
   }
-  // if there are not overrides and the parent node has default options set, use those values
-  else if(isset($node->default_amount) || isset($node->recurring_default_amount)) {
-    // parent node one-time default option.
-    if(isset($node->default_amount)){
+  // If there are not overrides and the parent node has default options set,
+  // use those values.
+  elseif (isset($node->default_amount) || isset($node->recurring_default_amount)) {
+    // Parent node one-time default option.
+    if (isset($node->default_amount)){
       $default_default_amount = intval($node->default_amount);
     }
-    // parent node recurring default option.
-    if(isset($node->recurring_default_amount)) {
+    // Parent node recurring default option.
+    if (isset($node->recurring_default_amount)) {
       $recurring_default_amount = intval($node->recurring_default_amount);
     }
   }
@@ -554,10 +563,8 @@ function fundraiser_designations_get_group_display_amounts($group, $node) {
   // Used if price override is enabled, but no overries defined. (i.e., when
   // switching to dual ask on alredy overriden forms).
   $node_form_amounts = fundraiser_designations_get_form_display_amounts($node);
-
   // Get the group override ask amounts.
   $override_price_set = unserialize($group->fd_overrides['price_set']);
-
   // Build the price set array.
   $price_sets = [];
   $donation_amounts = [];
@@ -588,7 +595,7 @@ function fundraiser_designations_get_group_display_amounts($group, $node) {
 
     }
   }
-  else {
+  elseif(isset($node_form_amounts['recurring'])) {
     // If no recurring override get the donation form default.
     $donation_amounts['recurring'] = $node_form_amounts['recurring'];
   }

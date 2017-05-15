@@ -384,17 +384,19 @@ function _fundraiser_commerce_cardonfile_update_card_addresses($limit, $max_limi
     }
     else {
       $donations = db_query('SELECT did FROM {fundraiser_donation} WHERE card_id = :card_id ORDER BY created DESC', array(
-        ':card_id' => $row->card_id,
-      ))->execute()->fetchAll();
+        ':card_id' => (int) $row->card_id,
+      ))->fetchAll();
       // Use the newest donation.
-      $did = $donations[0];
+      $did = $donations[0]->did;
       $order = commerce_order_load($did);
       $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
       $profile_id = $order_wrapper->commerce_customer_billing->value();
     }
 
-    $card_wrapper->commerce_cardonfile_profile = $profile_id;
-    $card_wrapper->save();
+    if (!empty($profile_id)) {
+      $card_wrapper->commerce_cardonfile_profile = $profile_id;
+      $card_wrapper->save();
+    }
   }
 
   $context['finished'] = ($sandbox['progress'] >= $sandbox['max']) ? TRUE : ($sandbox['progress'] / $sandbox['max']);

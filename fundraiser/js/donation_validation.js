@@ -146,8 +146,9 @@
         });
 
         // Track isValid status of each Braintree hosted field, if we are using that payment method.
+        var braintreeFields = false;
         if ($('.braintree-hosted-field').length) {
-          var braintreeFields = {'number' : false, 'expirationMonth' : false , 'expirationYear' : false , 'cvv' : false };
+          braintreeFields = {'number' : false, 'expirationMonth' : false , 'expirationYear' : false , 'cvv' : false };
           $(document).on('braintree.fieldEvent', function(event, param) {
             var field = param.fields[param.emittedBy];
             var $field = $(field.container);
@@ -183,7 +184,7 @@
               var $otherAmountValue = $('input[name="submitted[donation][other_amount]"]');
               return $nonce.length > 0 && $checkedAmounts.length && (!$otherAmount.length || $otherAmount.length && $otherAmountValue.val().length);
             }
-            else {
+            else if (braintreeFields !== false) {
               var isBillingUpdate = undefined !== Drupal.settings.braintree.billing_update_type;
               var braintreeFieldsAreValid = function() {
                 // Considered valid when not on a billing update form and all
