@@ -8,6 +8,7 @@ configure = admin/config/system/email-wrappers
 
 dependencies[] = webform
 dependencies[] = ctools
+dependencies[] = springboard
 dependencies[] = system (>=7.17)
 
 files[] = tests/email_wrappers.test

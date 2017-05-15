@@ -1,0 +1,6 @@
+name = Offline Market Source
+description = Offline Fundraiser Market Source functionality
+core = 7.x
+package = Jackson River Springboard
+dependencies[] = market_source
+dependencies[] = fundraiser_offline

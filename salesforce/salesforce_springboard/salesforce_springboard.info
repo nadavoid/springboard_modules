@@ -1,0 +1,6 @@
+name = Salesforce Springboard
+description = Helper functions for managing Salesforce within Springboard
+package = Salesforce
+core = 7.x
+dependencies[] = salesforce
+dependencies[] = salesforce_mapping

@@ -85,7 +85,7 @@ function springboard_api_basic_service_settings(&$form, $form_state) {
   $rows = array();
   $defaults = array();
   foreach ($api_keys as $key => $value) {
-    $links = _springboard_api_basic_service_links($key['id']);
+    $links = _springboard_api_basic_service_links($key);
     $defaults[$key] = $value['enabled'] ? $key : 0;
     $rows[$key] = array(
       $value['name'],
@@ -138,9 +138,7 @@ function _springboard_api_tracker_count() {
 }
 
 function _springboard_api_basic_service_links($id) {
-
-  $links = l(t('Edit'), '');
-  $links .= ' | ' . l(t('Delete'), '');
+  $links = l(t('Delete'), 'admin/config/services/springboard_api/' . $id .'/delete');
   return $links;
 }
 

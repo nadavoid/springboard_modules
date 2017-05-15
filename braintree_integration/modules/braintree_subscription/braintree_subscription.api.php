@@ -61,7 +61,7 @@ function hook_braintree_subscription_saved($result, &$context) {
 }
 
 /**
- * Do custom logic after a subscription is cancelled successfully.
+ * Do custom logic after a subscription is canceled successfully.
  *
  * @param $result
  * @param $context

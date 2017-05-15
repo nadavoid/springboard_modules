@@ -42,7 +42,7 @@ function springboard_dw_queue_legacy_uninstall() {
  */
 function springboard_dw_queue_legacy_schema() {
   $schema['springboard_data_warehouse_queue_legacy'] = array(
-    'description' => 'Record highwater timestamps so each queueing command can pick up where they left off',
+    'description' => 'Record the last processed record so each queueing command can pick up where they left off',
     'fields' => array(
       'id' => array(
         'description' => 'Primary key',
@@ -58,7 +58,7 @@ function springboard_dw_queue_legacy_schema() {
         'default' => '',
       ),
       'highwater' => array(
-        'description' => 'Timestamp of last queued item',
+        'description' => 'Id of last queued item',
         'type' => 'int',
         'not null' => TRUE,
       ),

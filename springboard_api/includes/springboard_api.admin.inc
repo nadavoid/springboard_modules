@@ -40,3 +40,36 @@ function springboard_api_admin_settings($form, $form_state) {
   }
   return system_settings_form($form);
 }
+
+
+/**
+ * Confirm form for api key delete.
+ *
+ * @param string $id
+ *   The app id.
+ */
+function springboard_api_admin_remove_app_form($form, $form_state, $id) {
+  $form = array();
+  $api_keys = variable_get('springboard_api_basic_keys', array());
+  $form['#app_id'] = $id;
+  $title = $api_keys["{$id}"]['name'];
+  $form['#submit'][] = 'springboard_api_remove_app_form_submit';
+  return confirm_form(
+    $form,
+    t('Are you sure you want to delete %title?', array('%title' => $title)),
+    'admin/config/services/springboard_api',
+    t('This action cannot be undone.'),
+    t('Delete'),
+    t('Cancel'),
+    'springboard_api_admin_manage_app');
+}
+
+/**
+ * Remove an API key.
+ */
+function springboard_api_remove_app_form_submit($form, &$form_state) {
+  $api_keys = variable_get('springboard_api_basic_keys', array());
+  unset($api_keys[$form['#app_id']]);
+  variable_set('springboard_api_basic_keys', $api_keys);
+  $form_state['redirect'] = 'admin/config/services/springboard_api';
+}
