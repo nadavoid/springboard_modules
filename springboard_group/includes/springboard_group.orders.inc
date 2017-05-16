@@ -445,12 +445,14 @@ function springboard_group__commerce_order__og_permissions(&$items) {
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
+      'module' => 'commerce_order',
     );
     $items['edit any order in springboard group'] = array(
       'title' => t('Edit any order in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
+      'module' => 'commerce_order',
     );
 
     $items['administer orders in springboard group'] = array(
@@ -458,6 +460,7 @@ function springboard_group__commerce_order__og_permissions(&$items) {
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
+      'module' => 'commerce_order',
     );
 
     $items['view any order in springboard group '] = array(
@@ -465,6 +468,7 @@ function springboard_group__commerce_order__og_permissions(&$items) {
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
+      'module' => 'commerce_order',
     );
 
     $items['view payments in springboard group'] = array(
@@ -472,6 +476,7 @@ function springboard_group__commerce_order__og_permissions(&$items) {
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
+      'module' => 'commerce_payment',
     );
 
     $items['create payments in springboard group'] = array(
@@ -479,6 +484,7 @@ function springboard_group__commerce_order__og_permissions(&$items) {
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
+      'module' => 'commerce_payment',
     );
 
     $items['delete payments in springboard group'] = array(
@@ -486,12 +492,14 @@ function springboard_group__commerce_order__og_permissions(&$items) {
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
+      'module' => 'commerce_payment',
     );
     $items['update payments in springboard group'] = array(
       'title' => t('Update payments in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
+      'module' => 'commerce_payment',
     );
 
     $items['edit any card data in springboard group'] = array(
@@ -499,6 +507,7 @@ function springboard_group__commerce_order__og_permissions(&$items) {
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
+      'module' => 'commerce_cardonfile',
     );
 
     $items['view any card data in springboard group'] = array(
@@ -506,6 +515,7 @@ function springboard_group__commerce_order__og_permissions(&$items) {
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
+      'module' => 'commerce_cardonfile',
     );
 
     $items['create card data  in springboard group'] = array(
@@ -513,6 +523,7 @@ function springboard_group__commerce_order__og_permissions(&$items) {
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
+      'module' => 'commerce_cardonfile',
     );
 
     $items['delete any card data in springboard group'] = array(
@@ -520,12 +531,14 @@ function springboard_group__commerce_order__og_permissions(&$items) {
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
+      'module' => 'commerce_cardonfile',
     );
     $items['submit springboard group donations offline'] = array(
       'title' => t('Submit donations offline in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
+      'module' => 'fundraiser',
     );
 
     $items['cancel future donations in springboard group'] = array(
@@ -533,12 +546,14 @@ function springboard_group__commerce_order__og_permissions(&$items) {
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
+      'module' => 'fundraiser',
     );
     $items['fastforward recurring donations in springboard group'] = array(
       'title' => t('Fast-forward recurring donations in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
+      'module' => 'fundraiser',
     );
 
 //  $items['administrate recurring donations'] = array(

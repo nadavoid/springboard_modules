@@ -44,18 +44,21 @@ function springboard_group_og_permission() {
     'title' => t('Access all webform results in group'),
     'description' => t('Grants access to the "Results" tab on all webforms in this group.'),
     'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+    'module' => 'webform',
   );
 
   $items['edit all webform submissions'] = array(
     'title' => t('Edit all webform submissions in group'),
     'description' => t('Allows editing of any webform submission in this group.'),
     'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+    'module' => 'webform',
   );
 
   $items['delete all webform submissions'] = array(
     'title' => t('Delete all webform submissions in group'),
     'description' => t('Allows deleting of any webform submission in this group.'),
     'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+    'module' => 'webform',
   );
 
   $grouped_types = springboard_group_get_grouped_types();
@@ -81,80 +84,13 @@ function springboard_group_og_permission_alter(&$perms) {
   $perms['administer group']['default role'] = array();
   $perms['approve and deny subscription']['default role'] = array();
 
-  // Make OG think that another module owns the permissions we set in
-  // springboard_group_og_permissions(), so that they are themed/categorized
-  // correctly, rather than appearing to belong to this module.
-  // @todo maybe we should just implement the hooks here.
-  foreach ($perms as $key => $perm) {
-    if ($perm['module'] == 'springboard_group') {
-      switch ($key) {
-        case strpos($key, 'webform') !== FALSE:
-          $perms[$key]['module'] = 'webform';
-          break;
-
-        case strpos($key, 'order') !== FALSE:
-          $perms[$key]['module'] = 'commerce_order';
-          break;
-
-        case strpos($key, 'payment') !== FALSE:
-          $perms[$key]['module'] = 'commerce_payment';
-          break;
-
-        case strpos($key, 'product') !== FALSE:
-          $perms[$key]['module'] = 'commerce_product';
-          break;
-
-        case strpos($key, 'contact') !== FALSE:
-          $perms[$key]['module'] = 'user';
-          break;
-
-        case strpos($key, 'user') !== FALSE:
-          $perms[$key]['module'] = 'user';
-          break;
-
-        case strpos($key, 'account') !== FALSE:
-          $perms[$key]['module'] = 'user';
-          break;
-
-        case strpos($key, 'profile') !== FALSE:
-          $perms[$key]['module'] = 'user';
-          break;
-
-        case strpos($key, 'card') !== FALSE:
-          $perms[$key]['module'] = 'commerce_cardonfile';
-          break;
-
-        case strpos($key, 'customer') !== FALSE:
-          $perms[$key]['module'] = 'commerce_customer';
-          break;
-
-        case strpos($key, 'fundraiser') !== FALSE:
-          $perms[$key]['module'] = 'fundraiser';
-          break;
-
-        case strpos($key, 'donations') !== FALSE:
-          $perms[$key]['module'] = 'fundraiser';
-          break;
-
-        case strpos($key, 'upsell') !== FALSE:
-          $perms[$key]['module'] = 'fundraiser';
-          break;
-
-        case strpos($key, 'sustainer') !== FALSE:
-          $perms[$key]['module'] = 'fundraiser';
-          break;
-      }
-
-    }
-  }
-
   // Alphabetize the perms categories.
   $sort_holder = array();
   $sorted = array();
   $og_perms = array();
   reset($perms);
   foreach ($perms as $permission_name => $permission_values) {
-    if ($permission_values['module'] != 'og') {
+    if ($permission_values['module'] != 'og' && $permission_values['module'] != 'og_ui') {
       $sort_holder[$permission_name] = $permission_values['module'];
     }
     else {
@@ -162,17 +98,14 @@ function springboard_group_og_permission_alter(&$perms) {
     }
   }
   asort($sort_holder);
+
+
   foreach ($sort_holder as $permission_name => $permission_values) {
     $sorted[$permission_name] = $perms[$permission_name];
   }
-  $perms = array_merge($og_perms, $sorted);
+
+  $perms = $og_perms + $sorted;
 }
-
-
-
-
-
-
 
 /**
  * Implements hook_og_user_access_alter().

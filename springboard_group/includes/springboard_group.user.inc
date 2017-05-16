@@ -263,12 +263,14 @@ function springboard_group__user__og_permissions(&$items) {
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
+      'module' => 'user',
     );
     $items['administer users in springboard group'] = array(
       'title' => t('Administer users in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
+      'module' => 'user',
     );
 
     $items['access user profiles in springboard group'] = array(
@@ -276,6 +278,7 @@ function springboard_group__user__og_permissions(&$items) {
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
+      'module' => 'user',
     );
 
   }
