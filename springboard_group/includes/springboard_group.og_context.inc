@@ -332,7 +332,7 @@ function springboard_group_context_selector_form($form, &$form_state, $groups) {
     $group_options[$nid] = check_plain($node->title);
   }
   asort($group_options);
-  $options = array_merge($options, $group_options);
+  $options += $group_options;
 
   // The ajax enabled group selector which will reload the page
   // subsequent to a group choice. The group ID will get put into session.
