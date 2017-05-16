@@ -28,6 +28,7 @@
         }
 
         $('table#permissions tr').each(function(){
+          var classes = $(this).children('td:first').attr('class');
           if ($(this).hasClass('hidden-component-off')) {
             $(this).removeClass('hidden-component-off').addClass('hidden-component-on');
             $(this).children('td:first:contains("Create")').parents('tr').show();
@@ -35,7 +36,7 @@
             $(this).children('td:first:contains("Edit any")').parents('tr').show();
             $(this).children('td:first:contains("Delete")').parents('tr').show();
           }
-          else {
+          else if ((typeof(classes) != "undefined" &&  classes.indexOf('module-og') !== -1)) {
             $(this).removeClass('hidden-component-on').addClass('hidden-component-off');
             $(this).children('td:first:contains("Create")').parents('tr').hide();
             $(this).children('td:first:contains("Edit own")').parents('tr').hide();

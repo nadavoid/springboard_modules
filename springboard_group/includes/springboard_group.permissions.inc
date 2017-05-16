@@ -143,9 +143,41 @@ function springboard_group_og_permission_alter(&$perms) {
           $perms[$key]['module'] = 'fundraiser';
           break;
       }
+
+    }
+    if ($perms[$key]['module'] == 'springboard_group_advocacy') {
+      $perms[$key]['module'] = 'springboard_advocacy';
+    }
+    if ($perms[$key]['module'] == 'publishcontent') {
+      $perms[$key]['module'] = 'og';
     }
   }
+
+  // Alphabetize the perms categories.
+  $sort_holder = array();
+  $sorted = array();
+  $og_perms = array();
+  reset($perms);
+  foreach ($perms as $permission_name => $permission_values) {
+    if ($permission_values['module'] != 'og') {
+      $sort_holder[$permission_name] = $permission_values['module'];
+    }
+    else {
+      $og_perms[$permission_name] = $permission_values;
+    }
+  }
+  asort($sort_holder);
+  foreach ($sort_holder as $permission_name => $permission_values) {
+    $sorted[$permission_name] = $perms[$permission_name];
+  }
+  $perms = array_merge($og_perms, $sorted);
 }
+
+
+
+
+
+
 
 /**
  * Implements hook_og_user_access_alter().
@@ -200,7 +232,7 @@ function springboard_group_preprocess_og_ui_admin_permissions(&$vars) {
             break;
 
           case 'publishcontent':
-            $vars['form']['permission'][$key]['#markup'] = t('Publication Status');
+            unset($vars['form']['permission'][$key]);
             break;
 
           case 'springboard_group':
@@ -208,7 +240,19 @@ function springboard_group_preprocess_og_ui_admin_permissions(&$vars) {
             break;
 
           case 'springboard_group_advocacy':
-            $vars['form']['permission'][$key]['#markup'] = t('Advocacy');
+            unset($vars['form']['permission'][$key]);
+            break;
+
+          case 'commerce_order':
+            $vars['form']['permission'][$key]['#markup'] = t('Commerce Order');
+            break;
+
+          case 'commerce_cardonfile':
+            $vars['form']['permission'][$key]['#markup'] = t('Commerce Card On File');
+            break;
+
+          case 'commerce_payment':
+            $vars['form']['permission'][$key]['#markup'] = t('Commerce Payment');
             break;
         }
       }
@@ -377,7 +421,6 @@ function springboard_group_form_og_ui_admin_global_permissions_alter(&$form, &$f
  * Implements hook_form_alter().
  */
 function springboard_group_form_og_ui_admin_permissions_alter(&$form, &$form_state, $form_id) {
-  dpm($form);
 
   if (arg(2) == 'group') {
     $path = drupal_get_path('module', 'springboard_group') . '/js/springboard-groups-groups-permissions.js';
