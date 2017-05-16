@@ -400,8 +400,8 @@ function springboard_group_rules_config_form__validate(&$form, &$form_state, $ca
  * Sub-hook to springboard_group_og_permissions().
  */
 function springboard_group__rules_config__og_permissions(&$items) {
-  $items['edit payment method'] = array(
-    'title' => t('Administer group payment methods'),
+  $items['edit payment method in springboard group'] = array(
+    'title' => t('Administer payment methods in springboard group'),
     'description' => t("Edit a group's payments methods."),
     'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
     'default role' => array(),

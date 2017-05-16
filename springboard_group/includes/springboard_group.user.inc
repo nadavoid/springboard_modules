@@ -257,32 +257,22 @@ function springboard_group_get_contact_group_gids($uid) {
 
 function springboard_group__user__og_permissions(&$items) {
   if (springboard_group_users_are_grouped()) {
-    $items['manage group contacts'] = array(
-      'title' => t('Manage contacts in a group'),
-      'description' => t('Update or delete contacts in a group.'),
-      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
-    );
-    $items['view group contacts'] = array(
-      'title' => t('View contacts in a group'),
-      'description' => t('View contacts in a group.'),
-      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
-    );
 
-    $items['cancel account'] = array(
-      'title' => t('Cancel accounts'),
+    $items['cancel account in springboard group'] = array(
+      'title' => t('Cancel accounts in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
     );
-    $items['administer users'] = array(
-      'title' => t('Administer users'),
+    $items['administer users in springboard group'] = array(
+      'title' => t('Administer users in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
     );
 
-    $items['access user profiles'] = array(
-      'title' => t('View user profiles'),
+    $items['access user profiles in springboard group'] = array(
+      'title' => t('View user profiles in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),

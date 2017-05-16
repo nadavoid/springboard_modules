@@ -55,20 +55,43 @@ function springboard_group_form_commerce_order_ui_order_form_alter(&$form, &$for
   $fields = springboard_group_commerce_orders_are_grouped(TRUE);
 
   if (!empty($fields)) {
-    springboard_group_set_single_selector($form, $fields);
+    // @todo make showing/hiding of group field configurable?
+    if(1) {
+      $groups = og_get_entity_groups('commerce_order', $form['#entity']);
+      $form['og_group_ref_commerce_order']['#access'] = FALSE;
+      $titles = [];
+      if (!empty($groups['node'])) {
+        foreach ($groups['node'] as $group_id) {
+          $group = node_load($group_id);
+          $titles[] = check_plain($group->title);
+        }
+        $form['order_group_display_holder'] =  array(
+          '#type' => 'fieldset',
+          '#title' => t('Group Ownership')
+        );
+        $form['order_group_display_holder']['order_group_display']['#markup'] = theme('item_list', array(
+          'items' => $titles,
+          'title' => '',
+        ));
+      }
+    }
+    else {
 
-    // Add ajax callback to the groups field so we can validate newly
-    // selected groups.
-    $language = $form['og_group_ref_' . 'commerce_order']['#language'];
-    $form['og_group_ref_' . 'commerce_order'][$language][0]['default']['#ajax'] = array(
-      'callback' => 'springboard_group_og_group_field_ajax_callback',
-    );
+      springboard_group_set_single_selector($form, $fields);
 
-    // Set up the validation modal window parameters.
-    springboard_group_prepare_validation_modal($form, $form_state);
+      // Add ajax callback to the groups field so we can validate newly
+      // selected groups.
+      $language = $form['og_group_ref_commerce_order']['#language'];
+      $form['og_group_ref_commerce_order'][$language][0]['default']['#ajax'] = array(
+        'callback' => 'springboard_group_og_group_field_ajax_callback',
+      );
 
-    // Add the validation handlers to the form.
-    springboard_group_load_ajax_validation_handlers($form, $form_state);
+      // Set up the validation modal window parameters.
+      springboard_group_prepare_validation_modal($form, $form_state);
+
+      // Add the validation handlers to the form.
+      springboard_group_load_ajax_validation_handlers($form, $form_state);
+    }
   }
 }
 
@@ -129,6 +152,8 @@ function springboard_group_commerce_order_presave($order) {
     $old_group_gid = $old_group[0]->nid;
     if ($new_group_gid != $old_group_gid) {
       // @todo grab associated sustainer orders and update them too
+      // or this should never happen because group ownership should not be
+      // editable.
     }
   }
 }
@@ -144,7 +169,8 @@ function springboard_group_commerce_entity_access($op, $entity, $account, $entit
   if (springboard_group_commerce_orders_are_grouped()) {
 
     // Check for group update and delete permissions on the order entity.
-    // View permissions are handled elsewhere.
+    // View permissions are handled elsewhere. Entity can be an order or
+    // a payment, etc.
     if (isset($entity)) {
 
       if (($op == 'update' || $op == 'delete')) {
@@ -162,7 +188,7 @@ function springboard_group_commerce_entity_access($op, $entity, $account, $entit
             return TRUE;
           }
           $gid = reset($group['node']);
-          return springboard_group_commerce_order_check_group_perms($gid, 'manage group orders');
+          return springboard_group_commerce_order_check_group_perms($gid, 'edit any group commerce_order entity');
         }
         // The order isn't grouped. Only group admins can manage
         // non-grouped items.
@@ -205,7 +231,7 @@ function springboard_group_query_commerce_order_access_alter(&$query) {
         foreach ($groups as $gid) {
           // Get the users roles in their groups and check
           // for view access in each group.
-          if (springboard_group_commerce_order_check_group_perms($gid, 'view group orders')) {
+          if (springboard_group_commerce_order_check_group_perms($gid, 'view any group commerce_order entity')) {
             // Groups in which the user has view access.
             $allowed_gids[] = $gid;
           }
@@ -274,11 +300,6 @@ function springboard_group__commerce_order__menu_alter(&$items) {
  * A commerce_payment_transaction_order_access() wrapper.
  *
  * Manipulate the commerce payment transaction entity permissions.
- *
- * @param $op
- * @param $order
- * @param null $account
- * @return bool
  */
 function springboard_group_commerce_payment_transaction_order_access($op, $order, $account = NULL) {
   global $user;
@@ -391,13 +412,13 @@ function springboard_group_fundraiser_sustainers_check_access($did) {
       if (arg(4) == 'recurring'
         && empty(arg(5))
       ) {
-        return springboard_group_commerce_order_check_group_perms($group[0]->nid, 'view group orders');
+        return springboard_group_commerce_order_check_group_perms($group[0]->nid, 'view any group commerce_order entity');
       }
 
       elseif (arg(4) == 'recurring'
         && empty(arg(5) == 'edit')
       ) {
-        return springboard_group_commerce_order_check_group_perms($group[0]->nid, 'manage group orders');
+        return springboard_group_commerce_order_check_group_perms($group[0]->nid, 'edit any group commerce_order entity');
       }
     }
 
@@ -418,111 +439,103 @@ function springboard_group_fundraiser_sustainers_check_access($did) {
 function springboard_group__commerce_order__og_permissions(&$items) {
   $orders_grouped = og_get_group_audience_fields('commerce_order', 'commerce_order', 'node', 'springboard_group');
   if (!empty($orders_grouped)) {
-    $items['manage group orders'] = array(
-      'title' => t('Manage orders in a group'),
-      'description' => t('Update or delete orders in a group.'),
-      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
-    );
-    $items['view group orders'] = array(
-      'title' => t('View orders in a group'),
-      'description' => t('View orders in a group.'),
-      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
-    );
 
-    $items['create commerce_order entities'] = array(
-      'title' => t('Create orders'),
+    $items['create orders in springboard group'] = array(
+      'title' => t('Create  orders in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
     );
-    $items['edit any commerce_order entity'] = array(
-      'title' => t('Edit any order'),
-      'description' => '',
-      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
-      'default role' => array(),
-    );
-    $items['view any commerce_order entity'] = array(
-      'title' => t('View any order'),
+    $items['edit any order in springboard group'] = array(
+      'title' => t('Edit any order in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
     );
 
-    $items['view payments'] = array(
-      'title' => t('View payments'),
+    $items['administer orders in springboard group'] = array(
+      'title' => t('Administer orders in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
     );
 
-    $items['create payments'] = array(
-      'title' => t('Create payments'),
+    $items['view any order in springboard group '] = array(
+      'title' => t('View any order in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
     );
 
-    $items['delete payments'] = array(
-      'title' => t('Delete payments'),
-      'description' => '',
-      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
-      'default role' => array(),
-    );
-    $items['update payments'] = array(
-      'title' => t('Update payments'),
+    $items['view payments in springboard group'] = array(
+      'title' => t('View payments in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
     );
 
-    $items['edit any card data'] = array(
-      'title' => t('Edit any card data'),
+    $items['create payments in springboard group'] = array(
+      'title' => t('Create payments in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
     );
 
-    $items['view any card data'] = array(
-      'title' => t('View any card data'),
+    $items['delete payments in springboard group'] = array(
+      'title' => t('Delete payments in Springboard Group'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+    );
+    $items['update payments in springboard group'] = array(
+      'title' => t('Update payments in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
     );
 
-    $items['create any card data'] = array(
-      'title' => t('Create any card data'),
+    $items['edit any card data in springboard group'] = array(
+      'title' => t('Edit any card data in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
     );
 
-    $items['delete any card data'] = array(
-      'title' => t('Delete any card data'),
-      'description' => '',
-      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
-      'default role' => array(),
-    );
-    $items['submit donations offline'] = array(
-      'title' => t('Submit donations offline'),
+    $items['view any card data in springboard group'] = array(
+      'title' => t('View any card data in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
     );
 
-    $items['cancel future donations'] = array(
-      'title' => t('Cancel future donations'),
+    $items['create card data  in springboard group'] = array(
+      'title' => t('Create card data  in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
     );
-    $items['fastforward recurring donations'] = array(
-      'title' => t('Fast-forward recurring donations'),
+
+    $items['delete any card data in springboard group'] = array(
+      'title' => t('Delete any card data in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
     );
-    $items['administer commerce_order entities'] = array(
-      'title' => t('Administer orders'),
+    $items['submit springboard group donations offline'] = array(
+      'title' => t('Submit donations offline in Springboard Group'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+    );
+
+    $items['cancel future donations in springboard group'] = array(
+      'title' => t('Cancel future donations in in Springboard Group'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+    );
+    $items['fastforward recurring donations in springboard group'] = array(
+      'title' => t('Fast-forward recurring donations in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),

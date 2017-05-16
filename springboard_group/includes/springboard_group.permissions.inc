@@ -84,6 +84,7 @@ function springboard_group_og_permission_alter(&$perms) {
   // Make OG think that another module owns the permissions we set in
   // springboard_group_og_permissions(), so that they are themed/categorized
   // correctly, rather than appearing to belong to this module.
+  // @todo maybe we should just implement the hooks here.
   foreach ($perms as $key => $perm) {
     if ($perm['module'] == 'springboard_group') {
       switch ($key) {
@@ -144,12 +145,6 @@ function springboard_group_og_permission_alter(&$perms) {
           break;
       }
 
-    }
-    if ($perms[$key]['module'] == 'springboard_group_advocacy') {
-      $perms[$key]['module'] = 'springboard_advocacy';
-    }
-    if ($perms[$key]['module'] == 'publishcontent') {
-      $perms[$key]['module'] = 'og';
     }
   }
 
@@ -231,15 +226,7 @@ function springboard_group_preprocess_og_ui_admin_permissions(&$vars) {
             $vars['form']['permission'][$key]['#markup'] = t('Groups Members');
             break;
 
-          case 'publishcontent':
-            unset($vars['form']['permission'][$key]);
-            break;
-
           case 'springboard_group':
-            unset($vars['form']['permission'][$key]);
-            break;
-
-          case 'springboard_group_advocacy':
             unset($vars['form']['permission'][$key]);
             break;
 
