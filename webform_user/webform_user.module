@@ -416,6 +416,15 @@ function webform_user_form_alter(&$form, &$form_state, $form_id) {
       foreach ($map as $webform_field => $profile_field) {
         if (array_key_exists($webform_field, $component_hierarchy)) {
           $form_field = &_webform_user_find_field($form, $component_hierarchy[$webform_field]);
+
+          // If market source is set to "direct" for this field, skip it,
+          // let the form set the value.
+          if (isset($form_field['#webform_component'])) {
+            if (_webform_user_field_is_ms_direct($form_field['#webform_component'])) {
+              continue;
+            }
+          }
+
           if (isset($user_data->$profile_field)) {
             // Figure out what the value is.
             $profile_value = is_array($user_data->$profile_field) ? '1' : 0;
@@ -462,6 +471,15 @@ function webform_user_form_alter(&$form, &$form_state, $form_id) {
       foreach ($map as $webform_field => $profile_field) {
         if (array_key_exists($webform_field, $component_hierarchy)) {
           $form_field = &_webform_user_find_field($form, $component_hierarchy[$webform_field]);
+
+          // If market source is set to "direct" for this field, skip it,
+          // let the form set the value.
+          if (isset($form_field['#webform_component'])) {
+            if (_webform_user_field_is_ms_direct($form_field['#webform_component'])) {
+              continue;
+            }
+          }
+
           if (isset($_SESSION['webform_user_submission_field_values'][$profile_field])) {
             $profile_value = $_SESSION['webform_user_submission_field_values'][$profile_field];
             // Set the value.
@@ -516,7 +534,7 @@ function webform_user_webform_validate($form, &$form_state) {
   $mail = isset($fields['mail']) ? trim($fields['mail']) : '';
   $skip_user_check = isset($form_state['webform_user_skip_user_check']) ? $form_state['webform_user_skip_user_check'] : FALSE;
 
-  if (_webform_user_is_webform_user_node($node) && !_webform_user_validate_email($mail)) {
+  if (_webform_user_is_webform_user_node($node) && !springboard_validate_email($mail)) {
     form_set_error('mail', t('Please enter a valid email address.'));
   }
   // When user is logged in make sure email isn't updated to
@@ -571,7 +589,7 @@ function webform_user_webform_submit($form, &$form_state) {
       }
       webform_submission_update($node, $submission);
       // Save webform user fields in user session for the existing user.
-      if (_webform_user_is_webform_user_session_store()) {
+      if (_webform_user_is_webform_user_session_store($form_state)) {
         _webform_user_session_set($node->nid, $map);
       }
     }
@@ -603,7 +621,7 @@ function webform_user_webform_submit($form, &$form_state) {
       }
       webform_submission_update($node, $submission);
       // Save webform user fields in user session.
-      if (_webform_user_is_webform_user_session_store()) {
+      if (_webform_user_is_webform_user_session_store($form_state)) {
         _webform_user_session_set($node->nid, $map);
       }
     }
@@ -629,6 +647,27 @@ function webform_user_webform_submit($form, &$form_state) {
       'send' => !empty($node->send_new_user_email) ? $node->send_new_user_email && $new_user : FALSE,
     ));
   }
+}
+
+/**
+ * Check whether a user profile field is set to "direct" in market source.
+ *
+ * @param array $component
+ *   The webform component array of the field.
+ *
+ * @return bool
+ *   Whether to skip processing this field.
+ */
+function _webform_user_field_is_ms_direct($component) {
+  $direct = FALSE;
+  if (function_exists('_market_source_build_qs_keys')) {
+    $ms_settings = _market_source_build_qs_keys();
+    $form_key = $component['form_key'];
+    if (isset($ms_settings[$form_key]['persistence']) && $ms_settings[$form_key]['persistence'] == 'direct') {
+      $direct = TRUE;
+    }
+  }
+  return $direct;
 }
 
 /**
@@ -1297,8 +1336,22 @@ function _webform_user_is_webform_user_node_type($type) {
 
 /**
  * Check if webform_user should save submission values to session.
+ *
+ * @form_state
+ *   The submitted form state.
+ *
+ * @return bool
+ *   Whether to allow session storage.
  */
-function _webform_user_is_webform_user_session_store() {
+function _webform_user_is_webform_user_session_store($form_state) {
+  // Allow other modules to prevent webform user session storage.
+  $session_cancel = module_invoke_all('webform_user_session_storage_cancel', $form_state);
+  foreach ($session_cancel as $cancel) {
+    if (!$cancel) {
+      return FALSE;
+    }
+  }
+
   return variable_get('webform_user_session_store', FALSE);
 }
 
@@ -1333,14 +1386,6 @@ function _webform_user_get_map($nid, $fields) {
   }
 
   return $user_map;
-}
-
-/**
- * Helper function, validate an e-mail address.
- */
-function _webform_user_validate_email($mail) {
-  // TODO - why are we not using valid_email_address() from D7?
-  return preg_match('/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/', $mail);
 }
 
 /**

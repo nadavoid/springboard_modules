@@ -337,6 +337,32 @@ function springboard_dw_fundraiser_donation_success($donation) {
     springboard_dw_track_item_warehouse_queued('donation', $donation->did);
   }
 
+  // Deal with any attached line items.
+  springboard_dw_queue_donation_line_items($donation);
+
+}
+
+/**
+ * Handles the queuing of any line items attached to a donation.
+ *
+ * @param object $donation
+ *   The donation being queued.
+ */
+function springboard_dw_queue_donation_line_items($donation) {
+  // Get the Drupal data warehouse queue.
+  $queue = DrupalQueue::get("springboard_dw_export");
+
+  $order = commerce_order_load($donation->did); // TODO: Confirm this is coming out of cache.
+  $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+  $currency_code = $order_wrapper->commerce_order_total->currency_code->value();
+
+  foreach ($order_wrapper->commerce_line_items as $delta => $line_item) {
+    // Every donation will have 1 line item that is the donation itself. Do not export this line item.
+    if ($line_item->value()->type != 'donation') {
+      $line_item_item = springboard_dw_map_line_item_item($line_item, $currency_code);
+      $queue->createItem($line_item_item);
+    }
+  }
 }
 
 /**
@@ -774,6 +800,37 @@ function springboard_dw_entity_insert($entity, $type) {
       springboard_dw_track_item_warehouse_queued('salesforce sync', $entity->rmid);
     }
   }
+}
+
+/**
+ * Map a commerce line item to an array formatted for an API call.
+ *
+ * @param object $item
+ *   An entity metadata wrapper object for a commerce line item.
+ * @param string $currency_code
+ *   The currency used on the order.
+ *
+ * @return array
+ *   The line item mapped to API consumable format.
+ */
+function springboard_dw_map_line_item_item($item, $currency_code = 'USD') {
+  $line_item_item = array();
+
+  $line_item_item['queue_type'] = 'line_item';
+  $line_item_item['line_item_id'] = $item->line_item_id->value();
+  $line_item_item['donation_id'] = $item->order_id->value();
+  $line_item_item['type'] = $item->type->value();
+  $line_item_item['label'] = $item->commerce_product->title->value();
+  $line_item_item['quantity'] = $item->quantity->value();
+  $line_item_item['product_id'] = $item->commerce_product->product_id->value();
+  $line_item_item['price'] = $item->commerce_unit_price->amount->value();
+  $line_item_item['price_formatted'] = commerce_currency_format($line_item_item['price'], $currency_code);
+  $line_item_item['total'] = $item->commerce_total->amount->value();
+  $line_item_item['total_formatted'] = commerce_currency_format($line_item_item['total'], $currency_code);
+  $line_item_item['created_at'] = $item->created->value();
+  $line_item_item['updated_at'] = $item->changed->value();
+
+  return $line_item_item;
 }
 
 /**
@@ -1236,7 +1293,7 @@ function springboard_dw_map_donation_item($donation, $update = FALSE) {
   $donation_item['submission_id'] = $donation->sid;
   $donation_item['status'] = $donation->status;
   $donation_item['transaction_id'] = $donation->txn_id;
-  $donation_item['gateway'] = $donation->gateway['id'];
+  $donation_item['gateway'] = $donation->gateway['title'];
   $donation_item['card_type'] = $donation->data['payment_fields']['credit']['card_type'];
   $donation_item['card_last_4'] = $donation->data['payment_fields']['credit']['card_number'];
   $donation_item['card_expiration_month'] = $donation->data['payment_fields']['credit']['card_expiration_month'];
@@ -1896,6 +1953,9 @@ function springboard_dw_export_item($item) {
   elseif ($item['queue_type'] == 'vendor_mapping') {
     return springboard_dw_vendor($item);
   }
+  elseif ($item['queue_type'] == 'line_item') {
+    return springboard_dw_line_item($item);
+  }
 }
 
 /**
@@ -2122,6 +2182,21 @@ function springboard_dw_petition_message($item) {
 function springboard_dw_vendor($item) {
   // Make the API call.
   $api_response = springboard_dw_api_call('vendor/create', $item);
+
+  // Return back TRUE if status code is 200, FALSE IF ANYTHING ELSE
+  return springboard_dw_generate_queue_item_response
+  ($api_response->getStatusCode());
+}
+
+/**
+ * Send a donation line item record to the data warehouse API.
+ *
+ * @param array $item
+ *   The queue information to send to the data warehouse.
+ */
+function springboard_dw_line_item($item) {
+  // Make the API call.
+  $api_response = springboard_dw_api_call('line-item/create', $item);
 
   // Return back TRUE if status code is 200, FALSE IF ANYTHING ELSE
   return springboard_dw_generate_queue_item_response

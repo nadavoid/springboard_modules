@@ -143,6 +143,7 @@
     }
 
     this.setCurrentPaymentMethod = function(paymentMethod) {
+      $(document).trigger('braintree.methodChange', [paymentMethod]);
       if (parent.settings.currentPaymentMethod == paymentMethod && processed) {
         return this;
       }
@@ -472,12 +473,15 @@
               city: payload.details.billingAddress.city,
               country: payload.details.billingAddress.countryCode,
               state: payload.details.billingAddress.state,
-              zip: payload.details.billingAddress.postalCode
+              zip: payload.details.billingAddress.postalCode,
+              phone: payload.details.phone
             };
             autofilled = parent.autofill(address, autofill);
           }
 
           $.data(parent.$form[0], 'events')['submit'] = parent.callbacks;
+          
+          $(document).trigger('braintree.autoFilled', [parent, address, autofilled]);
 
           // Auto-submit the form if no fields were auto-filled from the values
           // in the payload object.
@@ -542,7 +546,6 @@
           fieldsHaveBeenAutoFilled = true;
         }
       });
-
       return fieldsHaveBeenAutoFilled;
     }
 

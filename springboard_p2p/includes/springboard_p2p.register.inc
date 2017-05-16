@@ -384,6 +384,12 @@ function springboard_p2p_user_register_form_submit($form, &$form_state) {
   // Populate $edit with the properties of $account, which have been edited on
   // this form by taking over all values, which appear in the form values too.
   $edit = array_intersect_key((array) $account, $form_state['values']);
+  if (module_exists('email_registration')) {
+    // Strip off everything after the @ sign.
+    $name = preg_replace('/@.*$/', '', $edit['mail']);
+    $name = email_registration_cleanup_username($name);
+    $edit['name'] = email_registration_unique_username($name);
+  }
   $account = user_save($account, $edit);
 
   // Terminate if an error occurred during user_save().

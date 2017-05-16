@@ -1518,3 +1518,51 @@ function fundraiser_webform_webform_submission_render_alter(&$renderable) {
   }
   $renderable['amount']['#markup'] = $markup;
 }
+
+/**
+ * Implements hook_springboard_twig_form_twig_info_field_variables_alter().
+ */
+function fundraiser_webform_springboard_twig_form_twig_info_field_variables_alter($node_type, &$vars) {
+  $args = arg();
+  if (!in_array('webform', $args)) {
+    return;
+  }
+
+  if ($args[0] == 'node' && !empty($args[2])) {
+    $node = node_load($args[1]);
+  }
+  else {
+    return;
+  }
+
+  if (empty($node->webform['components'])) {
+    return;
+  }
+
+  $vars['webform'] = array();
+  foreach ($node->webform['components'] as $component) {
+    $description = '';
+    if (!empty($component['extra']['description'])) {
+      $description = $component['extra']['description'];
+    }
+    $vars['webform']['webform.' . $component['form_key']] = $description;
+  }
+}
+
+/**
+ * Implements hook_springboard_twig_variable_replacements_alter().
+ */
+function fundraiser_webform_springboard_twig_variable_replacements_alter($node_type, &$vars) {
+  if (empty($vars['node']->webform) || empty($vars['submission']->data)) {
+    return;
+  }
+
+  $vars['webform'] = array();
+  foreach ($vars['node']->webform['components'] as $cid => $component) {
+    if (!isset($vars['submission']->data[$cid]['value'])) {
+      continue;
+    }
+
+    $vars['webform'][$component['form_key']] = $vars['submission']->data[$cid]['value'][0];
+  }
+}

@@ -116,7 +116,7 @@ function sba_message_action_download_form_submit($form, &$form_state) {
  */
 function sba_message_action_download_form_validate($form, &$form_state) {
 
-  if (!valid_email_address($form_state['input']['csv_messages_download_email'])) {
+  if (!springboard_validate_email($form_state['input']['csv_messages_download_email'])) {
     form_set_error('csv_messages_download_email', t('Please enter a valid email address.'));
   }
 }

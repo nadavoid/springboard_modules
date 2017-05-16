@@ -1,0 +1,55 @@
+<?php
+
+/**
+ * @file
+ * This module integrates the webform module with Springboard and is meant to serve
+ * as a centralized place for miscellaneous, webform-related activities:
+ *
+ * - Inserts a watchdog log entry for every successful webform submission.
+ */
+
+/**
+ * Implements hook_module_implements_alter().
+ */
+function springboard_webform_module_implements_alter(&$implementations, $hook) {
+  // Ensure this module's form alter occurs after any others, so the 
+  // duration that gets logged value is more accurate:
+  if ($hook == 'form_alter' && isset($implementations['springboard_webform'])) {
+    $group = $implementations['springboard_webform'];
+    unset($implementations['springboard_webform']);
+    $implementations['springboard_webform'] = $group;
+  }
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function springboard_webform_form_alter(&$form, &$form_state, $form_id) {
+  if (strstr($form_id, 'webform_client_form') !== FALSE) {
+    $form['#submit'][] = '_springboard_webform_log_webform_submission';
+  }
+}
+
+/**
+ * Log all webform submissions.
+ */
+function _springboard_webform_log_webform_submission(&$form, &$form_state) {
+  if (!isset($form['#node'])) {
+    return;
+  }
+  $node = $form['#node'];
+
+  if (isset($_SERVER['REQUEST_TIME_FLOAT'])) {
+    $duration = microtime(TRUE) - $_SERVER['REQUEST_TIME_FLOAT'];
+  }
+
+  $vars = array(
+    '%type' => isset($node->type) ? $node->type : 'N/A',
+    '%nid' => isset($node->nid) ? $node->nid : 'N/A',
+    '%sid' => isset($form_state['values']['details']['sid']) ? $form_state['values']['details']['sid'] : 'N/A',
+    '%duration' => isset($duration) ? round($duration, 4) : 'N/A', 
+    '%title' => isset($node->title) ? str_replace('"', '\'', $node->title) : '',
+  );
+  $message = 'Webform submitted: type=%type, nid=%nid, sid=%sid, duration=%duration, title="%title"';
+  watchdog('springboard_webform', $message, $vars);
+}
