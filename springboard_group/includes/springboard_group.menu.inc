@@ -194,7 +194,7 @@ function springboard_group_menu_alter(&$items) {
 function springboard_group_rules_payment_method_overview_access($orig_args) {
   $group_context = springboard_group_get_group_context();
   $role_permissions = array();
-  if (!empty($group_context) && $group_context != '_none' && $group_context != '_all' && strpos($group_context, '_some|') !== FALSE) {
+  if (!empty($group_context) && $group_context != '_none' && $group_context != '_all') {
     $roles = og_get_user_roles('node', $group_context);
     $perms = og_role_permissions($roles);
     $role_permissions = array_keys(array_filter(reset($perms)));
