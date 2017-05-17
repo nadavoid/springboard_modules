@@ -3882,10 +3882,15 @@ function fundraiser_update_billing_form($form, &$form_state, $data) {
       $stored_card = _fundraiser_commerce_credit_card_pane_values($data['donation']);
       $form['payment_fields']['credit']['expiration_date']['card_expiration_month']['#default_value'] = $stored_card['credit_card']['exp_month'];
       $form['payment_fields']['credit']['expiration_date']['card_expiration_year']['#default_value'] = $stored_card['credit_card']['exp_year'];
-
-      // Add a validation function for credit cards.
-      $form['#validate'][] = 'fundraiser_update_billing_form_credit_card_form_validate';
     }
+  }
+
+  // Add a validation function for the payment fields.
+  if (!empty($form['payment_fields']['credit'])) {
+    $form['#validate'][] = 'fundraiser_update_billing_form_credit_card_form_validate';
+  }
+  elseif (!empty($form['payment_fields']['bank account'])) {
+    $form['#validate'][] = 'fundraiser_update_billing_form_bank_account_form_validate';
   }
 
   if (empty($form_state['donation'])) {
@@ -3927,15 +3932,50 @@ function fundraiser_update_billing_form($form, &$form_state, $data) {
  * Validation handler for fundraiser_update_billing_form().
  */
 function fundraiser_update_billing_form_credit_card_form_validate(&$form, &$form_state) {
-  $values = $form_state['values'];
-
-  // Ensure the number and cvv is set.
-  if (empty($values['payment_fields']['credit']['card_number'])) {
-    form_set_error('payment_fields][credit][card_number', t('Please enter your card number.'));
+  // If the credit card number field is empty we don't validate.
+  if (empty($form_state['values']['payment_fields']['credit']['card_number'])) {
+    return;
   }
 
-  if (empty($values['payment_fields']['credit']['card_cvv'])) {
-    form_set_error('payment_fields][credit][card_cvv', t('Please enter your card CVV.'));
+  $form_parents = array(
+    'payment_fields',
+    'credit',
+  );
+
+  // Use the standard credit card validation functions.
+  module_load_include('inc', 'fundraiser_commerce', 'includes/fundraiser_commerce.credit_card');
+  $submission_fields = _fundraiser_commerce_credit_card_cleanup($form_state['values']);
+  _fundraiser_commerce_credit_card_validate($submission_fields, $form_parents);
+}
+
+/**
+ * Validation handler for fundraiser_update_billing_form().
+ */
+function fundraiser_update_billing_form_bank_account_form_validate(&$form, &$form_state) {
+  $values = $form_state['values']['payment_fields']['bank account'];
+
+  // If the routing and account fields are empty we don't validate.
+  if (
+    empty($values['routing_number'])
+    && empty($values['account_number'])
+  ) {
+    return;
+  }
+
+  // Use standard bank account validation.
+  $prefix = 'payment_fields[bank account][';
+  // Validate the account number fields
+  if (!ctype_digit($values['routing_number']) || strlen($values['routing_number']) > 9) {
+    form_set_error($prefix . 'routing_number', t('The routing number should be a 9 digit numeric value.'));
+  }
+
+  if (!ctype_digit($values['account_number'])) {
+    form_set_error($prefix . 'account_number', t('The account number should only contain numeric values.'));
+  }
+
+  if ($values['account_number'] != $values['confirm_account_number']) {
+    form_set_error($prefix . 'account_number', t('The account numbers do not match.'));
+    form_set_error($prefix . 'confirm_account_number');
   }
 }
 
