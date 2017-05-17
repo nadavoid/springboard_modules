@@ -67,7 +67,12 @@ function springboard_group_og_context_handler($item = NULL) {
         $ret = array('_all' => array('_all'));
       }
       else {
-
+        if (is_numeric($_SESSION['springboard_group_working_group'])) {
+          $valid = springboard_group_context_check_session_id_is_valid($_SESSION['springboard_group_working_group']);
+          if (empty($valid)) {
+            return FALSE;
+          }
+        }
         // There's already a working group, return it as the context and
         // tell the dashboard we need a selector.
         $_SESSION['springboard_group_context_multiple'] = array_values($groups);
@@ -142,7 +147,7 @@ function springboard_group_get_group_context($node = NULL) {
     }
   }
 
-  // "_none", "_all" etc.
+  // There's already a group selection in context.
   if (!empty($_SESSION['springboard_group_working_group'])) {
 
     // If the selection is "all" and we're on the "add target" pages,
@@ -160,6 +165,12 @@ function springboard_group_get_group_context($node = NULL) {
         $groups = $_SESSION['springboard_group_context_multiple'];
         $gid = array_shift($groups);
         return $gid;
+      }
+    }
+    if (is_numeric($_SESSION['springboard_group_working_group'])) {
+      $valid = springboard_group_context_check_session_id_is_valid($_SESSION['springboard_group_working_group']);
+      if (empty($valid)) {
+        return FALSE;
       }
     }
     return $_SESSION['springboard_group_working_group'];
@@ -328,10 +339,13 @@ function springboard_group_context_selector_form($form, &$form_state, $groups) {
     unset($options['_all']);
   }
 
+  $group_options = array();
   foreach ($groups as $nid) {
     $node = node_load($nid);
-    $options[$nid] = check_plain($node->title);
+    $group_options[$nid] = check_plain($node->title);
   }
+  asort($group_options);
+  $options += $group_options;
 
   // The ajax enabled group selector which will reload the page
   // subsequent to a group choice. The group ID will get put into session.
@@ -366,4 +380,21 @@ function springboard_group_context_selector_ajax_callback($form, &$form_state) {
   $commands[] = ctools_ajax_command_reload();
   print ajax_render($commands);
   drupal_exit();
+}
+
+/**
+ * Check to see if a group node has been deleted or "un-grouped".
+ *
+ * Edge case: User's current working group is deleted or ungrouped.
+ */
+function springboard_group_context_check_session_id_is_valid($gid) {
+  $valid = FALSE;
+  $exists = db_query('SELECT nid FROM {node} WHERE nid = :nid', array(':nid' => $gid))->fetchField();
+  if (!empty($exists)) {
+    $node = node_load($gid);
+    if (og_is_group('node', $node)) {
+      $valid = TRUE;
+    }
+  }
+  return $valid;
 }

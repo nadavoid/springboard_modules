@@ -353,6 +353,12 @@ function fundraiser_sustainers_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
+      'status' => array(
+        'description' => 'Gateway Status.',
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => FALSE,
+      ),
       'created' => array(
         'description' => 'The timestamp when this donation series was created.',
         'type' => 'int',
@@ -1106,3 +1112,100 @@ function fundraiser_sustainers_update_7018(&$sandbox) {
   }
 }
 */
+
+/**
+ * Add the status field to the sustainers series entity.
+ */
+function fundraiser_sustainers_update_7018(&$sandbox) {
+  // Add the new column.
+  $status = array(
+    'description' => 'Gateway Status.',
+    'type' => 'varchar',
+    'length' => '255',
+    'not null' => FALSE,
+  );
+  db_add_field('fundraiser_sustainers_series', 'status', $status);
+}
+
+/**
+ * Update recurring status on finished series.
+ */
+function fundraiser_sustainers_update_7019(&$sandbox) {
+  if (!isset($sandbox['progress'])) {
+    $sandbox['progress'] = 0;
+    $sandbox['max'] = db_query('SELECT COUNT(did) FROM {fundraiser_sustainers_series}')->fetchField();
+    $sandbox['current_did'] = 0;
+  }
+
+  $statuses = fundraiser_sustainers_series_entity_statuses();
+
+  // Grab every series.
+  $series = db_query('
+    SELECT * FROM {fundraiser_sustainers_series}
+    WHERE did > :current
+    ORDER BY did ASC
+    LIMIT 25',
+    array(':current' => $sandbox['current_did'])
+  );
+
+  foreach ($series as $donation) {
+    // Check if the series is active.
+    $recur_remain = _fundraiser_sustainers_get_donations_recurr_remaining($donation->did);
+    // If not active, proceed with an update.
+    if (empty($recur_remain)) {
+
+      $last_donation = db_query(
+        'SELECT f.did, o.status FROM {fundraiser_sustainers} f
+        join commerce_order o on o.order_id = f.did
+        WHERE master_did = :master_did
+        ORDER BY next_charge
+        DESC LIMIT 0, 1',
+        array(':master_did' => $donation->did)
+      )->fetchObject();
+
+      // Check if the series hasn't been created yet.
+      $update = TRUE;
+      if (variable_get('fundraiser_sustainers_create_series_cron', FALSE)) {
+        $full_donation = fundraiser_donation_get_donation($donation->did);
+        // If the series creation is pending don't update.
+        if (
+          !empty($full_donation->data['fundraiser_sustainers_series_status'])
+          && $full_donation->data['fundraiser_sustainers_series_status'] == FUNDRAISER_SUSTAINERS_SERIES_STATUS_PENDING
+        ) {
+          $update = FALSE;
+        }
+      }
+
+      if ($update) {
+        // Match the donation status to the array of the series entity statuses.
+        $order_status = isset($last_donation->status) ? $last_donation->status : 'unknown';
+        foreach ($statuses as $key => $status_arr) {
+          if (in_array($order_status, $status_arr)) {
+            $status = $key;
+          }
+        }
+
+        if (!empty($status)) {
+          db_update('fundraiser_sustainers_series')
+            ->fields(array('status' => $status))
+            ->condition('did', $donation->did)
+            ->execute();
+        }
+      }
+    }
+    $sandbox['progress']++;
+    $sandbox['current_did'] = $donation->did;
+  }
+
+  $sandbox['#finished'] = empty($sandbox['max']) ? 1 : ($sandbox['progress'] / $sandbox['max']);
+
+  if ($sandbox['#finished'] >= 1) {
+    // Set all remaining series to active.
+    db_update('fundraiser_sustainers_series')
+      ->fields(array('status' => 'active'))
+      ->isNull('status')
+      ->execute();
+
+    return t('Fundraiser sustainers series status columns have been updated.');
+  }
+}

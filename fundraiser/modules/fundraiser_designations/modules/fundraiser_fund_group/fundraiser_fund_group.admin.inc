@@ -239,7 +239,7 @@ function fundraiser_fund_group_edit_form_submit(&$form, &$form_state) {
     $arg = json_encode(array($nid));
     // Create new order record.
     $weight = db_query("SELECT MAX(weight) FROM {draggableviews_structure} WHERE view_name = :name and args = :arg",
-      array(':name' => 'fundraiser_fund_groups_node', ':arg' => $arg))->fetchField();
+      array(':name' => 'fundraiser_fund_group', ':arg' => $arg))->fetchField();
 
     $fundraiser_fund_group->data['weight']  = $weight + 1;
     $fundraiser_fund_group->save();

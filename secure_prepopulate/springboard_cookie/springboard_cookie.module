@@ -48,6 +48,10 @@ function springboard_cookie_permission() {
  * Springboard cookie.
  */
 function springboard_cookie_inspect($uid) {
+  // check if secure prepopulate is configured. If not, post a warning.
+  if(!secure_prepopulate_get_key_and_vector()) {
+    drupal_set_message(t("You must <a href='@link'>configure Secure Prepopulate</a>  to save profile data in the Springboard cookie.", array('@link' => '/admin/config/system/secure-prepopulate')), 'warning');
+  }
   $cookie = springboard_cookie_get_cookie();
   $output = array();
 
@@ -343,11 +347,39 @@ function springboard_cookie_webform_user_webform_submit($form, &$form_state) {
     $fields = _webform_user_flatten_tree($form_state['values']['submitted_tree'], $node->nid);
     $email = trim($fields['mail']);
     $new_data = array('email' => $email);
-    if ($account = user_load_by_mail($email)) {
+    $account = user_load_by_mail($email);
+    if ($account) {
       $new_data['uid'] = $account->uid;
     }
+
     springboard_cookie_tag_client($new_data);
+
+    // For sensitive data storage allow modules to prevent it.
+    if (springboard_cookie_should_store_profile_values($form_state)) {
+      springboard_cookie_add_profile_values($account);
+    }
   }
+}
+
+/**
+ * Check if the cookie should save profile values to the cookie.
+ *
+ * @form_state
+ *   The submitted form state.
+ *
+ * @return bool
+ *   Whether to store profile data in the cookie.
+ */
+function springboard_cookie_should_store_profile_values($form_state) {
+  // Allow other modules to prevent webform user session storage.
+  $store_cancel = module_invoke_all('springboard_cookie_should_store_profile_values', $form_state);
+  foreach ($store_cancel as $cancel) {
+    if ($cancel === FALSE) {
+      return FALSE;
+    }
+  }
+
+  return TRUE;
 }
 
 /**

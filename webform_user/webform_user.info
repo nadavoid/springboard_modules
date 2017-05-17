@@ -5,6 +5,7 @@ version = 7.x-4.x-dev
 package = Webform Extra
 configure = admin/config/content/webform_user
 dependencies[] = webform
+dependencies[] = springboard
 
 files[] = tests/webform_user_test_setup.php
 

@@ -414,7 +414,7 @@ function springboard_target_form_validate($form, &$form_state) {
 
   //Email
   if (!empty($form_state['values']['email'])) {
-    $valid = valid_email_address($form_state['values']['email'], TRUE);
+    $valid = springboard_validate_email($form_state['values']['email'], TRUE);
     if (!$valid) {
       form_set_error('email', t('Invalid email address.'));
     }

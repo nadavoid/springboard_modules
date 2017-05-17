@@ -364,7 +364,7 @@ function springboard_group_get_group_member_perms($gid, $account = NULL) {
     global $user;
     $account = $user;
   }
-  if ($gid != '_all' && $gid != '_none' && strpos($gid, '_some|') !== FALSE) {
+  if ($gid != '_all' && $gid != '_none') {
     $roles = og_get_user_roles('node', $gid, $account->uid, TRUE, TRUE);
     $perms = og_role_permissions($roles);
     // Users may have multiple roles in a group.

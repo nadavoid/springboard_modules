@@ -823,7 +823,6 @@ function sb_social_token_info() {
  * Implements hook_tokens().
  */
 function sb_social_tokens($type, $tokens, $data = array(), $options = array()) {
-
   $replacements = array();
   if ($type == 'sb_social') {
     $node = !empty($data['node']) ? $data['node'] : FALSE;
@@ -1208,4 +1207,71 @@ function sb_social_social_referer_field_validate($form, &$form_state) {
      form_set_value($form['submitted']['social_referer_transaction'], '', $form_state);
    }
  }
+}
+
+/**
+ * Implements hook_springboard_twig_form_twig_info_field_variables_alter().
+ */
+function sb_social_springboard_twig_form_twig_info_field_variables_alter($node_type, &$vars) {
+  if ($node_type != 'sba_message_action') {
+    return;
+  }
+
+  $vars['social'] = array(
+    'sb_social.email_message' => t('Shared message email body.'),
+    'sb_social.email_share_link' => t('Email share link.'),
+    'sb_social.email_subject' => t('Shared message email subject.'),
+    'sb_social.facebook_share_link' => t('Facebook share link.'),
+    'sb_social.facebook_description' => t('Facebook share description.'),
+    'sb_social.facebook_image' => t('Facebook share image.'),
+    'sb_social.facebook_title' => t('Facebook share title.'),
+    'sb_social.share_links' => t('Social share links.'),
+    'sb_social.twitter_share_link' => t('Twitter share link.'),
+    'sb_social.twitter_message' => t('Twitter share message (tweet).'),
+  );
+}
+
+/**
+ * Implements hook_springboard_twig_variable_replacements_alter().
+ */
+function sb_social_springboard_twig_variable_replacements_alter($node_type, &$vars) {
+  $enabled_content_types = variable_get('springboard_social_enabled_content_types', array());
+  if (count($enabled_content_types) && !in_array($node_type, $enabled_content_types)) {
+    return;
+  }
+
+  $enabled_plugins = sb_social_get_enabled_plugins();
+  $buttons = array();
+  foreach ($enabled_plugins as $service => $plugin) {
+    $vars['service'] = $service;
+    $vars['contents'] = isset($plugin['button_contents']) ? $plugin['button_contents'] : '';
+
+    $use_addthis = variable_get('springboard_social_use_addthis', FALSE);
+    if ($use_addthis) {
+      $vars['extra'] = '';
+      // Some buttons (like email) require additional html attributes.
+      // The button_extra callback provides these values.
+      if (isset($plugin['button_extra'])) {
+        $func = $plugin['button_extra'];
+        if (function_exists($func)) {
+          $vars['extra'] = $func($settings['data'][$service], $node, $submission_id);
+        }
+      }
+    }
+
+    $buttons[$service] = theme('sb_social_share_button', $vars);
+  }
+
+  $vars['sb_social'] = array(
+    'email_message' => variable_get('springboard_social_email_message'),
+    'email_share_link' => $buttons['email'],
+    'email_subject' => variable_get('springboard_social_email_subject'),
+    'facebook_share_link' => $buttons['facebook'],
+    'facebook_description' => variable_get('springboard_social_facebook_description'),
+    'facebook_image' => variable_get('springboard_social_facebook_image'),
+    'facebook_title' => variable_get('springboard_social_facebook_title'),
+    'share_links' => $buttons,
+    'twitter_share_link' => $buttons['twitter'],
+    'twitter_message' => variable_get('springboard_social_twitter_message'),
+  );
 }

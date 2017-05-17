@@ -1,0 +1,8 @@
+name = Springboard - Twig Processor
+description = Enables processing of various aspects of Springboard with the Twig templating language.
+core = 7.x
+version = 7.x-4.x
+package = Jackson River Springboard - extras
+
+dependencies[] = email_wrappers
+dependencies[] = fundraiser_webform

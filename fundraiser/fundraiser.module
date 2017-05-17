@@ -18,33 +18,13 @@ function fundraiser_permission() {
       'title' => t('Administer fundraiser'),
       'description' => t('Perform administration tasks for fundraiser.'),
     ),
+    'access donation form overview' => array(
+      'title' => t('Access Donation Form Overview'),
+      'description' => t('Access the admin content tab for donation forms'),
+    ),
     'refund donations' => array(
       'title' => t('Refund donations'),
       'description' => t('Refund donations for fundraiser.'),
-    ),
-    'create donation form' => array(
-      'title' => t('Create donation form'),
-      'description' => t('Create donation forms.'),
-    ),
-    'edit own donation form' => array(
-      'title' => t('Edit own donation form'),
-      'description' => t('Edit own donation forms.'),
-    ),
-    'edit any donation form' => array(
-      'title' => t('Edit any donation form'),
-      'description' => t('Edit any donation forms.'),
-    ),
-    'delete own donation form' => array(
-      'title' => t('Delete own donation form'),
-      'description' => t('Delete own donation forms.'),
-    ),
-    'delete any donation form' => array(
-      'title' => t('Delete any donation form'),
-      'description' => t('Delete any donation forms.'),
-    ),
-    'clone donation form' => array(
-      'title' => t('Clone donation form'),
-      'description' => t('Clone donation forms.'),
     ),
     'use gateway switcher' => array(
       'title' => t('Use the bulk gateway switcher'),
@@ -273,10 +253,7 @@ function fundraiser_tokens($type, $tokens, $data = array(), $options = array()) 
 function fundraiser_clone_access_alter(&$access, $node) {
   if (fundraiser_is_donation_type($node->type)) {
     // Remove the access if the user isn't allowed to clone the donation form.
-    if (!user_access('clone donation form')) {
-      $access = 0;
-    }
-    if (user_access('clone donation form')) {
+    if (node_access('update', $node)) {
       $access = 1;
     }
   }
@@ -306,26 +283,6 @@ function fundraiser_views_api() {
   return array(
     'api' => 2,
   );
-}
-
-/**
- * Implementshook_node_access().
- */
-function fundraiser_node_access($node, $op, $account) {
-  // Without an idea who the owner is or type is we can't assess access. So don't rock the boat.
-  if ( isset($node->type) && isset($node->uid) && fundraiser_is_donation_type($node->type)) {
-    $is_author = $account->uid == $node->uid;
-    switch ($op) {
-      case 'create':
-        return user_access('create donation form', $account) ? NODE_ACCESS_ALLOW : NODE_ACCESS_IGNORE;
-      case 'update':
-        return ((user_access('edit own donation form', $account) && $is_author) ||
-          user_access('edit any donation form', $account)) ? NODE_ACCESS_ALLOW : NODE_ACCESS_IGNORE;
-      case 'delete':
-        return ((user_access('delete own donation form', $account) && $is_author) ||
-          user_access('delete any donation form', $account)) ? NODE_ACCESS_ALLOW : NODE_ACCESS_IGNORE;
-    }
-  }
 }
 
 /**
@@ -735,7 +692,7 @@ function _fundraiser_donation_settings_form(&$form, &$form_state) {
     '#title' => t('Minimum donation amount'),
     '#description' => t('The minimum acceptable donation amount.'),
     '#default_value' => isset($node->minimum_donation_amount) ?
-      number_format($node->minimum_donation_amount, 2) : variable_get('fundraiser_default_minimum', 10.00),
+      number_format($node->minimum_donation_amount, 2, '.', "") : variable_get('fundraiser_default_minimum', 10.00),
   );
 
   $form['#validate'][] = '_fundraiser_form_amounts_validate';
@@ -1290,7 +1247,9 @@ function _fundraiser_other_amount_field_create($fundraiser, $field) {
     return FALSE; // FALSE as opposed to empty, means we delete this field if it exists.
   }
   // If the show other options is disallowed, unset it.
-  if (!$fundraiser->show_other_amount) {
+  $recurring_always_other_disabled = $fundraiser->recurring_setting == 'always' && !$fundraiser->recurring_show_other_amount;
+  $recurring_user_choice_other_disabled = $fundraiser->recurring_setting == 'user_choice' && !$fundraiser->show_other_amount && !$fundraiser->recurring_show_other_amount;
+  if (!$fundraiser->show_other_amount || $recurring_always_other_disabled || $recurring_user_choice_other_disabled) {
     return FALSE; // FALSE as opposed to empty, means we delete this field if it exists.
   }
 
@@ -1424,7 +1383,7 @@ function _fundraiser_currency_field_display($form, $form_state, $field) {
  * Validation callback for field email. Called during form validation.
  */
 function _fundraiser_email_field_validate($form, $form_state, $submission_fields, $value) {
-  if (!_fundraiser_validate_email(trim($value))) {
+  if (!springboard_validate_email(trim($value))) {
     return array('mail' => t('You must enter a valid email address.'));
   }
 }
@@ -2124,7 +2083,7 @@ function fundraiser_donation_exception($donation) {
 }
 
 /**
- * Donation processing, a given donation needs to be cancelled.
+ * Donation processing, a given donation needs to be canceled.
  * Generally, only available for Authorize.net gateway donations. For example, during sustainer call.
  */
 function fundraiser_donation_cancel($donation) {
@@ -2139,7 +2098,7 @@ function fundraiser_donation_cancel($donation) {
   // Add a comment.
   global $user;
   $username = isset($user->name) ? $user->name : 'Anonymous';
-  fundraiser_donation_comment($donation, 'This donation was cancelled on @date by @username.',
+  fundraiser_donation_comment($donation, 'This donation was canceled on @date by @username.',
     array('@date' => format_date(strtotime('now')), '@username' => $username));
 
   // Allow other modules such as Ubercart to respond to cancellation and
@@ -2842,15 +2801,6 @@ function _fundraiser_is_secure() {
 /**
  * Generic helper functions. These may need to go into a diff. module.
  */
-
-/**
- * Helper function, check if given string is an email format. Generically useful function.
- * Future plans: this may need to be moved to a toolkit module for use by all our modules.
- */
-function _fundraiser_validate_email($mail) {
-  // eregi is depr in PHP 5.3. Replaced with preg_match, adding lower case options.
-  return preg_match("/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,6}$/", $mail);
-}
 
 /**
  * DB functions.
@@ -3840,12 +3790,18 @@ function fundraiser_update_billing_form($form, &$form_state, $data) {
   if (isset($data['calling module']) && !empty($data['calling module'])) {
     $functions[] = sprintf('fundraiser_update_billing_form__%s__preprocess', $data['calling module']);
   }
+
+  // Allow other modules to alter the data variables before building.
+  drupal_alter($functions, $data);
+
   foreach ($functions as $function) {
     $continue = module_invoke_all($function, $form, $form_state, $data);
     if (!empty($continue)) {
       return $continue;
     }
   }
+
+  $data['donation']->update_payment = $data['update payment'];
 
   $fundraiser_path = drupal_get_path('module', 'fundraiser');
   $form['#attached']['js'] = array(
@@ -3977,7 +3933,7 @@ function fundraiser_update_billing_form($form, &$form_state, $data) {
   }
 
   // Set any payment information from the $data variable.
-  if ($data['update payment'] && isset($data['payment_fields'])) {
+  if ($data['update payment'] && isset($data['payment_fields']) && !empty($form['payment_fields'])) {
     $form['payment_fields'] = array_replace_recursive($form['payment_fields'], $data['payment_fields']);
   }
 
@@ -4395,4 +4351,77 @@ function _fundraiser_update_webform_component_descr($nid, $cid, $new_descr) {
         ->condition('cid', $cid, '=')
         ->execute();
   }
+}
+
+/**
+ * Implements hook_springboard_twig_form_twig_info_field_variables_alter().
+ */
+function fundraiser_springboard_twig_form_twig_info_field_variables_alter($node_type, &$vars) {
+  if (!fundraiser_is_donation_type($node_type)) {
+    return;
+  }
+
+  $vars['donation'] = array(
+    'donation.did' => t('The donation ID.'),
+    'donation.nid' => t('The node ID.'),
+    'donation.sid' => t('The submission ID.'),
+    'donation.uid' => t("The user's ID."),
+    'donation.user' => t('The user object.'),
+    'donation.user.name' => t("The user's name."),
+    'donation.user.mail' => t("The user's email."),
+    'donation.amount' => t('The amount of the donation.'),
+    'donation.amount.percent' => t('The amount of the donation as a percantage relative to the goal amount.'),
+    'donation.currency' => t('The currency of the donation.'),
+    'donation.transaction_date' => t('The transaction date.'),
+    'donation.donation' => t('The raw donation data.'),
+    'donation.donation.amount' => t('The amount of the donation, from the submission data.'),
+    'donation.donation.amount_formatted' => t('The formatted amount, e.g. "$10.00".'),
+    'donation.donation.currency' => t('The currency of the donation, e.g. USD, from the submission data.'),
+    'donation.donation.currency.symbol' => t('The currency symbol, e.g. $.'),
+    'donation.donation.currency.minor_unit' => t('The currencies minor sybmol, e.g. "cent".'),
+    'donation.donation.currency.code' => t('The currency code, e.g. USD.'),
+    'donation.donation.quantity' => t('The quantity.'),
+    'donation.donation.payment_method' => t('The payment method, e.g. "credit".'),
+    'donation.donation.payment_fields.credit' => t('Holds the credit data, if the payment_method is credit.'),
+    'donation.donation.payment_fields.credit.card_number' => t('The credit card number, if the payment_method is credit.'),
+    'donation.donation.payment_fields.credit.card_type' => t('The credit card type, e.g. "Visa", if the payment_method is credit.'),
+    'donation.donation.payment_fields.credit.ocd' => t('Boolean value signifying if the donation was used to enroll in One Click Donate.'),
+    'donation.donation.payment_fields.credit.card_expiration_month' => t('The credit card expiration month, if the payment_method is credit.'),
+    'donation.donation.payment_fields.credit.card_expiration_year' => t('The credit card expiration year, if the payment_method is credit.'),
+    'donation.donation.first_name' => t('The first name, from the submission data.'),
+    'donation.donation.last_name' => t('The last name, from the submission data.'),
+    'donation.donation.mail' => t('The email address, from the submission data.'),
+    'donation.donation.address' => t('The street address, from the submission data.'),
+    'donation.donation.address_line_2' => t('The street address, line 2, from the submission data.'),
+    'donation.donation.city' => t('The city, from the submission data.'),
+    'donation.donation.state' => t('The state, from the submission data.'),
+    'donation.donation.country' => t('The country, from the submission data.'),
+    'donation.donation.zip' => t('The zip code, from the submission data.'),
+    'donation.donation.payment_method' => t('The payment method type, from the submission data.'),
+    'donation.donation.recurs_monthly' => t('Boolean value, if the donation recurs montly.'),
+    'donation.submission_data' => t('The submission data for this donation.'),
+    'donation.submission_data.amount' => t('The amount of the donation, from the submission data.'),
+    'donation.submission_data.currency' => t('The currency of the donation, e.g. USD, from the submission data.'),
+    'donation.submission_data.first_name' => t('The first name, from the submission data.'),
+    'donation.submission_data.last_name' => t('The last name, from the submission data.'),
+    'donation.submission_data.mail' => t('The email address, from the submission data.'),
+    'donation.submission_data.address' => t('The street address, from the submission data.'),
+    'donation.submission_data.address_line_2' => t('The street address, line 2, from the submission data.'),
+    'donation.submission_data.city' => t('The city, from the submission data.'),
+    'donation.submission_data.state' => t('The state, from the submission data.'),
+    'donation.submission_data.country' => t('The country, from the submission data.'),
+    'donation.submission_data.zip' => t('The zip code, from the submission data.'),
+    'donation.submission_data.payment_method' => t('The payment method type, from the submission data.'),
+  );
+}
+
+/**
+ * Implements hook_springboard_twig_variable_replacements_alter().
+ */
+function fundraiser_springboard_twig_variable_replacements_alter($node_type, &$vars) {
+  if (!fundraiser_is_donation_type($node_type) || empty($vars['submission'])) {
+    return;
+  }
+
+  $vars['donation'] = fundraiser_donation_get_donation(fundraiser_donation_get_did_by_sid($vars['submission']->sid));
 }

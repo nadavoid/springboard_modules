@@ -19,16 +19,7 @@ function springboard_p2p_rules_admin_page() {
   $content['enabled']['title']['#markup'] = '<h3>' . t('Enabled P2P rules') . '</h3>';
 
   $conditions = array(
-    'event' => array(
-      'springboard_p2p_user_register_no_campaign',
-      'springboard_p2p_user_register_private_campaign',
-      'springboard_p2p_user_register_public_campaign',
-      'springboard_p2p_user_requests_approval',
-      'springboard_p2p_user_is_approved',
-      'springboard_p2p_user_is_rejected',
-      'springboard_p2p_user_requests_password_reset',
-      'springboard_p2p_user_creates_campaign',
-    ),
+    'event' => 'springboard_p2p_%',
     'plugin' => 'reaction rule',
     'active' => TRUE,
   );
