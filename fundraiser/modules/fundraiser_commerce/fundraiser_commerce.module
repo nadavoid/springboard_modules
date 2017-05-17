@@ -1939,15 +1939,13 @@ function fundraiser_commerce_fundraiser_donation_update($donation) {
         // Determine if the card id has changed.
         $card_id_changed = $old_card->card_id != $card_data->card_id;
 
-        // Determine if the card number has changed.
-        $card_number_changed = $old_card->card_number != $card_data->card_number;
-
         // Determine if the expiration date has changed.
         $exp_month_changed = FALSE;
         $exp_year_changed = FALSE;
+
         if ($payment_method == 'credit') {
-          $exp_month_changed = !empty($donation->data['payment_fields'][$payment_method]) && !empty($donation->donation['payment_fields'][$payment_method]) && $donation->data['payment_fields']['credit']['card_expiration_month'] != $donation->donation['payment_fields']['credit']['card_expiration_month'];
-          $exp_year_changed = !empty($donation->data['payment_fields'][$payment_method]) && !empty($donation->donation['payment_fields'][$payment_method]) && $donation->data['payment_fields']['credit']['card_expiration_year'] != $donation->donation['payment_fields']['credit']['card_expiration_year'];
+          $exp_month_changed = $old_card->card_exp_month != $card_data->card_exp_month;
+          $exp_year_changed = $old_card->card_exp_year != $card_data->card_exp_year;
         }
 
         $masters_done = array();

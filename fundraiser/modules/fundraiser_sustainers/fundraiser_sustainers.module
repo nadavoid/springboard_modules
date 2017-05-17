@@ -2319,31 +2319,15 @@ function fundraiser_sustainers_edit_form($did) {
     $data = array(
       'donation' => $next_donation,
       'calling module' => 'fundraiser_sustainers',
-      'update billing' => FALSE,
-      'update cardonfile' => FALSE,
     );
     if (!empty($cardonfile)) {
       $data['card'] = $cardonfile;
-      $data['payment_fields'] = array(
-        'credit' => array(
-          'expiration_date' => array(
-            'card_expiration_month' => array(
-              '#default_value' => $cardonfile->card_exp_month,
-            ),
-            'card_expiration_year' => array(
-              '#default_value' => $cardonfile->card_exp_year,
-            ),
-          ),
-        ),
-      );
     }
     // Display the billing update form only if the update callback for the
     // gatway has been defined.
     $billing_update_form = '';
     if (isset($next_donation->gateway['update callback'])) {
       $billing_update_form_array = drupal_get_form('fundraiser_update_billing_form', $data);
-      $billing_update_form_array['#attached']['js'][3]['data']['fundraiser']['js_validation_settings']['card_cvv']->required = FALSE;
-      $billing_update_form_array['#attached']['js'][3]['data']['fundraiser']['js_validation_settings']['card_number']->required = FALSE;
       $billing_update_form = drupal_render($billing_update_form_array);
     }
   }
@@ -2378,6 +2362,53 @@ function fundraiser_sustainers_edit_form($did) {
   drupal_set_title(t('Recurring donation #@did', array('@did' => $did)));
   $parts = array($payment_info, $billing_info, $future_orders, $donation_amount_form, $donation_date_form, $billing_update_form, $cancel_form);
   return implode('', $parts);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function fundraiser_sustainers_form_fundraiser_update_billing_form_alter(&$form, &$form_state) {
+  // We only want to alter the update form when its appearing for sustainers.
+  if ($form['#calling_module'] != 'fundraiser_sustainers') {
+    return;
+  }
+
+  $donation = $form['#donation'];
+
+  // Ensure the number and cvv are not flagged required by js.
+  $form['#attached']['js'][3]['data']['fundraiser']['js_validation_settings']['card_cvv']->required = FALSE;
+  $form['#attached']['js'][3]['data']['fundraiser']['js_validation_settings']['card_number']->required = FALSE;
+
+  if (empty($form_state['card']) && !empty($donation->data['cardonfile'])) {
+    $form_state['card'] = commerce_cardonfile_load($donation->data['cardonfile']);
+  }
+
+  $form['master_did'] = array(
+    '#type' => 'hidden',
+    '#value' => $donation->recurring->master_did,
+  );
+
+  // Add Market Source fields for the benefit of new future payment records.
+  if (module_exists('market_source')) {
+    $market_source_keys = array_keys(_market_source_build_qs_keys());
+    $form['market_source_codes'] = array(
+      '#type' => 'container',
+      '#tree' => TRUE,
+    );
+    foreach ($donation->node->webform['components'] as $component) {
+      if (in_array($component['form_key'], $market_source_keys) && $component['type'] == 'hidden') {
+        // Simply provide a hidden field and let Market Source do the rest.
+        $form['market_source_codes'][$component['form_key']] = array(
+          '#type' => 'hidden',
+          '#default_value' => $component['value'],
+        );
+      }
+    }
+    $form['#after_build'][] = 'market_source_webform_after_build';
+  }
+
+  // Set the submit handlers to use the sustainer handler.
+  $form['actions']['submit']['#submit'] = ['fundraiser_sustainers_update_billing_form_submit'];
 }
 
 function fundraiser_sustainers_donation_payment_info($next_donation, $master_did, $cardonfile = NULL) {
@@ -2440,48 +2471,6 @@ function fundraiser_sustainers_fundraiser_update_billing_form__fundraiser_sustai
 }
 
 /**
- * Implements hook_fundraiser_update_billing_form__CALLING_MODULE__alter().
- */
-function fundraiser_sustainers_fundraiser_update_billing_form__fundraiser_sustainers__alter(&$form, &$form_state, $data) {
-  if (empty($form_state['card']) && !empty($data['donation']->data['cardonfile'])) {
-    $form_state['card'] = commerce_cardonfile_load($data['donation']->data['cardonfile']);
-  }
-
-  $form['master_did'] = array(
-    '#type' => 'hidden',
-    '#value' => $data['donation']->recurring->master_did,
-  );
-
-  // Add Market Source fields for the benefit of new future payment records.
-  if (module_exists('market_source')) {
-    $market_source_keys = array_keys(_market_source_build_qs_keys());
-    $form['market_source_codes'] = array(
-      '#type' => 'container',
-      '#tree' => TRUE,
-    );
-    foreach ($data['donation']->node->webform['components'] as $component) {
-      if (in_array($component['form_key'], $market_source_keys) && $component['type'] == 'hidden') {
-        // Simply provide a hidden field and let Market Source do the rest.
-        $form['market_source_codes'][$component['form_key']] = array(
-          '#type' => 'hidden',
-          '#default_value' => $component['value'],
-        );
-      }
-    }
-    $form['#after_build'][] = 'market_source_webform_after_build';
-  }
-
-  // Add a validation hook which will move some of the form elements, needed for
-  // commerce cardonfile.
-  if ($data['update payment'] && $data['update cardonfile']) {
-    $form['#validate'][] = '_fundraiser_update_billing_form_commerce_cardonfile_card_form_alter_validate';
-  }
-
-  $form['#validate'][] = 'fundraiser_sustainers_update_billing_form_validate';
-  $form['actions']['submit']['#submit'][] = 'fundraiser_sustainers_update_billing_form_submit';
-}
-
-/**
  * Form validation handler for billing address update form.
  */
 function fundraiser_sustainers_update_billing_form_validate($form, &$form_state) {
@@ -2512,17 +2501,7 @@ function fundraiser_sustainers_update_billing_form_submit($form, &$form_state) {
   // We only update donations to come, not ones already processed.
   $donations = _fundraiser_sustainers_get_donations_recurr_remaining($master_did);
 
-  $update_billing = TRUE;
-  if (isset($form_state['donation']->update_billing)) {
-    $update_billing = $form_state['donation']->update_billing;
-  }
-
-  $update_payment = TRUE;
-  if (isset($form_state['donation']->update_payment)) {
-    $update_payment = $form_state['donation']->update_payment;
-  }
-
-  fundraiser_sustainers_update_billing_info_in_series($donations, $submission_fields, $username, $update_billing, $update_payment);
+  fundraiser_sustainers_update_billing_info_in_series($donations, $submission_fields, $username, TRUE, TRUE);
 
   // Use the first future donation for a template of new future donations.
   $source_donation = reset($donations);
@@ -3633,24 +3612,10 @@ function fundraiser_sustainers_billing_update_form($form, &$form_state, $donatio
     $data = array(
       'donation' => $next_donation,
       'calling module' => 'fundraiser_sustainers',
-      'update billing' => FALSE,
-      'update cardonfile' => FALSE,
     );
 
     if (!empty($cardonfile)) {
       $data['card'] = $cardonfile;
-      $data['payment_fields'] = array(
-        'credit' => array(
-          'expiration_date' => array(
-            'card_expiration_month' => array(
-              '#default_value' => $cardonfile->card_exp_month,
-            ),
-            'card_expiration_year' => array(
-              '#default_value' => $cardonfile->card_exp_year,
-            ),
-          ),
-        ),
-      );
     }
     $form = fundraiser_update_billing_form($form, $form_state, $data);
 
@@ -3666,6 +3631,14 @@ function fundraiser_sustainers_billing_update_form($form, &$form_state, $donatio
       unset($form['payment_fields']['#title']);
     }
   }
+
+  $form['master_did'] = array(
+    '#type' => 'hidden',
+    '#value' => $donation->recurring->master_did,
+  );
+
+  // Set the submit handler to use the sustainer handler.
+  $form['actions']['submit']['#submit'] = ['fundraiser_sustainers_update_billing_form_submit'];
 
   return $form;
 }
