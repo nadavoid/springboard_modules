@@ -181,3 +181,45 @@ function springboard_group_fundraiser_donation_create($donation) {
     }
   }
 }
+
+/**
+ * Add the order-related permissions.
+ *
+ * Sub-hook to springboard_group_og_permissions() hook.
+ */
+function springboard_group__fundraiser__og_permissions(&$items) {
+  $orders_grouped = springboard_group_commerce_orders_are_grouped();
+  if (!empty($orders_grouped)) {
+
+    $items['submit springboard group donations offline'] = array(
+      'title' => t('Submit donations offline in Springboard Group'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+      'module' => 'fundraiser',
+    );
+
+    $items['cancel future donations in springboard group'] = array(
+      'title' => t('Cancel future donations in in Springboard Group'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+      'module' => 'fundraiser',
+    );
+    $items['fastforward recurring donations in springboard group'] = array(
+      'title' => t('Fast-forward recurring donations in Springboard Group'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+      'module' => 'fundraiser',
+    );
+
+//  $items['administrate recurring donations'] = array(
+//    'title' => t('Administer recurring donations'),
+//    'description' => '',
+//    'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+//    'default role' => array(),
+//  );
+
+  }
+}

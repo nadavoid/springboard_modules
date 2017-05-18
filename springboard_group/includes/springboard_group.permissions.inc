@@ -70,6 +70,8 @@ function springboard_group_og_permission() {
     }
   }
 
+  springboard_group__fundraiser__og_permissions($items);
+
   return $items;
 }
 
