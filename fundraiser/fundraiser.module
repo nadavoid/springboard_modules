@@ -18,6 +18,10 @@ function fundraiser_permission() {
       'title' => t('Administer fundraiser'),
       'description' => t('Perform administration tasks for fundraiser.'),
     ),
+    'access donation report' => array(
+      'title' => t('Access donation report'),
+      'description' => t('View donation report.'),
+    ),
     'access donation form overview' => array(
       'title' => t('Access Donation Form Overview'),
       'description' => t('Access the admin content tab for donation forms'),
