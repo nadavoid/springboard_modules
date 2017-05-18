@@ -720,6 +720,7 @@ $html_raw
 
   $multi_body = token_replace($multi_body, $token_set, array('clear' => TRUE));
   if ($eid) {
+    module_load_include('inc', 'webform', 'includes/webform.submissions');
     $multi_body = _webform_filter_values($multi_body, $message['params']['node'], $message['params']['submission'], $message['params']['node']->webform['emails'][$eid], FALSE, TRUE);
   }
   return $multi_body;

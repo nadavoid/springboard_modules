@@ -917,6 +917,7 @@ function springboard_advocacy_parse_redirect($node, $submission) {
   $redirect = NULL;
   if (isset($node->webform['redirect_url'])) {
     $redirect_url = trim($node->webform['redirect_url']);
+    module_load_include('inc', 'webform', 'includes/webform.submissions');
     $redirect_url = _webform_filter_values($redirect_url, $node, $submission, NULL, FALSE, TRUE);
 
     // Remove the site domain name from the redirect if present.
