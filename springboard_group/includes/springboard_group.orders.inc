@@ -357,19 +357,27 @@ function springboard_group_commerce_payment_transaction_access($op, $transaction
 
 
 /**
- * @param \QueryAlterableInterface $query
+ * The following is necessary to grant access to the payments overview page,
  */
 function springboard_group_query_commerce_payment_transaction_access_alter(QueryAlterableInterface $query) {
-  // Read the meta-data from the query.
-  if (!$account = $query->getMetaData('account')) {
-    global $user;
-    $account = $user;
-  }
-  if (user_access('view payments', $account)) {
-
-    //@todo not sure we need this.
-    //$query->where('1 = 0');
-
+  if (strpos(current_path(), 'admin/commerce/orders') !== FALSE) {
+    if (is_numeric(arg(3)) && arg(4) == 'payment') {
+      $conditions =& $query->conditions();
+      // Override the access denial in payments query alter.
+      foreach ($conditions as $key => $condition) {
+        if (!empty($condition['field']) && is_string($condition['field']) && $condition['field'] == '1 = 0') {
+          $order = commerce_order_load(arg(3));
+          $wrapper = entity_metadata_wrapper('commerce_order', $order);
+          if ($wrapper->og_group_ref_commerce_order->raw()) {
+            foreach ($wrapper->og_group_ref_commerce_order->raw() as $gid) {
+              if (springboard_group_commerce_order_check_group_perms($gid, 'view payments in springboard group')) {
+                unset($conditions[$key]);
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }
 
