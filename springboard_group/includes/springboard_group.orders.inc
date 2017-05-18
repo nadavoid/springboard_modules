@@ -56,7 +56,7 @@ function springboard_group_form_commerce_order_ui_order_form_alter(&$form, &$for
 
   if (!empty($fields)) {
     // @todo make showing/hiding of group field configurable?
-    if(1) {
+    if (1) {
       $groups = og_get_entity_groups('commerce_order', $form['#entity']);
       $form['og_group_ref_commerce_order']['#access'] = FALSE;
       $titles = [];
@@ -65,9 +65,9 @@ function springboard_group_form_commerce_order_ui_order_form_alter(&$form, &$for
           $group = node_load($group_id);
           $titles[] = check_plain($group->title);
         }
-        $form['order_group_display_holder'] =  array(
+        $form['order_group_display_holder'] = array(
           '#type' => 'fieldset',
-          '#title' => t('Group Ownership')
+          '#title' => t('Group Ownership'),
         );
         $form['order_group_display_holder']['order_group_display']['#markup'] = theme('item_list', array(
           'items' => $titles,
@@ -111,6 +111,8 @@ function springboard_group_commerce_order_form__validate(&$form, &$form_state, $
 
 /**
  * Implements hook_fundraiser_donation_create().
+ *
+ * Add orders to a group behind the scenes.
  */
 function springboard_group__commerce_order__fundraiser_donation_create($donation) {
 
@@ -134,29 +136,6 @@ function springboard_group__commerce_order__fundraiser_donation_create($donation
   }
 }
 
-/**
- * Implements hook_commerce_order_presave().
- *
- * Update group membership on commerce orders when admin edits order and
- * changes group affiliation.
- */
-function springboard_group_commerce_order_presave($order) {
-
-  if (!empty($order->og_group_ref_commerce_order) && !empty($order->original)) {
-    $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
-    $original_order_wrapper = entity_metadata_wrapper('commerce_order', $order->original);
-    $new_group = $order_wrapper->og_group_ref_commerce_order->value();
-    $old_group = $original_order_wrapper->og_group_ref_commerce_order->value();
-
-    $new_group_gid = $new_group[0]->nid;
-    $old_group_gid = $old_group[0]->nid;
-    if ($new_group_gid != $old_group_gid) {
-      // @todo grab associated sustainer orders and update them too
-      // or this should never happen because group ownership should not be
-      // editable.
-    }
-  }
-}
 
 /**
  * Implements hook_commerce_entity_access().
@@ -164,7 +143,6 @@ function springboard_group_commerce_order_presave($order) {
  * Limit access to orders and payments based on group ownership of the order.
  */
 function springboard_group_commerce_entity_access($op, $entity, $account, $entity_type) {
-
   // Check if orders are configured as groupable.
   if (springboard_group_commerce_orders_are_grouped()) {
 
@@ -209,7 +187,6 @@ function springboard_group_commerce_entity_access($op, $entity, $account, $entit
  * Limit view access to commerce orders by group ownsership.
  */
 function springboard_group_query_commerce_order_access_alter(&$query) {
-
   // Skip this if a user is a group admin.
   if (!user_access('administer group')) {
     // Check if orders are grouped.
@@ -222,53 +199,25 @@ function springboard_group_query_commerce_order_access_alter(&$query) {
         }
       }
 
-      // Get the users groups.
-      $groups = springboard_group_get_user_group_ids(FALSE);
-
-      $allowed_gids = array(0);
-
-      if (!empty($groups)) {
-        foreach ($groups as $gid) {
-          // Get the users roles in their groups and check
-          // for view access in each group.
-          if (springboard_group_commerce_order_check_group_perms($gid, 'view any group commerce_order entity')) {
-            // Groups in which the user has view access.
-            $allowed_gids[] = $gid;
-          }
-        }
-      }
-      $allowed_gids = implode(',', $allowed_gids);
-
       // If this is a listing, there is no order Id to check. We have to load
       // all orders in a group and check against the array.
       // @todo: really?
       if (empty($id)) {
-        $allowed_order_ids = array(0);
-        $order_ids = db_query('SELECT order_id FROM {commerce_order} co
-        INNER JOIN {og_membership} om on co.order_id = om.etid AND om.field_name = :name
-        WHERE om.gid IN (:gids)',
-          array(':name' => "og_group_ref_commerce_order", ':gids' => $allowed_gids)
-        )->fetchAllAssoc('order_id');
-
-        if (!empty($order_ids)) {
-          $allowed_order_ids = array_keys($order_ids);
-        }
-
-        $query->condition('commerce_order.order_id', $allowed_order_ids, 'IN');
-
+        //$allowed_order_ids = springboard_group_orders_get_allowed_order_ids('view any order in springboard group');
+        //$query->condition('fundraiser_donation.did', $allowed_order_ids, 'IN');
+        //$query->condition('commerce_order.order_id', $allowed_order_ids, 'IN');
       }
       else {
-        // There's an order id in the query. Check to see if it's in the groups.
-        $is_in_allowed_group = db_query('SELECT etid FROM {og_membership} om
-        WHERE om.gid IN (' . $allowed_gids . ')
-        AND om.field_name = :name
-        AND om.etid = :id
-      ', array(
-          ':name' => "og_group_ref_commerce_order",
-          ':id' => $id
-        ))->fetchField();
-
-        if (empty($is_in_allowed_group)) {
+        // Get the users groups.
+        $order = commerce_order_load($id);
+        $wrapper = entity_metadata_wrapper('commerce_order', $order);
+        if ($wrapper->og_group_ref_commerce_order->raw()) {
+          foreach ($wrapper->og_group_ref_commerce_order->raw() as $gid) {
+            if (springboard_group_commerce_order_check_group_perms($gid, 'view any order in springboard group')) {
+              return;
+            }
+          }
+          // If we get here disallow access.
           $query->condition('commerce_order.order_id', array('-1'), 'IN');
         }
       }
@@ -276,6 +225,45 @@ function springboard_group_query_commerce_order_access_alter(&$query) {
   }
 }
 
+
+/**
+ * @param $conditions
+ * @param $context
+ */
+function springboard_group_commerce_entity_access_condition_commerce_order_alter(&$conditions, $context) {
+  if (!isset($context['entity'])) {
+    $allowed_order_ids = springboard_group_orders_get_allowed_order_ids('view any order in springboard group');
+    $conditions->condition('fundraiser_donation.did', $allowed_order_ids, 'IN');
+    //$conditions->condition('commerce_order.order_id', $allowed_order_ids, 'IN');
+  }
+  else {
+    $wrapper = entity_metadata_wrapper('commerce_order', $context['entity']);
+    if ($wrapper->og_group_ref_commerce_order->raw()) {
+      foreach ($wrapper->og_group_ref_commerce_order->raw() as $gid) {
+        if (springboard_group_commerce_order_check_group_perms($gid, 'view any order in springboard group')) {
+          return TRUE;
+        }
+      }
+      return FALSE;
+    }
+  }
+}
+
+/**
+ * Implements hook_commerce_entity_access_condition_ENTITY_TYPE_alter().
+ *
+ * For some reason the commerce_customer_profile entity controls view access
+ * to teh orders overview screen.
+ */
+function springboard_group_commerce_entity_access_condition_commerce_customer_profile_alter(&$conditions, $context) {
+  if (!isset($context['entity'])) {
+    $allowed_order_ids = springboard_group_orders_get_allowed_order_ids('view any order in springboard group');
+    $conditions->condition('commerce_order.order_id', $allowed_order_ids, 'IN');
+  }
+  else {
+
+  }
+}
 
 /**
  * Menu alter helper.
@@ -359,6 +347,7 @@ function springboard_group_commerce_payment_transaction_order_access($op, $order
  * @return bool
  */
 function springboard_group_commerce_payment_transaction_access($op, $transaction, $account = NULL) {
+
   if (isset($transaction->order_id)) {
     $order = commerce_order_load($transaction->order_id);
     if (!$order) {
@@ -412,7 +401,7 @@ function springboard_group_fundraiser_sustainers_check_access($did) {
       if (arg(4) == 'recurring'
         && empty(arg(5))
       ) {
-        return springboard_group_commerce_order_check_group_perms($group[0]->nid, 'view any group commerce_order entity');
+        return springboard_group_commerce_order_check_group_perms($group[0]->nid, 'view any order in springboard group');
       }
 
       elseif (arg(4) == 'recurring'
@@ -437,7 +426,7 @@ function springboard_group_fundraiser_sustainers_check_access($did) {
  * Sub-hook to springboard_group_og_permissions() hook.
  */
 function springboard_group__commerce_order__og_permissions(&$items) {
-  $orders_grouped = og_get_group_audience_fields('commerce_order', 'commerce_order', 'node', 'springboard_group');
+  $orders_grouped = springboard_group_commerce_orders_are_grouped();
   if (!empty($orders_grouped)) {
 
     $items['create orders in springboard group'] = array(
@@ -463,7 +452,7 @@ function springboard_group__commerce_order__og_permissions(&$items) {
       'module' => 'commerce_order',
     );
 
-    $items['view any order in springboard group '] = array(
+    $items['view any order in springboard group'] = array(
       'title' => t('View any order in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
@@ -494,6 +483,7 @@ function springboard_group__commerce_order__og_permissions(&$items) {
       'default role' => array(),
       'module' => 'commerce_payment',
     );
+
     $items['update payments in springboard group'] = array(
       'title' => t('Update payments in Springboard Group'),
       'description' => '',
@@ -518,7 +508,7 @@ function springboard_group__commerce_order__og_permissions(&$items) {
       'module' => 'commerce_cardonfile',
     );
 
-    $items['create card data  in springboard group'] = array(
+    $items['create card data in springboard group'] = array(
       'title' => t('Create card data  in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
@@ -533,34 +523,61 @@ function springboard_group__commerce_order__og_permissions(&$items) {
       'default role' => array(),
       'module' => 'commerce_cardonfile',
     );
-    $items['submit springboard group donations offline'] = array(
-      'title' => t('Submit donations offline in Springboard Group'),
-      'description' => '',
-      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
-      'default role' => array(),
-      'module' => 'fundraiser',
-    );
-
-    $items['cancel future donations in springboard group'] = array(
-      'title' => t('Cancel future donations in in Springboard Group'),
-      'description' => '',
-      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
-      'default role' => array(),
-      'module' => 'fundraiser',
-    );
-    $items['fastforward recurring donations in springboard group'] = array(
-      'title' => t('Fast-forward recurring donations in Springboard Group'),
-      'description' => '',
-      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
-      'default role' => array(),
-      'module' => 'fundraiser',
-    );
-
-//  $items['administrate recurring donations'] = array(
-//    'title' => t('Administer recurring donations'),
-//    'description' => '',
-//    'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
-//    'default role' => array(),
-//  );
   }
 }
+
+/**
+ * @return array
+ */
+function springboard_group_orders_get_allowed_order_ids($perm) {
+  // Make sure we have enough values to be able to check access.
+  $groups = springboard_group_get_user_group_ids(FALSE);
+  $allowed_gids = array(0);
+  if (!empty($groups)) {
+    foreach ($groups as $gid) {
+      // Get the users roles in their groups and check
+      // for view access in each group.
+      if (springboard_group_commerce_order_check_group_perms($gid, $perm)) {
+        // Groups in which the user has view access.
+        $allowed_gids[] = $gid;
+      }
+    }
+  }
+  $allowed_order_ids = array(0);
+  $order_ids = db_query('SELECT order_id FROM {commerce_order} co
+        INNER JOIN {og_membership} om on co.order_id = om.etid AND om.field_name = :name
+        WHERE om.gid IN (:gids)',
+    array(':name' => "og_group_ref_commerce_order", ':gids' => $allowed_gids)
+  )->fetchAllAssoc('order_id');
+
+  if (!empty($order_ids)) {
+    $allowed_order_ids = array_keys($order_ids);
+  }
+  return $allowed_order_ids;
+}
+
+
+
+/**
+ * Implements hook_commerce_order_presave().
+ *
+ * Update group membership on commerce orders when admin edits order and
+ * changes group affiliation.
+ */
+//function springboard_group_commerce_order_presave($order) {
+//
+//  if (!empty($order->og_group_ref_commerce_order) && !empty($order->original)) {
+//    $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+//    $original_order_wrapper = entity_metadata_wrapper('commerce_order', $order->original);
+//    $new_group = $order_wrapper->og_group_ref_commerce_order->value();
+//    $old_group = $original_order_wrapper->og_group_ref_commerce_order->value();
+//
+//    $new_group_gid = $new_group[0]->nid;
+//    $old_group_gid = $old_group[0]->nid;
+//    if ($new_group_gid != $old_group_gid) {
+//      // @todo grab associated sustainer orders and update them too
+//      // or this should never happen because group ownership should not be
+//      // editable.
+//    }
+//  }
+//}
