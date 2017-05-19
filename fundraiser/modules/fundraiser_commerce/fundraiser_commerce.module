@@ -1875,46 +1875,9 @@ function fundraiser_commerce_fundraiser_donation_update($donation) {
     }
   }
 
-  // Update the payment information.
-  $failed_payment_update_donations = &drupal_static(__FUNCTION__ . '_failed_payment_update', array());
-  $payment_method = $donation->data['payment_method'];
-  $bank_payment_method_valid = FALSE;
-  $credit_payment_method_valid = FALSE;
-  $is_bank_method = $payment_method == 'bank account';
-  $is_credit_method = $payment_method == 'credit';
-  // To support Braintree payment and billing updates, check for the value of
-  // the "nonce" element.
-  $nonce_set = isset($donation->donation['payment_fields'][$payment_method]['nonce']);
-
-  if (!$nonce_set && $is_bank_method) {
-    $routing_number_set = !empty($donation->donation['payment_fields'][$payment_method]['routing_number']);
-    $account_number_set = !empty($donation->donation['payment_fields'][$payment_method]['account_number']);
-    if ($routing_number_set && $account_number_set) {
-      $bank_payment_method_valid = TRUE;
-    }
-  }
-  elseif (!$nonce_set && $is_credit_method) {
-    $card_number_set = !empty($donation->donation['payment_fields'][$payment_method]['card_number']);
-    $card_cvv_set = !empty($donation->donation['payment_fields'][$payment_method]['card_cvv']);
-    if ($card_number_set && $card_cvv_set) {
-      $credit_payment_method_valid = TRUE;
-    }
-  }
-
-  if (
-    !empty($donation->update_payment)
-    && (
-      $nonce_set
-      || $bank_payment_method_valid
-      || $credit_payment_method_valid
-    )
-    && empty($failed_payment_update_donations[$donation->did])
-  ) {
-    // Allow the gateways to clean the data before going to the update function.
-    if (isset($donation->gateway['cleanup callback']) && function_exists($donation->gateway['cleanup callback'])) {
-      $cleaned = $donation->gateway['cleanup callback']($donation->donation, $donation->donation['payment_method']);
-      $donation->donation['payment_fields'] = $cleaned['payment_fields'];
-    }
+  if (!empty($donation->update_payment)) {
+    // Add a flag to track success of the update process.
+    $donation->update_payment_success = FALSE;
 
     // Update the gateway's stored data.
     // Gateways that allow recurring donation will have an update callback.
@@ -1922,6 +1885,12 @@ function fundraiser_commerce_fundraiser_donation_update($donation) {
 
     // If we're in a sustainer update's first donation or a regular donation.
     if (empty($donation->sustainer_update) || (!empty($donation->sustainer_update) && !empty($donation->sustainer_update_first)) && $update_callback) {
+      // Allow the gateways to clean the data before going to the update function.
+      if (isset($donation->gateway['cleanup callback']) && function_exists($donation->gateway['cleanup callback'])) {
+        $cleaned = $donation->gateway['cleanup callback']($donation->donation, $donation->donation['payment_method']);
+        $donation->donation['payment_fields'] = $cleaned['payment_fields'];
+      }
+
       // Load the current card data for updating.
       $card_data = _fundraiser_commerce_donation_cardonfile_card($donation);
 
@@ -1931,11 +1900,16 @@ function fundraiser_commerce_fundraiser_donation_update($donation) {
         drupal_alter('fundraiser_commerce_donation_update_card_update', $donation, $card_data);
 
         if (empty($card_data)) {
-          $failed_payment_update_donations[$donation->did] = TRUE;
           drupal_set_message(t('Unable to update payment information. Please check your information and try again.'), 'warning');
           return FALSE;
         }
+        else {
+          $donation->update_payment_success = TRUE;
+        }
+      }
 
+      // If we had a successful update continue on.
+      if ($donation->update_payment_success) {
         // Determine if the card id has changed.
         $card_id_changed = $old_card->card_id != $card_data->card_id;
 
@@ -1943,7 +1917,7 @@ function fundraiser_commerce_fundraiser_donation_update($donation) {
         $exp_month_changed = FALSE;
         $exp_year_changed = FALSE;
 
-        if ($payment_method == 'credit') {
+        if ($donation->donation['payment_method'] == 'credit') {
           $exp_month_changed = $old_card->card_exp_month != $card_data->card_exp_month;
           $exp_year_changed = $old_card->card_exp_year != $card_data->card_exp_year;
         }
@@ -2017,7 +1991,7 @@ function fundraiser_commerce_fundraiser_donation_update($donation) {
     }
     // Sustainer update, update remaining donations with the first record's cardonfile id
     // This avoids calling the APIs for each donation
-    elseif (!empty($donation->sustainer_update) && !empty($donation->sustainer_update_did) && empty($failed_payment_update_donations[$donation->sustainer_update_did])) {
+    elseif (!empty($donation->sustainer_update) && !empty($donation->sustainer_update_did)) {
       $master = fundraiser_donation_get_donation($donation->sustainer_update_did);
       drupal_alter('fundraiser_commerce_sustainer_series_donation_update', $master, $donation);
 
