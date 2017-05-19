@@ -3673,7 +3673,6 @@ function fundraiser_sustainers_billing_update_direct($donation) {
  */
 function fundraiser_sustainers_billing_update_access($donation) {
   global $user;
-  return TRUE;
   return ($donation->uid == $user->uid);
 }
 
