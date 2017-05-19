@@ -3770,6 +3770,7 @@ function fundraiser_update_billing_form($form, &$form_state, $data) {
     'donation' => NULL,
     'card' => NULL,
     'update other orders' => TRUE,
+    'placement' => NULL,
   );
   $data = array_replace_recursive($defaults, $data);
 
@@ -3834,6 +3835,11 @@ function fundraiser_update_billing_form($form, &$form_state, $data) {
     $form['billing_information'][$field_key] = _fundraiser_create_field_from_info($field_key, $field, $data['donation']->donation);
   }
 
+  // Add button to handle only billing updates.
+  $form['billing_information']['address_update']['#type'] = 'submit';
+  $form['billing_information']['address_update']['#value'] = t('Update Address');
+  $form['billing_information']['address_update']['#submit'] = ['fundraiser_sustainers_update_billing_address_only_form_submit'];
+
   // CC info.
   $form['payment_method'] = array(
     '#type' => 'hidden',
@@ -3863,14 +3869,12 @@ function fundraiser_update_billing_form($form, &$form_state, $data) {
   }
 
   $form['actions']['submit']['#type'] = 'submit';
-  $form['actions']['submit']['#value'] = t('Save changes');
-  $form['#validate'] = array();
+  $form['actions']['submit']['#value'] = t('Update Address and Payment Details');
+  $form['actions']['submit']['#validate'] = array();
+  // Set the submit handlers to the sustainer handler.
+  $form['actions']['submit']['#submit'] = ['fundraiser_sustainers_update_billing_form_submit'];
 
   $form['#donation'] = $data['donation'];
-
-  // Make the card number and cvv optional by default.
-  $form['#attached']['js'][3]['data']['fundraiser']['js_validation_settings']['card_cvv']->required = FALSE;
-  $form['#attached']['js'][3]['data']['fundraiser']['js_validation_settings']['card_number']->required = FALSE;
 
   if (!empty($data['card'])) {
     $form_state['card'] = $data['card'];
@@ -3887,10 +3891,14 @@ function fundraiser_update_billing_form($form, &$form_state, $data) {
 
   // Add a validation function for the payment fields.
   if (!empty($form['payment_fields']['credit'])) {
-    $form['#validate'][] = 'fundraiser_update_billing_form_credit_card_form_validate';
+    $form['actions']['submit']['#validate'][] = 'fundraiser_update_billing_form_credit_card_form_validate';
+
+    // In the js settings set the card number and cvv optional by default.
+    $form['#attached']['js'][3]['data']['fundraiser']['js_validation_settings']['card_cvv']->required = FALSE;
+    $form['#attached']['js'][3]['data']['fundraiser']['js_validation_settings']['card_number']->required = FALSE;
   }
-  elseif (!empty($form['payment_fields']['bank account'])) {
-    $form['#validate'][] = 'fundraiser_update_billing_form_bank_account_form_validate';
+  else {
+    $form['actions']['submit']['#validate'][] = 'fundraiser_update_billing_form_gateway_validate';
   }
 
   if (empty($form_state['donation'])) {
@@ -3932,11 +3940,6 @@ function fundraiser_update_billing_form($form, &$form_state, $data) {
  * Validation handler for fundraiser_update_billing_form().
  */
 function fundraiser_update_billing_form_credit_card_form_validate(&$form, &$form_state) {
-  // If the credit card number field is empty we don't validate.
-  if (empty($form_state['values']['payment_fields']['credit']['card_number'])) {
-    return;
-  }
-
   $form_parents = array(
     'payment_fields',
     'credit',
@@ -3945,37 +3948,27 @@ function fundraiser_update_billing_form_credit_card_form_validate(&$form, &$form
   // Use the standard credit card validation functions.
   module_load_include('inc', 'fundraiser_commerce', 'includes/fundraiser_commerce.credit_card');
   $submission_fields = _fundraiser_commerce_credit_card_cleanup($form_state['values']);
-  _fundraiser_commerce_credit_card_validate($submission_fields, $form_parents);
+  // Set the require_cvv boolean to FALSE, this skips checking the CVV.
+  _fundraiser_commerce_credit_card_validate($submission_fields, $form_parents, FALSE);
 }
 
 /**
  * Validation handler for fundraiser_update_billing_form().
  */
-function fundraiser_update_billing_form_bank_account_form_validate(&$form, &$form_state) {
-  $values = $form_state['values']['payment_fields']['bank account'];
+function fundraiser_update_billing_form_gateway_validate($form, &$form_state) {
+  $gateway_info = $form_state['donation']->gateway;
+  // The payment method is the key on the payment fields array.
+  $payment_method = key($form_state['values']['payment_fields']);
+  $submission_fields = $form_state['values'];
 
-  // If the routing and account fields are empty we don't validate.
-  if (
-    empty($values['routing_number'])
-    && empty($values['account_number'])
-  ) {
-    return;
+  // Allow the gateway to cleanup the submission before validation.
+  if (isset($gateway_info['cleanup callback']) && function_exists($gateway_info['cleanup callback'])) {
+    $submission_fields = $gateway_info['cleanup callback']($submission_fields, $payment_method);
   }
 
-  // Use standard bank account validation.
-  $prefix = 'payment_fields[bank account][';
-  // Validate the account number fields
-  if (!ctype_digit($values['routing_number']) || strlen($values['routing_number']) > 9) {
-    form_set_error($prefix . 'routing_number', t('The routing number should be a 9 digit numeric value.'));
-  }
-
-  if (!ctype_digit($values['account_number'])) {
-    form_set_error($prefix . 'account_number', t('The account number should only contain numeric values.'));
-  }
-
-  if ($values['account_number'] != $values['confirm_account_number']) {
-    form_set_error($prefix . 'account_number', t('The account numbers do not match.'));
-    form_set_error($prefix . 'confirm_account_number');
+  // Call the gateways validation function.
+  if (isset($gateway_info['validate callback']) && function_exists($gateway_info['validate callback'])) {
+    $gateway_info['validate callback']($submission_fields, $form['payment_fields'], $payment_method);
   }
 }
 

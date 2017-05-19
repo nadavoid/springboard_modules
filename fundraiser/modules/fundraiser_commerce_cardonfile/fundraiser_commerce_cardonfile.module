@@ -277,11 +277,8 @@ function fundraiser_commerce_cardonfile_form_fundraiser_update_billing_form_alte
       '#value' => $form['#donation']->recurring->master_did,
     ];
 
-    // Set the submit handlers to use the sustainer handler.
-    $form['actions']['submit']['#submit'] = [
-      'fundraiser_sustainers_update_billing_form_submit',
-      'fundraiser_commerce_cardonfile_fundraiser_billing_update_form_submit',
-    ];
+    // Add this submit handler to set the redirect.
+    $form['actions']['submit']['#submit'][] = 'fundraiser_commerce_cardonfile_fundraiser_billing_update_form_submit';
   }
 }
 
