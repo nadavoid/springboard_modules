@@ -224,3 +224,54 @@ function _braintree_payment_default_fundraiser_fields() {
     'sbp_phone',
   );
 }
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function braintree_payment_form_fundraiser_update_billing_form_alter(&$form, $form_state) {
+  if (!empty($form['#fundraiser_data']['donation']->gateway['id'])) {
+    list($method_id, $rule_name) = explode('|', $form['#fundraiser_data']['donation']->gateway['id']);
+    // Remove the billing update fields from certain braintree gateways.
+    $no_update = array(
+      'braintree_applepay',
+      'braintree_paypal',
+    );
+
+    if (in_array($method_id, $no_update)) {
+      if (!empty($form['billing_information'])) {
+        $form['billing_information']['#access'] = FALSE;
+      }
+      if (!empty($form['payment_fields'])) {
+        $form['payment_fields']['#access'] = FALSE;
+      }
+      if (!empty($form['actions'])) {
+        $form['actions']['submit']['#access'] = FALSE;
+
+        // Add a message so folks know why these fields are missing.
+        $form['actions']['braintree_no_update'] = array(
+          '#markup' => t('This payment method does not support changes to the billing information.'),
+        );
+      }
+    }
+
+    if ($method_id == 'braintree_hostedfields') {
+      // Hide the address only option as Braintree does not work with two submit buttons.
+      $form['billing_information']['address_update']['#access'] = FALSE;
+
+      // Reset the submit handler to use one for braintree.
+      $form['actions']['submit']['#validate'] = ['braintree_payment_form_fundraiser_update_billing_form_validate'];
+    }
+  }
+}
+
+/**
+ * Validation handler for fundraiser_update_billing_form().
+ */
+function braintree_payment_form_fundraiser_update_billing_form_validate(&$form, &$form_state) {
+  // Ensure the nonce is set.
+  $nonce = braintree_get_nonce();
+
+  if (empty($nonce)) {
+    form_set_error('braintree', t('We were unable to update your card at this time.'));
+  }
+}
