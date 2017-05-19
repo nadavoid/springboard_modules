@@ -72,7 +72,7 @@
           var afterTarget = '#webform-component-donation'
         }
         else {
-           afterTarget = '#webform-component-billing-information'
+           afterTarget = '#webform-component-donor-information'
         }
 
         readonlyize({
