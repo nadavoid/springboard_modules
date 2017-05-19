@@ -2495,22 +2495,9 @@ function fundraiser_sustainers_update_billing_form_validate($form, &$form_state)
  * Form submit handler for billing address update form.
  */
 function fundraiser_sustainers_update_billing_address_only_form_submit($form, &$form_state) {
-  $master_did = $form_state['values']['master_did'];
-  $submission_fields = $form_state['values'];
-
-  // Remove unnecessary values.
-  unset($submission_fields['master_did']);
-  unset($submission_fields['uid']);
-
-  global $user;
-  $username = isset($user->name) ? $user->name : 'Anonymous';
-  // We only update donations to come, not ones already processed.
-  $donations = _fundraiser_sustainers_get_donations_recurr_remaining($master_did);
-
-  fundraiser_sustainers_update_billing_info_in_series($donations, $submission_fields, $username, TRUE, FALSE);
-
-  drupal_set_message(t('Billing address information successfully updated'));
-  $form_state['redirect'] = current_path();
+  // Call the main submit function with the update_payment flag set to FALSE.
+  $form_state['update_payment'] = FALSE;
+  fundraiser_sustainers_update_billing_form_submit($form, $form_state);
 }
 
 /**
@@ -2519,6 +2506,8 @@ function fundraiser_sustainers_update_billing_address_only_form_submit($form, &$
 function fundraiser_sustainers_update_billing_form_submit($form, &$form_state) {
   $master_did = $form_state['values']['master_did'];
   $submission_fields = $form_state['values'];
+  $update_billing = $form_state['update_billing'];
+  $update_payment = $form_state['update_payment'];
 
   // Remove unnecessary values.
   unset($submission_fields['master_did']);
@@ -2529,26 +2518,29 @@ function fundraiser_sustainers_update_billing_form_submit($form, &$form_state) {
   // We only update donations to come, not ones already processed.
   $donations = _fundraiser_sustainers_get_donations_recurr_remaining($master_did);
 
-  $success = fundraiser_sustainers_update_billing_info_in_series($donations, $submission_fields, $username, TRUE, TRUE);
+  $success = fundraiser_sustainers_update_billing_info_in_series($donations, $submission_fields, $username, $update_billing, $update_payment);
 
   if ($success === FALSE) {
     drupal_set_message(t("We were unable to update the payment details. Please try again."), 'error');
     return;
   }
 
-  // Use the first future donation for a template of new future donations.
-  $source_donation = reset($donations);
+  // If this a payment update was successful create new donations.
+  if ($update_payment) {
+    // Use the first future donation for a template of new future donations.
+    $source_donation = reset($donations);
 
-  // Load the master donation.
-  $master_donation = fundraiser_donation_get_donation($master_did);
-  $source_donation = fundraiser_donation_get_donation($source_donation->did);
+    // Load the master donation.
+    $master_donation = fundraiser_donation_get_donation($master_did);
+    $source_donation = fundraiser_donation_get_donation($source_donation->did);
 
-  // If Market Source codes were given, put those on the new donation objects.
-  if (!empty($submission_fields['market_source_codes'])) {
-    $source_donation->new_submission_data = $submission_fields['market_source_codes'];
+    // If Market Source codes were given, put those on the new donation objects.
+    if (!empty($submission_fields['market_source_codes'])) {
+      $source_donation->new_submission_data = $submission_fields['market_source_codes'];
+    }
+
+    fundraiser_sustainers_update_billing_info_create_new_donations($master_donation, $source_donation, $submission_fields);
   }
-
-  fundraiser_sustainers_update_billing_info_create_new_donations($master_donation, $source_donation, $submission_fields);
 
   drupal_set_message(t('Billing information successfully updated'));
   $form_state['redirect'] = current_path();
