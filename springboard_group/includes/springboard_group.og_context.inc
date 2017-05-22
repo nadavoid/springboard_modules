@@ -42,15 +42,14 @@ function springboard_group_og_context_handler($item = NULL) {
     $groups = springboard_group_get_user_group_ids();
     if (!empty($groups)) {
       // If the user only belongs to one group, return it.
-      if (count($groups) === 1) {
+      if (count($groups) === 1 && !user_access('administer groups')) {
         $gid = reset($groups);
-        $_SESSION['springboard_group_context_multiple'] = NULL;
         $ret = array('node' => array($gid));
       }
-      // If the user has multiple groups and there is not a currently selected
-      // working group, set the first group as the working group, and set
-      // springboard_group_context_multiple so that the dashboard knows
-      // we need a selector.
+      // If the user is an admin or has multiple groups and there is not a
+      // currently selected working group, set the first group as the working
+      // group, and set springboard_group_context_multiple so that the
+      // dashboard knows we need a selector.
       elseif (!isset($_SESSION['springboard_group_working_group'])) {
         $_SESSION['springboard_group_context_multiple'] = array_values($groups);
         $gid = reset($groups);
@@ -77,6 +76,18 @@ function springboard_group_og_context_handler($item = NULL) {
         // tell the dashboard we need a selector.
         $_SESSION['springboard_group_context_multiple'] = array_values($groups);
         $ret = array('node' => array($_SESSION['springboard_group_working_group']));
+      }
+    }
+    else {
+      // Check if no groups have been created yet. Set group to _none,
+      // if so. Otherwise all content would disappear on group-enabled admin
+      // pages for group-enabled content types.
+      $groups = springboard_group_get_all_springboard_groups();
+      if (empty($groups)) {
+        if (user_access('administer group')) {
+          drupal_set_message("Springboard Groups is enabled but you haven't created a group yet.");
+        }
+        $_SESSION['springboard_group_working_group'] = '_none';
       }
     }
   }
@@ -294,14 +305,16 @@ function springboard_group_context_selector__preprocess_page(&$vars) {
     }
   }
 
-  if (in_array($path, $og_paths) && isset($_SESSION['springboard_group_context_multiple'])) {
-    $build = array(
-      'selector' => drupal_get_form('springboard_group_context_selector_form', $_SESSION['springboard_group_context_multiple']),
-    );
-    $vars['page']['content']['system_main']['group_selector']['#markup'] = render($build);
-    $vars['page']['content']['system_main']['group_selector']['#weight'] = -10;
-    $vars['page']['content']['system_main']['group_selector']['#prefix'] = '<div id="sb-og-group-group_selector">';
-    $vars['page']['content']['system_main']['group_selector']['#suffix'] = '</div>';
+  if (in_array($path, $og_paths)) {
+    if (isset($_SESSION['springboard_group_context_multiple'])) {
+      $build = array(
+        'selector' => drupal_get_form('springboard_group_context_selector_form', $_SESSION['springboard_group_context_multiple']),
+      );
+      $vars['page']['content']['system_main']['group_selector']['#markup'] = render($build);
+      $vars['page']['content']['system_main']['group_selector']['#weight'] = -10;
+      $vars['page']['content']['system_main']['group_selector']['#prefix'] = '<div id="sb-og-group-group_selector">';
+      $vars['page']['content']['system_main']['group_selector']['#suffix'] = '</div>';
+    }
   }
 }
 
