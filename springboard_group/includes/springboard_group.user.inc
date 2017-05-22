@@ -33,7 +33,7 @@ function springboard_group_user_check_group_perms($gid, $permission) {
   if ($roles = og_get_user_roles('node', $gid)) {
     $perms = og_role_permissions($roles);
     foreach ($perms as $perm_array) {
-      if (in_array($permission, $perm_array)) {
+      if (in_array($permission, array_keys($perm_array))) {
         return TRUE;
       }
     }
@@ -110,22 +110,28 @@ function springboard_group__user__menu_alter(&$items) {
  */
 function springboard_group_user_view_access($account) {
   $uid = is_object($account) ? $account->uid : (int) $account;
+
   if ($GLOBALS['user']->uid != $uid) {
     if ($uid) {
       $contact_gids = springboard_group_get_contact_group_gids($uid);
       if (!empty($contact_gids)) {
+
         $groups = springboard_group_get_user_group_ids(FALSE);
         foreach ($contact_gids as $gid) {
-          if (in_array($gid, $groups) && springboard_group_user_check_group_perms($gid, 'view group contacts')) {
+          if (in_array($gid, $groups) && springboard_group_user_check_group_perms($gid, 'access user profiles in springboard group')) {
             return TRUE;
           }
           if (user_access('administer groups') && user_access('administer users')) {
+
             return TRUE;
           }
         }
-        // If the user is grouped at all, return false, even if the admin has
-        // administer permissions but not group admin permissions?
-        // return FALSE;
+//      $strict = variable_get('node_access_strict', 0);
+//      if ($strict) {
+//        // If the user is grouped at all, return false, even if the admin has
+//        // administer permissions but not group admin permissions?
+//         return FALSE;
+//      }
       }
     }
   }
@@ -140,18 +146,21 @@ function springboard_group_user_edit_access($account) {
   if ($GLOBALS['user']->uid != $account->uid) {
     $contact_gids = springboard_group_get_contact_group_gids($account->uid);
     if (!empty($contact_gids)) {
-      $groups = springboard_group_get_user_group_ids(FALSE);
+      $editors_groups = springboard_group_get_user_group_ids(FALSE);
       foreach ($contact_gids as $gid) {
-        if (in_array($gid, $groups) && springboard_group_user_check_group_perms($gid, 'manage group contacts')) {
+        if (in_array($gid, $editors_groups) && springboard_group_user_check_group_perms($gid, 'administer users in springboard group')) {
           return TRUE;
         }
         if (user_access('administer groups') && user_access('administer users')) {
           return TRUE;
         }
       }
-      // If the user is grouped at all, return false, even if the admin has
-      // administer permissions but not group admin permissions?
-      // return FALSE;
+//      $strict = variable_get('node_access_strict', 0);
+//      if ($strict) {
+//        // If the user is grouped at all, return false, even if the admin has
+//        // administer permissions but not group admin permissions?
+//         return FALSE;
+//      }
     }
   }
   // Use the normal access check if we get here.
@@ -167,16 +176,19 @@ function springboard_group_user_cancel_access($account) {
     if (!empty($contact_gids)) {
       $groups = springboard_group_get_user_group_ids(FALSE);
       foreach ($contact_gids as $gid) {
-        if (in_array($gid, $groups) && springboard_group_user_check_group_perms($gid, 'manage group contacts')) {
+        if (in_array($gid, $groups) && springboard_group_user_check_group_perms($gid, 'administer users in springboard group')) {
           return TRUE;
         }
         if (user_access('administer groups') && user_access('administer users')) {
           return TRUE;
         }
       }
-      // If the user is grouped at all, return false, even if the admin has
-      // administer permissions but not group admin permissions?
-      // return FALSE;
+//      $strict = variable_get('node_access_strict', 0);
+//      if ($strict) {
+//        // If the user is grouped at all, return false, even if the admin has
+//        // administer permissions but not group admin permissions?
+//         return FALSE;
+//      }
     }
   }
   // Use the normal access check if we get here.
