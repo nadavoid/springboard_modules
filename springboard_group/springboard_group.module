@@ -136,6 +136,27 @@ function springboard_group_get_all_springboard_groups() {
 }
 
 /**
+ * Check if a particular node type is grouped.
+ *
+ * @param $type
+ * @param bool $fields
+ *
+ * @return array|bool
+ */
+function springboard_group_node_type_is_grouped($type, $fields = FALSE) {
+  $group_enabled_field = &drupal_static(__FUNCTION__ . $type . $fields);
+  if (!isset($group_enabled_field)) {
+    $group_enabled_field = og_get_group_audience_fields('node', $type, 'node', 'springboard_group');
+  }
+  if (!$fields) {
+    return (bool) $group_enabled_field;
+  }
+  else {
+    return $group_enabled_field;
+  }
+}
+
+/**
  * Get the group ids from the OG form element.
  *
  * Used during Ajax requests triggered by the OG element and in validation
@@ -326,11 +347,12 @@ function springboard_group_load_ajax_validation_handlers(&$form, &$form_state) {
   if (isset($form['#node']->type)) {
 
     $type = $form['#node']->type;
-    if (fundraiser_is_donation_type($type)) {
+    if (fundraiser_is_donation_type($type) && springboard_group_rules_config_are_grouped()) {
       springboard_group_fundraiser_node_form__alter($form, $form_state, $callback);
     }
-
-    if (module_exists('page_wrappers') && (_page_wrappers_enabled_type($form['#node']) || $type == 'page_wrapper')) {
+    if (module_exists('page_wrappers')
+      && springboard_group_node_type_is_grouped('page_wrappers')
+      && (_page_wrappers_enabled_type($form['#node']) || $type == 'page_wrapper')) {
       springboard_group_page_wrappers_node_form__alter($form, $form_state, $callback);
     }
 
@@ -339,13 +361,19 @@ function springboard_group_load_ajax_validation_handlers(&$form, &$form_state) {
         return;
       }
       $webform_types = variable_get('webform_node_types');
-      if (module_exists('email_wrappers') && in_array($type, $webform_types)) {
+      if (module_exists('email_wrappers')
+        && in_array($type, $webform_types)
+        && springboard_group_node_type_is_grouped('email_wrappers')) {
         springboard_group_email_wrappers_node_form__alter($form, $form_state);
       }
-      if (module_exists('webform_ab') && ($type == 'webform_ab' || in_array($type, $webform_types))) {
+      if (module_exists('webform_ab')
+        && springboard_group_node_type_is_grouped('webform_ab')
+        && ($type == 'webform_ab' || in_array($type, $webform_types))) {
         springboard_group_webform_ab_node_form__alter($form, $form_state);
       }
-      if (module_exists('springboard_group_advocacy') && springboard_advocacy_is_action_type($type)) {
+      if (module_exists('springboard_group_advocacy')
+        && springboard_advocacy_is_action_type($type)
+        && springboard_group_node_type_is_grouped($type)) {
         springboard_group_advocacy_action_targets_form__alter($form, $form_state);
       }
     }

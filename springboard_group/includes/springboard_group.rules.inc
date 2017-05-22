@@ -51,6 +51,20 @@ function springboard_group_get_properties($data = array(), array $options, $name
   }
 }
 
+function springboard_group_rules_config_are_grouped($fields = FALSE) {
+  $group_enabled_field = &drupal_static(__FUNCTION__ . $fields);
+  if (!isset($group_enabled_field)) {
+    $group_enabled_field = og_get_group_audience_fields('rules_config', 'rules_config', 'node', 'springboard_group');
+  }
+  if (!$fields) {
+    return (bool) $group_enabled_field;
+  }
+  else {
+    return $group_enabled_field;
+  }
+}
+
+
 /**
  * Implements hook_rules_config_access().
  *
@@ -78,7 +92,7 @@ function springboard_group_rules_config_access($op, $rules_config = NULL, $accou
     else {
       // Access control on rules that don't have a group yet.
       if ($rules_config->module == 'commerce_payment') {
-        $fields = og_get_group_audience_fields('rules_config', 'rules_config', 'node', 'springboard_group');
+        $fields = springboard_group_rules_config_are_grouped();
         if (!empty($fields)) {
           if ((user_access('administer rules') || user_access('administer payment methods')) && !user_access('administer group')) {
             return FALSE;
@@ -243,7 +257,7 @@ function springboard_group_rules_add_group_widget(&$form, &$form_state, $rule) {
     // See springboard_group_field_widget_form_alter() and
     // springboard_group_set_single_selector() for details about
     // why this is necessary.
-    $fields = og_get_group_audience_fields('rules_config', 'rules_config', 'node', 'springboard_group');
+    $fields = springboard_group_rules_config_are_grouped(TRUE);
 
     if (!empty($fields)) {
       springboard_group_set_single_selector($form, $fields);
@@ -273,9 +287,9 @@ function springboard_group_rules_add_group_widget(&$form, &$form_state, $rule) {
  */
 function springboard_group_validate_payment($form, &$form_state) {
   field_attach_form_validate('rules_config', $form_state['values']['rule_entity'], $form, $form_state);
-  if (empty($target) && !user_access('administer group')) {
-    form_set_error('og_group_ref_rules_config', t('You must select a group.'));
-  }
+//  if (empty($target) && !user_access('administer group')) {
+//    form_set_error('og_group_ref_rules_config', t('You must select a group.'));
+//  }
 }
 
 /**
