@@ -231,9 +231,12 @@ function springboard_group_query_commerce_order_access_alter(&$query) {
  * @param $context
  */
 function springboard_group_commerce_entity_access_condition_commerce_order_alter(&$conditions, $context) {
+
   if (!isset($context['entity'])) {
+
     $allowed_order_ids = springboard_group_orders_get_allowed_order_ids('view any order in springboard group');
     if (strpos(current_path(), 'admin/commerce/orders') !== FALSE) {
+
       $conditions->condition('commerce_order.order_id', $allowed_order_ids, 'IN');
     }
     else {
@@ -357,9 +360,21 @@ function springboard_group_commerce_payment_transaction_access($op, $transaction
 
 
 /**
- * The following is necessary to grant access to the payments overview page,
+ * The following is necessary to grant access to the payments overview page.
+ *
+ * See commerce_payment_query_commerce_payment_transaction_access_alter(), it
+ * hard codes a denial of access to anyone who does not have view access
+ * without providing a sane way to alter that denial. That prevents the access
+ * check on payments from ever reaching the
+ * commerce_entity_access_condition_ENTITY_ID_alter() hooks implemented in
+ * this file.
+ *
  */
 function springboard_group_query_commerce_payment_transaction_access_alter(QueryAlterableInterface $query) {
+  if (!springboard_group_commerce_orders_are_grouped()) {
+    return;
+  }
+
   if (strpos(current_path(), 'admin/commerce/orders') !== FALSE) {
     if (is_numeric(arg(3)) && arg(4) == 'payment') {
       $conditions =& $query->conditions();
