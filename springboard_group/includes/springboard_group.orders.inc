@@ -19,6 +19,7 @@
  */
 function springboard_group__commerce_order__menu_alter(&$items) {
   if (springboard_group_commerce_orders_are_grouped()) {
+    $items['admin/commerce/orders/%commerce_order']['access callback'] = 'springboard_group_commerce_order_admin_order_view_access';
     $items['admin/commerce/orders/%commerce_order/payment']['access callback'] = 'springboard_group_commerce_payment_transaction_order_access';
     $items['admin/commerce/orders/%commerce_order/payment/%commerce_payment_transaction']['access callback'] = 'springboard_group_commerce_payment_transaction_access';
     $items['admin/commerce/orders/%commerce_order/payment/%commerce_payment_transaction/edit']['access callback'] = 'springboard_group_commerce_payment_transaction_access';
@@ -26,7 +27,6 @@ function springboard_group__commerce_order__menu_alter(&$items) {
     $items['admin/reports/salesforce/donations']['access callback'] = 'springboard_group_donation_report_access';
   }
 }
-
 
 /**
  * Add the order-related permissions.
@@ -220,7 +220,6 @@ function springboard_group_commerce_order_form__validate(&$form, &$form_state, $
   // @todo, if any.
 }
 
-
 /**
  * Implements hook_fundraiser_donation_create().
  *
@@ -277,7 +276,7 @@ function springboard_group_commerce_entity_access($op, $entity, $account, $entit
             return TRUE;
           }
           $gid = reset($group['node']);
-          return springboard_group_check_group_perm($gid, 'edit any group commerce_order entity', $GLOBALS['user']->uid);
+          return springboard_group_check_group_perm($gid, 'edit any order in springboard group', $GLOBALS['user']->uid);
         }
         // The order isn't grouped. Only group admins can manage
         // non-grouped items.
@@ -319,6 +318,7 @@ function springboard_group_query_commerce_order_access_alter(&$query) {
         //$query->condition('commerce_order.order_id', $allowed_order_ids, 'IN');
       }
       else {
+
         // Get the users groups.
         $order = commerce_order_load($id);
         $wrapper = entity_metadata_wrapper('commerce_order', $order);
@@ -361,6 +361,7 @@ function springboard_group_commerce_entity_access_condition_commerce_order_alter
     }
   }
   else {
+
     // There's an entity to check.
     $wrapper = entity_metadata_wrapper('commerce_order', $context['entity']);
     if ($wrapper->og_group_ref_commerce_order->raw()) {
@@ -392,6 +393,24 @@ function springboard_group_commerce_entity_access_condition_commerce_customer_pr
   }
 }
 
+function springboard_group_commerce_order_admin_order_view_access($order) {
+  if (isset($order)) {
+    $group = og_get_entity_groups('commerce_order', $order);
+    if (!empty($group)) {
+      if (user_access('administer group')
+        && user_access('administer orders')
+      ) {
+        return TRUE;
+      }
+
+      $gid = reset($group['node']);
+      return springboard_group_check_group_perm($gid, 'edit any order in springboard group', $GLOBALS['user']->uid);
+    }
+  }
+  return commerce_order_admin_order_view_access($order);
+}
+
+
 /**
  * A commerce_payment_transaction_order_access() menu callback wrapper.
  *
@@ -415,7 +434,6 @@ function springboard_group_commerce_payment_transaction_order_access($op, $order
       $gid = reset($group['node']);
     }
   }
-
   switch ($op) {
 
     case 'view':
