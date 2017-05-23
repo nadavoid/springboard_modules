@@ -398,6 +398,7 @@ function springboard_group_check_group_perm($gid, $permission, $uid = NULL) {
       foreach ($perms as $perm_array) {
         if (in_array($permission, array_keys($perm_array))) {
           $has_perm = TRUE;
+          return $has_perm;
         }
       }
     }
@@ -407,7 +408,8 @@ function springboard_group_check_group_perm($gid, $permission, $uid = NULL) {
 }
 
 
-function springboard_group_user_has_perm_in_any_group($perm, $account = NULL) {
+function springboard_group_user_has_perm_in_any_group($permission, $account = NULL) {
+
   global $user;
   if (empty($account)) {
     $account = $user;
@@ -422,9 +424,9 @@ function springboard_group_user_has_perm_in_any_group($perm, $account = NULL) {
         foreach ($perms as $perm) {
           $role_permissions = array_merge($role_permissions, array_keys(array_filter($perm)));
         }
-          if (in_array($perm, $role_permissions)) {
-            $access = TRUE;
-          }
+        if (in_array($permission, $role_permissions)) {
+          $access = TRUE;
+        }
       }
     }
   }
