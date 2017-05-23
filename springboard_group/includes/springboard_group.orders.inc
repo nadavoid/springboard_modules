@@ -263,13 +263,12 @@ function springboard_group_commerce_entity_access_condition_commerce_customer_pr
  * @param $items
  */
 function springboard_group__commerce_order__menu_alter(&$items) {
-  dpm($items);
   if (springboard_group_commerce_orders_are_grouped()) {
     $items['admin/commerce/orders/%commerce_order/payment']['access callback'] = 'springboard_group_commerce_payment_transaction_order_access';
     $items['admin/commerce/orders/%commerce_order/payment/%commerce_payment_transaction']['access callback'] = 'springboard_group_commerce_payment_transaction_access';
     $items['admin/commerce/orders/%commerce_order/payment/%commerce_payment_transaction/edit']['access callback'] = 'springboard_group_commerce_payment_transaction_access';
     $items['admin/commerce/orders/%commerce_order/payment/%commerce_payment_transaction/delete']['access callback'] = 'springboard_group_commerce_payment_transaction_access';
-
+    $items['admin/reports/salesforce/donations']['access callback'] = 'springboard_group_donation_report_access';
   }
 }
 
@@ -314,7 +313,6 @@ function springboard_group_commerce_payment_transaction_order_access($op, $order
   return commerce_payment_transaction_order_access($op, $order, $account);
 
 }
-
 
 /**
  * A commerce_payment_transaction_access() wrapper.
@@ -385,6 +383,12 @@ function springboard_group_query_commerce_payment_transaction_load_multiple_alte
   //$query->condition('base.transaction_id', array('-1'), 'IN');
 }
 
+function springboard_group_donation_report_access($args) {
+  if (!user_access('administer group') && $args[0] == 'views_check_perm') {
+    return springboard_group_user_has_perm_in_any_group('access donation report in group');
+  }
+  return views_access($args);
+}
 
 /**
  * Implements hook_fundraiser_sustainers_check_access().

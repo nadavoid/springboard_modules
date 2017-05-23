@@ -879,4 +879,13 @@ function springboard_group_user_can_access_type_in_group($type, $account = NULL)
   return $access;
 }
 
-
+/**
+ * Implements hook_module_implements_alter().
+ */
+function springboard_group_module_implements_alter(&$implementations, $hook) {
+  if ($hook == 'menu_alter') {
+    $group = $implementations['springboard_group'];
+    unset($implementations['springboard_group']);
+    $implementations['springboard_group'] = $group;
+  }
+}

@@ -191,6 +191,14 @@ function springboard_group__fundraiser__og_permissions(&$items) {
   $orders_grouped = springboard_group_commerce_orders_are_grouped();
   if (!empty($orders_grouped)) {
 
+    $items['access donation report in group'] = array(
+      'title' => t('View donation report.'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+      'module' => 'fundraiser',
+    );
+
     $items['submit springboard group donations offline'] = array(
       'title' => t('Submit donations offline in Springboard Group'),
       'description' => '',

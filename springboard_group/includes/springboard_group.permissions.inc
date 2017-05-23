@@ -405,3 +405,28 @@ function springboard_group_check_group_perm($gid, $permission, $uid = NULL) {
   }
   return $has_perm;
 }
+
+
+function springboard_group_user_has_perm_in_any_group($perm, $account = NULL) {
+  global $user;
+  if (empty($account)) {
+    $account = $user;
+  }
+  $groups = og_get_entity_groups('user', $account);
+  $access = FALSE;
+  if (!empty($groups['node'])) {
+    foreach ($groups['node'] as $gid) {
+      if ($roles = og_get_user_roles('node', $gid)) {
+        $perms = og_role_permissions($roles);
+        $role_permissions = [];
+        foreach ($perms as $perm) {
+          $role_permissions = array_merge($role_permissions, array_keys(array_filter($perm)));
+        }
+          if (in_array($perm, $role_permissions)) {
+            $access = TRUE;
+          }
+      }
+    }
+  }
+  return $access;
+}
