@@ -18,30 +18,6 @@ function springboard_group_users_are_grouped($fields = FALSE) {
 }
 
 /**
- * Permission checker for current user.
- *
- * Takes a group ID and a permission string and determines whether the current
- * user has that permission in the group.
- *
- * @param $gid
- * @param $permission
- *
- * @return bool
- */
-function springboard_group_user_check_group_perms($gid, $permission) {
-  //@todo cache. send uid?
-  if ($roles = og_get_user_roles('node', $gid)) {
-    $perms = og_role_permissions($roles);
-    foreach ($perms as $perm_array) {
-      if (in_array($permission, array_keys($perm_array))) {
-        return TRUE;
-      }
-    }
-  }
-  return FALSE;
-}
-
-/**
  * @param $form
  * @param $form_state
  * @param null $callback
@@ -118,7 +94,7 @@ function springboard_group_user_view_access($account) {
 
         $groups = springboard_group_get_user_group_ids(FALSE);
         foreach ($contact_gids as $gid) {
-          if (in_array($gid, $groups) && springboard_group_user_check_group_perms($gid, 'access user profiles in springboard group')) {
+          if (in_array($gid, $groups) && springboard_group_check_group_perm($gid, 'access user profiles in springboard group', $GLOBALS['user']->uid)) {
             return TRUE;
           }
           if (user_access('administer groups') && user_access('administer users')) {
@@ -148,7 +124,7 @@ function springboard_group_user_edit_access($account) {
     if (!empty($contact_gids)) {
       $editors_groups = springboard_group_get_user_group_ids(FALSE);
       foreach ($contact_gids as $gid) {
-        if (in_array($gid, $editors_groups) && springboard_group_user_check_group_perms($gid, 'administer users in springboard group')) {
+        if (in_array($gid, $editors_groups) && springboard_group_check_group_perm($gid, 'administer users in springboard group', $GLOBALS['user']->uid)) {
           return TRUE;
         }
         if (user_access('administer groups') && user_access('administer users')) {
@@ -176,7 +152,7 @@ function springboard_group_user_cancel_access($account) {
     if (!empty($contact_gids)) {
       $groups = springboard_group_get_user_group_ids(FALSE);
       foreach ($contact_gids as $gid) {
-        if (in_array($gid, $groups) && springboard_group_user_check_group_perms($gid, 'administer users in springboard group')) {
+        if (in_array($gid, $groups) && springboard_group_check_group_perm($gid, 'administer users in springboard group', $GLOBALS['user']->uid)) {
           return TRUE;
         }
         if (user_access('administer groups') && user_access('administer users')) {

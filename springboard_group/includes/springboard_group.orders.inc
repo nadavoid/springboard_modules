@@ -18,27 +18,6 @@ function springboard_group_commerce_orders_are_grouped($fields = FALSE) {
 }
 
 /**
- * Permission Checker.
- *
- * @param $gid
- * @param $permission
- *
- * @return bool
- */
-function springboard_group_commerce_order_check_group_perms($gid, $permission) {
-  //@todo cache. send uid?
-  if ($roles = og_get_user_roles('node', $gid)) {
-    $perms = og_role_permissions($roles);
-    foreach ($perms as $perm_array) {
-      if (in_array($permission, array_keys($perm_array))) {
-        return TRUE;
-      }
-    }
-  }
-  return FALSE;
-}
-
-/**
  * Add the group widget to the commerce order form.
  */
 function springboard_group_form_commerce_order_ui_order_form_alter(&$form, &$form_state) {
@@ -166,7 +145,7 @@ function springboard_group_commerce_entity_access($op, $entity, $account, $entit
             return TRUE;
           }
           $gid = reset($group['node']);
-          return springboard_group_commerce_order_check_group_perms($gid, 'edit any group commerce_order entity');
+          return springboard_group_check_group_perm($gid, 'edit any group commerce_order entity', $GLOBALS['user']->uid);
         }
         // The order isn't grouped. Only group admins can manage
         // non-grouped items.
@@ -213,7 +192,7 @@ function springboard_group_query_commerce_order_access_alter(&$query) {
         $wrapper = entity_metadata_wrapper('commerce_order', $order);
         if ($wrapper->og_group_ref_commerce_order->raw()) {
           foreach ($wrapper->og_group_ref_commerce_order->raw() as $gid) {
-            if (springboard_group_commerce_order_check_group_perms($gid, 'view any order in springboard group')) {
+            if (springboard_group_check_group_perm($gid, 'view any order in springboard group', $GLOBALS['user']->uid)) {
               return;
             }
           }
@@ -232,6 +211,8 @@ function springboard_group_query_commerce_order_access_alter(&$query) {
  */
 function springboard_group_commerce_entity_access_condition_commerce_order_alter(&$conditions, $context) {
 
+  // @todo is $context[account'] always the current user?
+  // if so pass it to check_group_perm
   if (!isset($context['entity'])) {
 
     $allowed_order_ids = springboard_group_orders_get_allowed_order_ids('view any order in springboard group');
@@ -247,7 +228,7 @@ function springboard_group_commerce_entity_access_condition_commerce_order_alter
     $wrapper = entity_metadata_wrapper('commerce_order', $context['entity']);
     if ($wrapper->og_group_ref_commerce_order->raw()) {
       foreach ($wrapper->og_group_ref_commerce_order->raw() as $gid) {
-        if (springboard_group_commerce_order_check_group_perms($gid, 'view any order in springboard group')) {
+        if (springboard_group_check_group_perm($gid, 'view any order in springboard group', $GLOBALS['user']->uid)) {
           return TRUE;
         }
       }
@@ -282,6 +263,7 @@ function springboard_group_commerce_entity_access_condition_commerce_customer_pr
  * @param $items
  */
 function springboard_group__commerce_order__menu_alter(&$items) {
+  dpm($items);
   if (springboard_group_commerce_orders_are_grouped()) {
     $items['admin/commerce/orders/%commerce_order/payment']['access callback'] = 'springboard_group_commerce_payment_transaction_order_access';
     $items['admin/commerce/orders/%commerce_order/payment/%commerce_payment_transaction']['access callback'] = 'springboard_group_commerce_payment_transaction_access';
@@ -319,15 +301,15 @@ function springboard_group_commerce_payment_transaction_order_access($op, $order
 
     case 'view':
       if ($gid) {
-        return springboard_group_commerce_order_check_group_perms($gid, 'view payments in springboard group');
+        return springboard_group_check_group_perm($gid, 'view payments in springboard group', $account->uid);
       }
     break;
 
     case 'update':
-        return springboard_group_commerce_order_check_group_perms($gid, 'update payments in springboard group');
+        return springboard_group_check_group_perm($gid, 'update payments in springboard group', $account->uid);
 
     case 'delete':
-      return springboard_group_commerce_order_check_group_perms($gid, 'delete payments in springboard group');
+      return springboard_group_check_group_perm($gid, 'delete payments in springboard group', $account->uid);
   }
   return commerce_payment_transaction_order_access($op, $order, $account);
 
@@ -385,7 +367,7 @@ function springboard_group_query_commerce_payment_transaction_access_alter(Query
           $wrapper = entity_metadata_wrapper('commerce_order', $order);
           if ($wrapper->og_group_ref_commerce_order->raw()) {
             foreach ($wrapper->og_group_ref_commerce_order->raw() as $gid) {
-              if (springboard_group_commerce_order_check_group_perms($gid, 'view payments in springboard group')) {
+              if (springboard_group_check_group_perm($gid, 'view payments in springboard group', $GLOBALS['user']->uid)) {
                 unset($conditions[$key]);
               }
             }
@@ -418,13 +400,13 @@ function springboard_group_fundraiser_sustainers_check_access($did) {
       if (arg(4) == 'recurring'
         && empty(arg(5))
       ) {
-        return springboard_group_commerce_order_check_group_perms($group[0]->nid, 'view any order in springboard group');
+        return springboard_group_check_group_perm($group[0]->nid, 'view any order in springboard group', $GLOBALS['user']->uid);
       }
 
       elseif (arg(4) == 'recurring'
         && empty(arg(5) == 'edit')
       ) {
-        return springboard_group_commerce_order_check_group_perms($group[0]->nid, 'edit any order in springboard group');
+        return springboard_group_check_group_perm($group[0]->nid, 'edit any order in springboard group', $GLOBALS['user']->uid);
       }
     }
 
@@ -554,7 +536,7 @@ function springboard_group_orders_get_allowed_order_ids($perm) {
     foreach ($groups as $gid) {
       // Get the users roles in their groups and check
       // for view access in each group.
-      if (springboard_group_commerce_order_check_group_perms($gid, $perm)) {
+      if (springboard_group_check_group_perm($gid, $perm, $GLOBALS['user']->uid)) {
         // Groups in which the user has view access.
         $allowed_gids[] = $gid;
       }

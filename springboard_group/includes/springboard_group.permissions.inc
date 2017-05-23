@@ -380,3 +380,28 @@ function springboard_group_get_group_member_perms($gid, $account = NULL) {
   return $in_group_perms;
 }
 
+/**
+ * Check if a user has a specific permission in a specific group.
+ *
+ * @param $gid
+ * @param $permission
+ * @param $uid
+ *
+ * @return bool
+ */
+function springboard_group_check_group_perm($gid, $permission, $uid = NULL) {
+  $uid = !empty($uid) ? $uid : $GLOBALS['user']->uid;
+  $has_perm = &drupal_static(__FUNCTION__ . $gid . $permission . $uid);
+  if (!isset($has_perm)) {
+    if ($roles = og_get_user_roles('node', $gid, $uid)) {
+      $perms = og_role_permissions($roles);
+      foreach ($perms as $perm_array) {
+        if (in_array($permission, array_keys($perm_array))) {
+          $has_perm = TRUE;
+        }
+      }
+    }
+    $has_perm = FALSE;
+  }
+  return $has_perm;
+}
