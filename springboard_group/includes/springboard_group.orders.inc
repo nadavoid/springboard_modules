@@ -393,6 +393,9 @@ function springboard_group_commerce_entity_access_condition_commerce_customer_pr
   }
 }
 
+/**
+ * Menu access callback wrapper  for commerce_order_admin_order_view_access().
+ */
 function springboard_group_commerce_order_admin_order_view_access($order) {
   if (isset($order)) {
     $group = og_get_entity_groups('commerce_order', $order);
@@ -406,8 +409,8 @@ function springboard_group_commerce_order_admin_order_view_access($order) {
       $gid = reset($group['node']);
       return springboard_group_check_group_perm($gid, 'edit any order in springboard group', $GLOBALS['user']->uid);
     }
+    return commerce_order_admin_order_view_access($order);
   }
-  return commerce_order_admin_order_view_access($order);
 }
 
 
@@ -422,7 +425,6 @@ function springboard_group_commerce_payment_transaction_order_access($op, $order
   if (empty($account)) {
     $account = clone($user);
   }
-
   if (isset($order)) {
     $group = og_get_entity_groups('commerce_order', $order);
     if (!empty($group)) {
@@ -436,19 +438,53 @@ function springboard_group_commerce_payment_transaction_order_access($op, $order
   }
   switch ($op) {
 
+
+    case 'create':
+      $access = springboard_group_check_group_perm($gid, 'create payments in springboard group', $account->uid);
+      if ($access) {
+        // We currently allow any user to create any payment transaction,
+        // regardless of the order, because entity_access() doesn't give us a
+        // way to discriminate on the order.
+        // @todo: find a way to prevent creating a payment transaction if the
+        // user doesn't have access to the order.
+        if (!isset($order) || commerce_order_access('update', $order, $account)) {
+          return TRUE;
+        }
+      }
+      break;
+
     case 'view':
       if ($gid) {
-        return springboard_group_check_group_perm($gid, 'view payments in springboard group', $account->uid);
+        $access = springboard_group_check_group_perm($gid, 'view payments in springboard group', $account->uid);
+        if ($access) {
+          if (commerce_order_access('view', $order, $account)) {
+            return TRUE;
+          }
+        }
       }
     break;
 
     case 'update':
-        return springboard_group_check_group_perm($gid, 'update payments in springboard group', $account->uid);
-
+      if ($gid) {
+        $access = springboard_group_check_group_perm($gid, 'update payments in springboard group', $account->uid);
+        if ($access) {
+          if (commerce_order_access('view', $order, $account)) {
+            return TRUE;
+          }
+        }
+      }
     case 'delete':
-      return springboard_group_check_group_perm($gid, 'delete payments in springboard group', $account->uid);
+      if ($gid) {
+        $access = springboard_group_check_group_perm($gid, 'delete payments in springboard group', $account->uid);
+        if ($access) {
+          if (commerce_order_access('update', $order, $account)) {
+            return TRUE;
+          }
+        }
+      }
   }
-
+  // If we get here there's no group or no group access,
+  // and use the standard access check.
   return commerce_payment_transaction_order_access($op, $order, $account);
 }
 
@@ -463,7 +499,6 @@ function springboard_group_commerce_payment_transaction_order_access($op, $order
  * @return bool
  */
 function springboard_group_commerce_payment_transaction_access($op, $transaction, $account = NULL) {
-
   if (isset($transaction->order_id)) {
     $order = commerce_order_load($transaction->order_id);
     if (!$order) {
@@ -602,4 +637,71 @@ function springboard_group_orders_get_allowed_order_ids($perm) {
     $allowed_order_ids = array_keys($order_ids);
   }
   return $allowed_order_ids;
+}
+
+
+function springboard_group_form_commerce_payment_order_transaction_add_form_alter(&$form, $form_state) {
+  // Shows the add payment form on the payment landing page.
+  if (springboard_group_commerce_orders_are_grouped()) {
+    $order = $form_state['order'];
+    $form['#access'] = springboard_group_commerce_payment_transaction_order_access('create', $order);
+
+    if (springboard_group_rules_config_are_grouped()) {
+      if (!empty($form['payment_method'])) {
+        foreach ($form['payment_method']['#options'] as $key => $method) {
+          if (is_array($method)) {
+            foreach ($method as $name => $value) {
+              $rule_name = substr($name, strpos($name, '|') + 1);
+              if (!springboard_group_commerce_order_check_payment_method_group($rule_name)) {
+                unset($form['payment_method']['#options'][$key][$name]);
+              }
+            }
+          }
+          else {
+            $rule_name = substr($key, strpos($key, '|') + 1);
+            if (!springboard_group_commerce_order_check_payment_method_group($rule_name)) {
+              unset($form['payment_method']['#options'][$key]);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+function springboard_group_commerce_order_check_payment_method_group($rule_name) {
+  $rule = rules_config_load($rule_name);
+  $groups = og_get_entity_groups('rules_config', $rule);
+  $access =  FALSE;
+    if (!empty($groups['node'])) {
+      $role_permissions = [];
+      foreach ($groups['node'] as $gid) {
+        if ($roles = og_get_user_roles('node', $gid)) {
+          $perms = og_role_permissions($roles);
+          foreach ($perms as $perm) {
+            $role_permissions = array_merge($role_permissions, array_keys(array_filter($perm)));
+          }
+          if (in_array('create payments in springboard group', $role_permissions)) {
+            $access = TRUE;
+          }
+        }
+      }
+
+      return $access;
+
+
+//    dpm($group);
+//    // Access control on rules that already have a group.
+//    $gid = reset($group['node']);
+//    //@todo gid can be multiple
+//    if ($roles = og_get_user_roles('node', $gid)) {
+//      //@todo this code in rules.inc is wrong.
+//      $perms = og_role_permissions($roles);
+//      $role_permissions = array_keys(array_filter(reset($perms)));
+//      dpm($perms);
+//      if (in_array('create payments in springboard group', $role_permissions)) {
+//        return TRUE;
+//      }
+//    }
+  }
 }

@@ -417,10 +417,10 @@ function springboard_group_user_has_perm_in_any_group($permission, $account = NU
   $groups = og_get_entity_groups('user', $account);
   $access = FALSE;
   if (!empty($groups['node'])) {
+    $role_permissions = [];
     foreach ($groups['node'] as $gid) {
       if ($roles = og_get_user_roles('node', $gid)) {
         $perms = og_role_permissions($roles);
-        $role_permissions = [];
         foreach ($perms as $perm) {
           $role_permissions = array_merge($role_permissions, array_keys(array_filter($perm)));
         }

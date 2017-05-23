@@ -81,7 +81,7 @@ function springboard_group_rules_config_access($op, $rules_config = NULL, $accou
       if ($roles = og_get_user_roles('node', $gid)) {
         $perms = og_role_permissions($roles);
         $role_permissions = array_keys(array_filter(reset($perms)));
-        if ($group_context == $gid && in_array('edit payment method', $role_permissions)) {
+        if ($group_context == $gid && in_array('edit payment method in springboard group', $role_permissions)) {
           return TRUE;
         }
       }
@@ -143,7 +143,7 @@ function springboard_group_rules_payment_rules_overview__page_alter(&$page) {
           else {
             $invalid = $context_gid != $gid;
           }
-          if ($invalid || (!user_access('administer group') && !in_array('edit payment method', $role_permissions))) {
+          if ($invalid || (!user_access('administer group') && !in_array('edit payment method in springboard group', $role_permissions))) {
             unset($page['content']['system_main'][$key]['rules']['#rows'][$row_key]);
           }
         }
