@@ -110,10 +110,14 @@ function _fundraiser_commerce_credit_card_cleanup($submission_fields) {
 /**
  * Return the credit card expiration dates
  *
- * @param $submission_fields Array
- *    Values from the submitted form
+ * @param array $submission_fields
+ *   Values from the submitted form.
+ * @param array $form_parents
+ *   The parent field names.
+ * @param boolean $require_cvv
+ *   Set to FALSE to skip checking the cvv code, defaults to TRUE.
  */
-function _fundraiser_commerce_credit_card_validate($submission_fields, $form_parents) {
+function _fundraiser_commerce_credit_card_validate($submission_fields, $form_parents, $require_cvv = TRUE) {
   $prefix = implode('][', $form_parents) . '][';
 
   // If using a stored card, return early.
@@ -134,14 +138,16 @@ function _fundraiser_commerce_credit_card_validate($submission_fields, $form_par
     }
   }
 
-  $cvv = $submission_fields['payment_fields']['credit']['card_cvv'];
-  if (empty($cvv)) {
-    form_set_error($prefix . 'card_cvv', t('The credit card CVV is required.'));
-  }
-  else {
-    $valid = commerce_payment_validate_credit_card_security_code($number, $cvv);
-    if ($valid !== TRUE && !empty($cvv)) {
-      form_set_error($prefix . 'card_cvv', t('You have entered an invalid CVV number.'));
+  if ($require_cvv) {
+    $cvv = $submission_fields['payment_fields']['credit']['card_cvv'];
+    if (empty($cvv)) {
+      form_set_error($prefix . 'card_cvv', t('The credit card CVV is required.'));
+    }
+    else {
+      $valid = commerce_payment_validate_credit_card_security_code($number, $cvv);
+      if ($valid !== TRUE && !empty($cvv)) {
+        form_set_error($prefix . 'card_cvv', t('You have entered an invalid CVV number.'));
+      }
     }
   }
 
