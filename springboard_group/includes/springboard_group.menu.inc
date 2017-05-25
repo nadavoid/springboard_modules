@@ -184,8 +184,9 @@ function springboard_group_menu_alter(&$items) {
       $items[$path]['access callback'] = FALSE;
       unset($items[$path]['access arguments']);
     }
+
     // Custom access for payment method overview page.
-    if ($path == 'admin/commerce/config/payment-methods') {
+    if (springboard_group_rules_config_are_grouped() && $path == 'admin/commerce/config/payment-methods') {
       $items[$path]['access callback'] = 'springboard_group_rules_payment_method_overview_access';
     }
   }
@@ -195,6 +196,9 @@ function springboard_group_menu_alter(&$items) {
     $function = 'springboard_group__' . $entity_type . '__menu_alter';
     if (function_exists($function)) {
       $function($items);
+    }
+    if ($entity_type == 'commerce_order') {
+      springboard_group__cardonfile__menu_alter($items);
     }
   }
 }

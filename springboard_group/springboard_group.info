@@ -8,6 +8,8 @@ files[] = includes/views/handlers/springboard_group_views_handler_groups_users.i
 files[] = includes/views/handlers/springboard_group_views_handler_field_user_link.inc
 files[] = includes/views/handlers/springboard_group_views_handler_field_user_link_edit.inc
 files[] = includes/views/handlers/springboard_group_views_handler_field_user_link_cancel.inc
+files[] = includes/views/handlers/springboard_group_commerce_cardonfile_plugin_argument_validate_owner.inc
+
 
 dependencies[] = og
 dependencies[] = og_ui

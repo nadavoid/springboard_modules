@@ -187,6 +187,17 @@ function springboard_group_views_pre_execute(&$view) {
  */
 function springboard_group_views_default_views_alter(&$views) {
 
+  if (springboard_group_commerce_orders_are_grouped()) {
+    // ADd custom validation to the card on file view.
+    $displays = $views['commerce_card_on_file_user_cards']->display;
+    foreach ($displays as $display_name => $display) {
+      $handler =& $views['commerce_card_on_file_user_cards']->display[$display_name]->handler;
+      if (!empty($handler->display->display_options['arguments']['user']['validate']['type'])) {
+        $handler->display->display_options['arguments']['user']['validate']['type'] = 'springboard_group_commerce_cof_owner';
+      }
+    }
+  }
+
   $alter = array_filter(variable_get('group_restricted_views', []));
   foreach ($alter as $view_name => $value) {
     $displays = $views[$view_name]->display;
@@ -377,4 +388,17 @@ function springboard_group_views_data_alter(&$data) {
     $data['users']['cancel_node']['field']['handler'] = 'springboard_group_views_handler_field_user_link_cancel';
   }
 
+}
+
+function springboard_group_views_plugins() {
+  if (springboard_group_commerce_orders_are_grouped()) {
+    return array(
+      'argument validator' => array(
+        'springboard_group_commerce_cof_owner' => array(
+          'title' => t('Springboard Group Card owner access'),
+          'handler' => 'springboard_group_commerce_cardonfile_plugin_argument_validate_owner',
+        ),
+      ),
+    );
+  }
 }

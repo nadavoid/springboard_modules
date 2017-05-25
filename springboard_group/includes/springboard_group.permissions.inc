@@ -68,6 +68,9 @@ function springboard_group_og_permission() {
     if (function_exists($function)) {
       $function($items);
     }
+    if ($entity_type == 'commerce_order') {
+      springboard_group__commerce_cardonfile__og_permissions($items);
+    }
   }
 
   springboard_group__fundraiser__og_permissions($items);

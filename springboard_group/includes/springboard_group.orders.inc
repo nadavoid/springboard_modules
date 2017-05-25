@@ -672,36 +672,20 @@ function springboard_group_form_commerce_payment_order_transaction_add_form_alte
 function springboard_group_commerce_order_check_payment_method_group($rule_name) {
   $rule = rules_config_load($rule_name);
   $groups = og_get_entity_groups('rules_config', $rule);
-  $access =  FALSE;
-    if (!empty($groups['node'])) {
+  $access = FALSE;
+  if (!empty($groups['node'])) {
+    foreach ($groups['node'] as $gid) {
       $role_permissions = [];
-      foreach ($groups['node'] as $gid) {
-        if ($roles = og_get_user_roles('node', $gid)) {
-          $perms = og_role_permissions($roles);
-          foreach ($perms as $perm) {
-            $role_permissions = array_merge($role_permissions, array_keys(array_filter($perm)));
-          }
-          if (in_array('create payments in springboard group', $role_permissions)) {
-            $access = TRUE;
-          }
+      if ($roles = og_get_user_roles('node', $gid)) {
+        $perms = og_role_permissions($roles);
+        foreach ($perms as $perm) {
+          $role_permissions = array_merge($role_permissions, array_keys(array_filter($perm)));
+        }
+        if (in_array('create payments in springboard group', $role_permissions)) {
+          $access = TRUE;
         }
       }
-
-      return $access;
-
-
-//    dpm($group);
-//    // Access control on rules that already have a group.
-//    $gid = reset($group['node']);
-//    //@todo gid can be multiple
-//    if ($roles = og_get_user_roles('node', $gid)) {
-//      //@todo this code in rules.inc is wrong.
-//      $perms = og_role_permissions($roles);
-//      $role_permissions = array_keys(array_filter(reset($perms)));
-//      dpm($perms);
-//      if (in_array('create payments in springboard group', $role_permissions)) {
-//        return TRUE;
-//      }
-//    }
+    }
+    return $access;
   }
 }

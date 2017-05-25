@@ -5,6 +5,7 @@
  * Springboard Group integration with Organic Groups.
  */
 
+require_once __DIR__ . '/includes/springboard_group.commerce_cardonfile.inc';
 require_once __DIR__ . '/includes/springboard_group.ctools.inc';
 require_once __DIR__ . '/includes/springboard_group.email_wrappers.inc';
 require_once __DIR__ . '/includes/springboard_group.entityreference.inc';
