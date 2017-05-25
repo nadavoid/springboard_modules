@@ -97,7 +97,7 @@ function springboard_group_node_settings_form() {
 
     // Add the multiple selection option.
     $disallowed_multiple = array('sba_message_action', 'sba_social_action');
-    $donation_types = array_flip(array_filter(fundraiser_get_donation_types()));
+    $donation_types = array_keys(array_filter(fundraiser_get_donation_types()));
     $disallowed_multiple = array_merge($disallowed_multiple, $donation_types);
     if (!in_array($type, $disallowed_multiple)) {
       $form['springboard_group_node'][$type]['og_' . $type . '_multiple'] = array(
