@@ -71,32 +71,17 @@ function springboard_group_rules_config_are_grouped($fields = FALSE) {
  * Adds access control checks to commerce payment rules.
  */
 function springboard_group_rules_config_access($op, $rules_config = NULL, $account = NULL) {
-  // Access control on already-existing rules.
-  if ($op == 'update') {
-    $group = og_get_entity_groups('rules_config', $rules_config);
-    if (!empty($group)) {
-      // Access control on rules that already have a group.
-      $gid = reset($group['node']);
-      $group_context = springboard_group_get_group_context();
-      if ($roles = og_get_user_roles('node', $gid)) {
-        $perms = og_role_permissions($roles);
-        $role_permissions = array_keys(array_filter(reset($perms)));
-        if ($group_context == $gid && in_array('edit payment method in springboard group', $role_permissions)) {
-          return TRUE;
-        }
+
+  if (isset($rules_config) && springboard_group_rules_config_are_grouped() && $rules_config->module == 'commerce_payment') {
+    // Access control on already-existing rules.
+    if ($op == 'update') {
+      if (springboard_group_check_payment_method_group_access($rules_config)) {
+        return TRUE;
       }
-      if ($group_context != $gid && !user_access('administer group')) {
-        return FALSE;
-      }
-    }
-    else {
-      // Access control on rules that don't have a group yet.
-      if ($rules_config->module == 'commerce_payment') {
-        $fields = springboard_group_rules_config_are_grouped();
-        if (!empty($fields)) {
-          if ((user_access('administer rules') || user_access('administer payment methods')) && !user_access('administer group')) {
-            return FALSE;
-          }
+      else {
+        // Access control on rules that don't have a group yet.
+        if ((user_access('administer rules') || user_access('administer payment methods')) && !user_access('administer group')) {
+          return FALSE;
         }
       }
     }
@@ -112,38 +97,32 @@ function springboard_group_rules_payment_rules_overview__page_alter(&$page) {
   if (!empty($page['content']['system_main']['#page_callback']) &&
     $page['content']['system_main']['#page_callback'] == 'commerce_payment_ui_admin_page'
   ) {
-    $role_permissions = array();
-    $context_gid = springboard_group_get_group_context();
-    if (!empty($context_gid) && $context_gid != '_none' && $context_gid != '_all') {
-      $roles = og_get_user_roles('node', $context_gid);
-      $perms = og_role_permissions($roles);
-      $role_permissions = array_keys(array_filter(reset($perms)));
-    }
+    $context = springboard_group_get_group_context();
     foreach (array('enabled', 'disabled') as $key) {
+      $valid = array();
       foreach ($page['content']['system_main'][$key]['rules']['#rows'] as $row_key => &$row) {
+
         $machine_name = (str_replace('Machine name: ', '', $row[0]['data']['description']['settings']['machine_name']['#markup']));
         $rule = rules_config_load($machine_name);
         if (!empty($rule)) {
-          $group = og_get_entity_groups('rules_config', $rule);
-          if (!empty($group)) {
-            $gid = reset($group['node']);
+          if ($context == '_none') {
+            $valid[] = $row_key;
           }
           else {
-            $gid = !is_numeric($context_gid) ? $context_gid : NULL;
-          }
-          if ($context_gid == '_all') {
-            $all_gids = og_get_all_group('node');
-            if (!in_array($gid, $all_gids)) {
-              $invalid = TRUE;
+            $groups = og_get_entity_groups('rules_config', $rule);
+            $gids = array();
+            if (!empty($groups)) {
+              $gids = array_values($groups['node']);
             }
-            else {
-              $invalid = FALSE;
+            if (!empty($gids)) {
+              foreach ($gids as $gid) {
+                if ($context == $gid || $context == '_all') {
+                  $valid[] = $row_key;
+                }
+              }
             }
           }
-          else {
-            $invalid = $context_gid != $gid;
-          }
-          if ($invalid || (!user_access('administer group') && !in_array('edit payment method in springboard group', $role_permissions))) {
+          if (!in_array($row_key, $valid) || (!user_access('administer group') && !springboard_group_check_payment_method_group_access($rule))) {
             unset($page['content']['system_main'][$key]['rules']['#rows'][$row_key]);
           }
         }
@@ -409,7 +388,6 @@ function springboard_group_rules_config_form__validate(&$form, &$form_state, $ca
   }
 }
 
-
 /**
  * Sub-hook to springboard_group_og_permissions().
  */
@@ -421,4 +399,24 @@ function springboard_group__rules_config__og_permissions(&$items) {
     'default role' => array(),
     'module' => 'commerce_payment',
   );
+}
+
+function springboard_group_check_payment_method_group_access($rule) {
+  $groups = og_get_entity_groups('rules_config', $rule);
+  $access = FALSE;
+  if (!empty($groups['node'])) {
+    $role_permissions = [];
+    foreach ($groups['node'] as $gid) {
+      if ($roles = og_get_user_roles('node', $gid)) {
+        $perms = og_role_permissions($roles);
+        foreach ($perms as $perm) {
+          $role_permissions = array_merge($role_permissions, array_keys(array_filter($perm)));
+        }
+        if (in_array('edit payment method in springboard group', $role_permissions)) {
+          $access = TRUE;
+        }
+      }
+    }
+  }
+  return $access;
 }
