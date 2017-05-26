@@ -197,7 +197,7 @@ function springboard_group_menu_alter(&$items) {
     if (function_exists($function)) {
       $function($items);
     }
-    if ($entity_type == 'commerce_order') {
+    if ($entity_type == 'commerce_order' && function_exists('springboard_group__cardonfile__menu_alter')) {
       springboard_group__cardonfile__menu_alter($items);
     }
   }

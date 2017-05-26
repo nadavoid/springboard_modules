@@ -7,13 +7,12 @@ function springboard_group__cardonfile__menu_alter(&$items) {
       if ($path == 'user/%views_arg/cards') {
         $items[$path]['access callback'] = 'springboard_group_commerce_cardonfile_views_access';
       }
-      if (isset($items[$path]['access callback']) && $items[$path]['access callback'] == 'commerce_cardonfile_access') {
+      if (isset($item['access callback']) && $item['access callback'] === 'commerce_cardonfile_access') {
         $items[$path]['access callback'] = 'springboard_group_commerce_cardonfile_access';
       }
     }
   }
 }
-
 /**
  * Add the order-related permissions.
  *
@@ -78,6 +77,90 @@ function springboard_group_commerce_cardonfile_access($op = 'view', $card = NULL
     return FALSE;
   }
 
+  // Check if the gateway can do this op.
+  $op_callback = springboard_group_cardonfile_check_gateway_callbacks($op, $card, $payment_method, $payment_rule);
+  // @todo gateways callbacks can implement access checks!
+  if (empty($op_callback)) {
+    return FALSE;
+  }
+
+  // Check if card is in grouped  gateway, if so:
+  $grouped = og_get_entity_groups('rules_config', $payment_rule);
+
+  if (!empty($grouped) && ((user_access('administer card data') || user_access("$op any card data")) && user_access('administer group'))) {
+    return TRUE;
+  }
+  elseif (!empty($grouped)) {
+    // If the user in the group that owns the gateway,
+    // and also has edit cardonfile
+    // permission in that group, allow the edit???
+    foreach ($grouped['node'] as $gid) {
+      $access = springboard_group_check_group_perm($gid, $op . ' any card data in springboard group');
+      if ($access) {
+        return TRUE;
+      }
+    }
+    // @todo shouldn't orders work like this too?
+    return FALSE;
+  }
+
+  return commerce_cardonfile_access($op, $card, $account);
+}
+
+/**
+ * Determines if the current user has access to the account's stored cards.
+ *
+ * Used by views plugin. Can disallow access to stored cards tab.
+ */
+function springboard_group_commerce_cardonfile_user_access($account) {
+  global $user;
+  if ((user_access('administer card data') || user_access('view any card data')) && user_access('administer group')) {
+    return TRUE;
+  }
+  else {
+    // Are users grouped?
+    if (springboard_group_users_are_grouped()) {
+      $gids = springboard_group_get_contact_group_gids($account->uid);
+      foreach ($gids as $gid) {
+        if (springboard_group_check_group_perm($gid, 'administer users in springboard group')) {
+          $user_access[] = $gid;
+        }
+      }
+      if (!empty($user_access)) {
+        foreach ($user_access as $gid) {
+          if (springboard_group_check_group_perm($gid, 'view any card data in springboard group')) {
+            return TRUE;
+          }
+        }
+      }
+      // Check card's gateway's group?
+    }
+    else {
+      // Contacts aren't grouped, see if admin has card view
+      // rights in any group.
+      $access = springboard_group_user_has_perm_in_any_group('view any card data in springboard group');
+      if ($access) {
+        // @todo Check if admin is in group that owns any of users stored cards
+        // $todo alter the page to display only eligible cards.
+        return TRUE;
+      }
+    }
+  }
+
+  // If we get here, use the standard access check.
+  return commerce_cardonfile_user_access($account);
+}
+
+function springboard_group_commerce_cardonfile_views_access($args) {
+  if (!user_access('administer group') && $args[0] == 'views_check_perm') {
+    return springboard_group_user_has_perm_in_any_group('view any card data in springboard group');
+  }
+  return views_access($args);
+}
+
+
+function springboard_group_cardonfile_check_gateway_callbacks($op, $card, $payment_method, $payment_rule) {
+
   switch ($op) {
     case 'edit':
       $op_callback = commerce_cardonfile_payment_method_callback($payment_method, 'update callback');
@@ -98,40 +181,24 @@ function springboard_group_commerce_cardonfile_access($op = 'view', $card = NULL
       $op_callback = TRUE;
       break;
   }
-
-  if (empty($op_callback)) {
-    return FALSE;
-  }
-
-  if ((user_access('administer card data') || user_access("$op any card data")) && user_access('administer group')) {
-    return TRUE;
-  }
-
-  // og checks here.
-
-  // If we get here, use the standard access check.
-  return commerce_cardonfile_access($op, $card, $account);
+  return $op_callback;
 }
 
-/**
- * Determines if the current user has access to the account's stored cards.
- */
-function springboard_group_commerce_cardonfile_user_access($account) {
-  global $user;
-  if ((user_access('administer card data') || user_access('view any card data')) && user_access('administer group')) {
-    return TRUE;
-  }
-  else {
-     // og checks here
-  }
 
-  // If we get here, use the standard access check.
-  return commerce_cardonfile_user_access($account);
+
+function springboard_group_query_views_commerce_card_on_file_user_cards_alter(&$view, &$query) {
+  // Skip this if a user is a group admin.
+  if (!user_access('administer group')) {
+    // Check if orders are grouped.
+    if (springboard_group_rules_config_are_grouped()) {
+       // @todo alter the landing page to show only eligible cards.
+    }
+  }
 }
 
-function springboard_group_commerce_cardonfile_views_access($args) {
-  if (!user_access('administer group') && $args[0] == 'views_check_perm') {
-    return springboard_group_user_has_perm_in_any_group('view any card data in springboard group');
-  }
-  return views_access($args);
-}
+// If the contact does not belong to any of the admins groups or the admin
+// does not have administer user permission i the group, I assume the admin
+// would not have access to /user/* paths, including cardonfile. If the
+// contact is in the admin’s group, and the admin can administer users and
+// administer cardonfile, I assume that also only cards related to gateways
+// that the admin’s group owns will display. It seems complicated.

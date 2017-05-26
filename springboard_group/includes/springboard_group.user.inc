@@ -89,6 +89,7 @@ function springboard_group_user_view_access($account) {
 
   if ($GLOBALS['user']->uid != $uid) {
     if ($uid) {
+      //@todo need to check if users are grouped?
       $contact_gids = springboard_group_get_contact_group_gids($uid);
       if (!empty($contact_gids)) {
 
