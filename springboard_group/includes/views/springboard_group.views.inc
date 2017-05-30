@@ -187,7 +187,7 @@ function springboard_group_views_pre_execute(&$view) {
  */
 function springboard_group_views_default_views_alter(&$views) {
 
-  if (springboard_group_commerce_orders_are_grouped()) {
+  if (springboard_group_commerce_orders_are_grouped() && isset($views['commerce_card_on_file_user_cards'])) {
     // ADd custom validation to the card on file view.
     $displays = $views['commerce_card_on_file_user_cards']->display;
     foreach ($displays as $display_name => $display) {
@@ -200,75 +200,77 @@ function springboard_group_views_default_views_alter(&$views) {
 
   $alter = array_filter(variable_get('group_restricted_views', []));
   foreach ($alter as $view_name => $value) {
-    $displays = $views[$view_name]->display;
-    foreach ($displays as $display_name => $display) {
-      $handler =& $views[$view_name]->display[$display_name]->handler;
-      /* Field: Content: Title */
-      if (!empty($handler->display->display_options['fields'])) {
+    if (isset($views[$view_name])) {
+      $displays = $views[$view_name]->display;
+      foreach ($displays as $display_name => $display) {
+        $handler =& $views[$view_name]->display[$display_name]->handler;
+        /* Field: Content: Title */
+        if (!empty($handler->display->display_options['fields'])) {
 //        $handler->display->display_options['relationships']['og_membership_related_node_group']['id'] = 'og_membership_related_node_group';
 //        $handler->display->display_options['relationships']['og_membership_related_node_group']['table'] = 'og_membership';
 //        $handler->display->display_options['relationships']['og_membership_related_node_group']['field'] = 'og_membership_related_node_group';
-        $fields =& $handler->display->display_options['fields'];
-        // Place the field in the appropriate column position per view display.
-        $label = t('Owner');
-        $index = 2;
-        switch ($view_name) {
-          case 'sba_actions';
-            $table = 'node';
-            $index = 5;
-            break;
+          $fields =& $handler->display->display_options['fields'];
+          // Place the field in the appropriate column position per view display.
+          $label = t('Owner');
+          $index = 2;
+          switch ($view_name) {
+            case 'sba_actions';
+              $table = 'node';
+              $index = 5;
+              break;
 
-          case 'sbv_forms';
-            $table = 'node';
-            switch ($display_name) {
-              // Recent forms block.
-              case 'block_3':
-                $index = 6;
-                break;
+            case 'sbv_forms';
+              $table = 'node';
+              switch ($display_name) {
+                // Recent forms block.
+                case 'block_3':
+                  $index = 6;
+                  break;
 
-              // Recent donation forms.
-              case 'block_4':
-                $index = 5;
-                break;
+                // Recent donation forms.
+                case 'block_4':
+                  $index = 5;
+                  break;
 
-              // All donations.
-              case 'block_1':
-                $index = 3;
-            }
-            break;
+                // All donations.
+                case 'block_1':
+                  $index = 3;
+              }
+              break;
 
-          case 'sbv_assets':
-            $table = 'node';
-            $index = 1;
-            break;
+            case 'sbv_assets':
+              $table = 'node';
+              $index = 1;
+              break;
 
-          case 'commerce_orders':
-            $table = 'commerce_order';
-            $index = 1;
-            break;
+            case 'commerce_orders':
+              $table = 'commerce_order';
+              $index = 1;
+              break;
 
-          case 'sbv_donations':
-            $table = 'fundraiser_donation';
-            $index = 1;
-            break;
+            case 'sbv_donations':
+              $table = 'fundraiser_donation';
+              $index = 1;
+              break;
 
-          case 'sbv_contacts':
-            $table = 'users';
-            $label = t('Owners');
-            $index = 1;
-            break;
+            case 'sbv_contacts':
+              $table = 'users';
+              $label = t('Owners');
+              $index = 1;
+              break;
 
-          default:
-            $table = 'node';
+            default:
+              $table = 'node';
+          }
+
+          $group_field = [];
+          $group_field['title_sb_group']['id'] = 'title_sb_group';
+          $group_field['title_sb_group']['table'] = $table;
+          $group_field['title_sb_group']['field'] = 'springboard_groups';
+          $group_field['title_sb_group']['label'] = $label;
+
+          springboard_group_views_add_group_field($fields, $index, $group_field);
         }
-
-        $group_field = [];
-        $group_field['title_sb_group']['id'] = 'title_sb_group';
-        $group_field['title_sb_group']['table'] = $table;
-        $group_field['title_sb_group']['field'] = 'springboard_groups';
-        $group_field['title_sb_group']['label'] = $label;
-
-        springboard_group_views_add_group_field($fields, $index, $group_field);
       }
     }
   }
