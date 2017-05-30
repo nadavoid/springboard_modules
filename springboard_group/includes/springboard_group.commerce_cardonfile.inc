@@ -2,7 +2,7 @@
 
 
 function springboard_group__cardonfile__menu_alter(&$items) {
-  if (springboard_group_commerce_orders_are_grouped()) {
+  if (springboard_group_users_are_grouped()) {
     foreach ($items as $path => $item) {
       if ($path == 'user/%views_arg/cards') {
         $items[$path]['access callback'] = 'springboard_group_commerce_cardonfile_views_access';
@@ -19,8 +19,8 @@ function springboard_group__cardonfile__menu_alter(&$items) {
  * Sub-hook to springboard_group_og_permissions() hook.
  */
 function springboard_group__commerce_cardonfile__og_permissions(&$items) {
-  $orders_grouped = springboard_group_commerce_orders_are_grouped();
-  if (!empty($orders_grouped)) {
+  $users_grouped = springboard_group_users_are_grouped();
+  if (!empty($users_grouped)) {
 
     $items['edit any card data in springboard group'] = array(
       'title' => t('Edit any card data in Springboard Group'),
@@ -84,23 +84,21 @@ function springboard_group_commerce_cardonfile_access($op = 'view', $card = NULL
     return FALSE;
   }
 
-  // Check if card is in grouped  gateway, if so:
-  $grouped = og_get_entity_groups('rules_config', $payment_rule);
+  $gids = springboard_group_get_contact_group_gids($account->uid);
 
-  if (!empty($grouped) && ((user_access('administer card data') || user_access("$op any card data")) && user_access('administer group'))) {
+  if (!empty($gids) && ((user_access('administer card data') || user_access("$op any card data")) && user_access('administer group'))) {
     return TRUE;
   }
-  elseif (!empty($grouped)) {
+  elseif (!empty($gids)) {
     // If the user in the group that owns the gateway,
     // and also has edit cardonfile
     // permission in that group, allow the edit???
-    foreach ($grouped['node'] as $gid) {
+    foreach ($gids as $gid) {
       $access = springboard_group_check_group_perm($gid, $op . ' any card data in springboard group');
       if ($access) {
         return TRUE;
       }
     }
-    // @todo shouldn't orders work like this too?
     return FALSE;
   }
 
@@ -140,8 +138,6 @@ function springboard_group_commerce_cardonfile_user_access($account) {
       // rights in any group.
       $access = springboard_group_user_has_perm_in_any_group('view any card data in springboard group');
       if ($access) {
-        // @todo Check if admin is in group that owns any of users stored cards
-        // $todo alter the page to display only eligible cards.
         return TRUE;
       }
     }
