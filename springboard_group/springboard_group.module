@@ -91,10 +91,15 @@ function springboard_group_node_access($node, $op, $account) {
 /**
  * Get a list of groupable entity types.
  *
- * Checks to see what entity types have an OG group reference field.
+ * Checks to see what entity types have an OG group reference field using the
+ * og_springboard_og handler, or in the case of users, a specific field name.
+ *
+ * Please note that *USERS* have a normal entity reference field that we
+ * are counting as a "group" field. Therefore DO NOT use this function
+ * without that expectation and its consequences.
  *
  * @return array
- *   An array of groupable entites.
+ *   An array of groupable entities.
  */
 function springboard_group_get_grouped_types() {
   $groups_enabled = &drupal_static(__FUNCTION__);
@@ -102,8 +107,10 @@ function springboard_group_get_grouped_types() {
     $groups_enabled = array();
     // Get the fields that exist in the bundle.
     foreach (field_info_fields() as $field_name => $field) {
-      if ($field_name == 'og_group_ref_user') {
-        //dpm($field['settings']['handler']);
+      if ($field_name == 'user_sb_group_ref') {
+        if (springboard_group_users_are_grouped()) {
+          $groups_enabled['user']['user'][] = 'user_sb_group_ref';
+        }
       }
 
       if ($field['type'] == 'entityreference' && $field['settings']['handler'] == 'og_springboard_og' && !empty($field['bundles'])) {

@@ -21,14 +21,12 @@ class springboard_group_views_handler_groups_users extends views_handler_field {
 
     if (!empty($user)) {
       $groups = array();
-      foreach (og_get_entity_groups('user', $user, FALSE, 'og_group_ref_user') as $entity_type => $og_memberships) {
-        foreach ($og_memberships as $membership_id => $entity_id) {
-          if ($entity_type == 'node') {
-            $group_node = node_load($entity_id);
-            if ($group_node->type == 'springboard_group') {
-              $groups[] = l($group_node->title, 'node/' . $group_node->nid);
-            }
-          }
+      dpm(springboard_group_get_contact_group_gids($user->uid));
+      foreach (springboard_group_get_contact_group_gids($user->uid) as $gid) {
+        $group_node = node_load($gid);
+        dpm('dfd');
+        if ($group_node->type == 'springboard_group') {
+          $groups[] = l($group_node->title, 'node/' . $group_node->nid);
         }
       }
       if (count($groups) > 1) {

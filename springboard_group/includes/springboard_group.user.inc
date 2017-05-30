@@ -3,11 +3,10 @@
  * @file
  * Orders definitions and hooks for Springboard Group.
  */
-
 function springboard_group_users_are_grouped($fields = FALSE) {
   $group_enabled_field = &drupal_static(__FUNCTION__ . $fields);
   if (!isset($group_enabled_field)) {
-    $group_enabled_field = og_get_group_audience_fields('user', 'user', 'node', 'springboard_group');
+    $group_enabled_field = field_info_instance('user', 'user_sb_group_ref', 'user');
   }
   if (!$fields) {
     return (bool) $group_enabled_field;
@@ -16,19 +15,6 @@ function springboard_group_users_are_grouped($fields = FALSE) {
     return $group_enabled_field;
   }
 }
-
-/**
- * @param $form
- * @param $form_state
- * @param null $callback
- */
-function springboard_group_user_form__validate(&$form, &$form_state, $callback = NULL) {
-  if ($callback != 'springboard_group_og_group_field_ajax_callback') {
-    return;
-  }
-  // @todo, if any.
-}
-
 
 /**
  * Implements hook_webform_user_submission_insert().
@@ -50,13 +36,13 @@ function springboard_group_webform_user_submission_insert($node, $submission, $a
       if (!empty($gids)) {
         $user = user_load($account->uid);
         $user_wrapper = entity_metadata_wrapper('user', $user);
-        $current_groups = $user_wrapper->og_group_ref_user->value();
+        $current_groups = $user_wrapper->user_sb_group_ref->value();
         $cgids = array();
         foreach ($current_groups as $cgroup) {
           $cgids[] = $cgroup->nid;
         }
         $merged = array_unique(array_merge($gids, $cgids));
-        $user_wrapper->og_group_ref_user->set($merged);
+        $user_wrapper->user_sb_group_ref->set($merged);
         $user_wrapper->save();
       }
     }
@@ -65,6 +51,8 @@ function springboard_group_webform_user_submission_insert($node, $submission, $a
 
 /**
  * Menu alter helper.
+ *
+ * Replace user-related access callbacks with their group-wrapped versions.
  *
  * @param $items.
  */
@@ -92,7 +80,6 @@ function springboard_group_user_view_access($account) {
       //@todo need to check if users are grouped?
       $contact_gids = springboard_group_get_contact_group_gids($uid);
       if (!empty($contact_gids)) {
-
         $groups = springboard_group_get_user_group_ids(FALSE);
         foreach ($contact_gids as $gid) {
           if (in_array($gid, $groups) && springboard_group_check_group_perm($gid, 'access user profiles in springboard group', $GLOBALS['user']->uid)) {
@@ -201,29 +188,22 @@ function springboard_group_form_user_profile_form_alter(&$form, &$form_state) {
     return;
   }
 
-  // Convert the multiple select widget to a single selection widget.
-  // See springboard_group_field_widget_form_alter() and
-  // springboard_group_set_single_selector() for details about
-  // why this is necessary.
-  $fields = springboard_group_users_are_grouped(TRUE);
-
+  $fields = springboard_group_users_are_grouped();
   if (!empty($fields)) {
-    springboard_group_set_single_selector($form, $fields);
-
-    // Add ajax callback to the groups field so we can validate newly
-    // selected groups.
-    $language = $form['og_group_ref_user']['#language'];
-    $form['og_group_ref_user']['#title'] = t('Contact owners');
-    $form['og_group_ref_user'][$language][0]['default']['#description'] = t('The groups this contact is owned by.');
-    $form['og_group_ref_user'][$language][0]['default']['#ajax'] = array(
-      'callback' => 'springboard_group_og_group_field_ajax_callback',
-    );
-
-    // Set up the validation modal window parameters.
-    springboard_group_prepare_validation_modal($form, $form_state);
-
-    // Add the validation handlers to the form.
-    springboard_group_load_ajax_validation_handlers($form, $form_state);
+    // Show a read-only contact ownership field.
+    $language = $form['user_sb_group_ref']['#language'];
+    $form['user_sb_group_ref'][$language]['#access'] = FALSE;
+    if (!empty($form['user_sb_group_ref'][$language]['#default_value'])) {
+      $titles = array();
+      foreach ($form['user_sb_group_ref'][$language]['#default_value'] as $group_id) {
+        $group = node_load($group_id);
+        $titles[] = check_plain($group->title);
+      }
+      $form['contact_group_display']['#markup'] = theme('item_list', array(
+        'items' => $titles,
+        'title' => 'Contact Ownership',
+      ));
+    }
   }
 }
 
@@ -233,9 +213,9 @@ function springboard_group_get_contact_group_gids($uid) {
   if (!isset($contact_gids)) {
     $contact = user_load($uid);
     $contact_gids = array();
-    if (!empty($contact->og_group_ref_user)) {
+    if (!empty($contact->user_sb_group_ref)) {
       $contact_wrapper = entity_metadata_wrapper('user', $contact);
-      $groups = $contact_wrapper->og_group_ref_user->value();
+      $groups = $contact_wrapper->user_sb_group_ref->value();
       foreach ($groups as $group) {
         $contact_gids[] = $group->nid;
       }

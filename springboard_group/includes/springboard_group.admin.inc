@@ -216,10 +216,10 @@ function springboard_group_entity_settings_form() {
     }
 
     $disallowed_multiple = array(
-      //'rules_config:rules_config',
       'commerce_cardonfile:commerce_cardonfile',
       'commerce_customer_profile:billing',
       'commerce_order:commerce_order',
+      'user:user',
     );
 
     if (!in_array($type, $disallowed) && !in_array($type, $disallowed_multiple)) {
@@ -306,23 +306,88 @@ function springboard_group_entities_settings_form_submit($form, $form_state) {
  *   The entity type name.
  */
 function springboard_group_add_group_reference_field($bundle, $type) {
-  $og_field = og_fields_info('og_group_ref');
-  $og_field['field']['settings']['target_bundles'] = array('springboard_group' => 'springboard_group');
-  $og_field['instance']['settings']['behaviors']['og_widget']['admin']['widget_type'] = 'options_select';
-  $og_field['field']['settings']['handler'] = 'og_springboard_og';
-  $og_field['instance']['display']['default']['type'] = 'hidden';
-  $og_field['instance']['display']['default']['label'] = 'hidden';
-  $og_field['instance']['display']['teaser']['type'] = 'hidden';
-  $og_field['instance']['display']['teaser']['label'] = 'hidden';
+  if ($bundle != 'user') {
+    $og_field = og_fields_info('og_group_ref');
+    $og_field['field']['settings']['target_bundles'] = array('springboard_group' => 'springboard_group');
+    $og_field['instance']['settings']['behaviors']['og_widget']['admin']['widget_type'] = 'options_select';
+    $og_field['field']['settings']['handler'] = 'og_springboard_og';
+    $og_field['field']['settings']['handler_settings']['sort'] = array(
+      'direction' => 'ASC',
+      'property' => 'title',
+      'type' => 'property',
+    );
+    $og_field['field']['settings']['handler_settings']['target_bundles'] = array(
+      'springboard_group' => 'springboard_group',
+    );
 
-  // Enable Entity reference prepopulate.
-  $og_field['instance']['settings']['behaviors']['prepopulate'] = array(
-    'status' => TRUE,
-    'action' => 'none',
-    'fallback' => 'none',
-    'skip_perm' => FALSE,
-  );
-  og_create_field('og_group_ref_' . substr($bundle, 0, 19), $type, $bundle, $og_field);
+    $og_field['instance']['display']['default']['type'] = 'hidden';
+    $og_field['instance']['display']['default']['label'] = 'hidden';
+    $og_field['instance']['display']['teaser']['type'] = 'hidden';
+    $og_field['instance']['display']['teaser']['label'] = 'hidden';
+
+    // Enable Entity reference prepopulate.
+    $og_field['instance']['settings']['behaviors']['prepopulate'] = array(
+      'status' => TRUE,
+      'action' => 'none',
+      'fallback' => 'none',
+      'skip_perm' => FALSE,
+    );
+    og_create_field('og_group_ref_' . substr($bundle, 0, 19), $type, $bundle, $og_field);
+  }
+  else {
+    // Users get an ordinary entity reference field.
+    $entity_reference_field['field']['module'] = 'entityreference';
+    $entity_reference_field['field']['type'] = 'entityreference';
+    $entity_reference_field['field']['cardinality'] = -1;
+    $entity_reference_field['field']['settings']['target_bundles'] = array('springboard_group' => 'springboard_group');
+    $entity_reference_field['field']['settings']['handler'] = 'base';
+    $entity_reference_field['field']['settings']['handler_settings']['behaviors']['views-select-list']['status'] = 0;
+    $entity_reference_field['field']['settings']['handler_settings']['sort'] = array(
+      'direction' => 'ASC',
+      'property' => 'title',
+      'type' => 'property',
+    );
+    $entity_reference_field['field']['settings']['handler_settings']['target_bundles'] = array(
+      'springboard_group' => 'springboard_group',
+    );
+
+    $entity_reference_field['instance']['widget'] = array(
+      'active' => 1,
+      'module' => 'options',
+      'settings' => array(),
+      'type' => 'options_select',
+      'weight' => 29,
+    );
+    $entity_reference_field['instance']['display']['default']['type'] = 'hidden';
+    $entity_reference_field['instance']['display']['default']['label'] = 'hidden';
+    $entity_reference_field['instance']['display']['teaser']['type'] = 'hidden';
+    $entity_reference_field['instance']['display']['teaser']['label'] = 'hidden';
+    $entity_reference_field['instance']['label'] = t('Contact owners');
+    $entity_reference_field['instance']['description'] = t('The groups this contact is owned by.');
+    // Enable Entity reference prepopulate.
+    $entity_reference_field['instance']['settings']['behaviors']['prepopulate'] = array(
+      'status' => 0,
+    );
+
+    $field = field_info_field('user_sb_group_ref');
+    // Allow overriding the field name.
+    $entity_reference_field['field']['field_name'] = 'user_sb_group_ref';
+    if (empty($field)) {
+      $field = field_create_field($entity_reference_field['field']);
+    }
+
+    $instance = field_info_instance($type, 'user_sb_group_ref', $bundle);
+    if (empty($instance)) {
+      $instance = $entity_reference_field['instance'];
+      $instance += array(
+        'field_name' => 'user_sb_group_ref',
+        'bundle' => $bundle,
+        'entity_type' => $type,
+      );
+
+      field_create_instance($instance);
+    }
+  }
 }
 
 /**
