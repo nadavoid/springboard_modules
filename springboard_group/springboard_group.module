@@ -897,3 +897,14 @@ function springboard_group_module_implements_alter(&$implementations, $hook) {
     $implementations['springboard_group'] = $group;
   }
 }
+
+/**
+ * Implements hook_form_node_type_form_alter().
+ */
+function springboard_group_form_node_type_form_alter(&$form, &$form_state) {
+  // Don't allow group settings visible on node type forms because it
+  // doesn't set the correct handler or field name for springboard groups.
+  if (isset($form['og'])) {
+    $form['og']['#access'] = FALSE;
+  }
+}
