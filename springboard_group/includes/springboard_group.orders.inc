@@ -508,7 +508,12 @@ function springboard_group_commerce_payment_transaction_access($op, $transaction
   else {
     $order = NULL;
   }
-  return springboard_group_commerce_payment_transaction_order_access($op, $order, $account);
+  if (springboard_group_commerce_orders_are_grouped()) {
+    return springboard_group_commerce_payment_transaction_order_access($op, $order, $account);
+  }
+  else {
+    return commerce_payment_transaction_order_access($op, $order, $account);
+  }
 }
 
 

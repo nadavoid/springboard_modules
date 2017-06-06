@@ -87,8 +87,13 @@ function fundraiser_commerce_refund_form_access($order, $transaction) {
   if (time() - $transaction->created > 86400 * 120) {
     return FALSE;
   }
-  // Allow access if the user can update this transaction.
-  return commerce_payment_transaction_access('update', $transaction);
+  if (module_exists('springboard_group')) {
+    return springboard_group_commerce_payment_transaction_access('update', $transaction);
+  }
+  else {
+    // Allow access if the user can update this transaction.
+    return commerce_payment_transaction_access('update', $transaction);
+  }
 }
 
 /**
