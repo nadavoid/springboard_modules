@@ -46,8 +46,9 @@ function springboard_group_views_query_alter(&$view, &$query) {
   }
 
   // Array of alterable views.
-  $alter = variable_get('group_restricted_views', []);
+  $alter = array_filter(variable_get('group_restricted_views', []));
   if (in_array($view->name, $alter)) {
+
     // First check if the query is selecting a groupable entity. If it isn't,
     // we skip the query alteration.
     //$grouped = springboard_group_views_query_check_content_type($query);

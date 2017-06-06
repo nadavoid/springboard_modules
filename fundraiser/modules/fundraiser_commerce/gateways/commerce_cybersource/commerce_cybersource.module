@@ -1375,6 +1375,7 @@ function commerce_cybersource_cc_type_code($text) {
     case 'amex':
       return '003';
     case 'discover':
+    case 'discover card':
       return '004';
     case 'dc':
       return '005';
@@ -1739,8 +1740,8 @@ function commerce_cybersource_form_commerce_cardonfile_update_form_alter(&$form,
 /**
  * Card on file callback: updates the associated customer payment profile.
  */
-function commerce_cybersource_cardonfile_update($form, &$form_state, $payment_method, $card_data) {
-  $result = commerce_cybersource_update_customer_profile_request($payment_method, $form_state, $card_data);
+function commerce_cybersource_cardonfile_update($form, &$form_state, $payment_method, $card_data, $update_card = TRUE) {
+  $result = commerce_cybersource_update_customer_profile_request($payment_method, $form_state, $card_data, $update_card);
 
   if ($result) {
     return $result->paySubscriptionUpdateReply->reasonCode == 100;
@@ -1815,28 +1816,33 @@ function commerce_cybersource_retrieve_customer_profile_request($payment_method,
  *
  * @param type $card_data
  */
-function commerce_cybersource_update_customer_profile_request($payment_method, $form_state, $card_data) {
+function commerce_cybersource_update_customer_profile_request($payment_method, $form_state, $card_data, $update_card = TRUE) {
   $pane_values = $form_state['values'];
   $request = new stdClass();
   $request->merchantReferenceCode = 'Update Profile ' . $card_data->remote_id;
   $request->paySubscriptionUpdateService = (object) array('run' => 'true');
   $request->recurringSubscriptionInfo = (object) array('subscriptionID' => $card_data->remote_id);
-  if (isset($pane_values['credit_card']['number'])) {
-    $number = $pane_values['credit_card']['number'];
+
+  if (isset($pane_values['billto'])) {
+    $request->billTo = $pane_values['billto'];
   }
-  else {
-    $number = $card_data->card_number;
-  }
+
   // Add the credit card details.
-  $request->card = (object) array(
-    'accountNumber' => $number,
-    'expirationMonth' => $pane_values['credit_card']['exp_month'],
-    'expirationYear' => $pane_values['credit_card']['exp_year'],
-  );
-    if (isset($pane_values['billto'])) {
-      $request->billTo = $pane_values['billto'];
+  if ($update_card) {
+    if (isset($pane_values['credit_card']['number'])) {
+      $number = $pane_values['credit_card']['number'];
     }
-  // Determine the credit card type if possible for use in later code.
+    else {
+      $number = $card_data->card_number;
+    }
+
+    $request->card = (object) array(
+      'accountNumber' => $number,
+      'expirationMonth' => $pane_values['credit_card']['exp_month'],
+      'expirationYear' => $pane_values['credit_card']['exp_year'],
+    );
+
+    // Determine the credit card type if possible for use in later code.
     if (!empty($pane_values['credit_card']['number']) && empty($pane_values['credit_card']['type'])) {
       module_load_include('inc', 'commerce_payment', 'includes/commerce_payment.credit_card');
       $card_type = commerce_payment_validate_credit_card_type($pane_values['credit_card']['number'], array_keys(commerce_payment_credit_card_types()));
@@ -1851,14 +1857,15 @@ function commerce_cybersource_update_customer_profile_request($payment_method, $
       $request->card->cardType = commerce_cybersource_cc_type_code($card_type);
     }
 
-  // Add the CVV data if included.
-  if (isset($pane_values['credit_card']['code'])) {
-    $request->card->cvNumber = $pane_values['credit_card']['code'];
-  }
+    // Add the CVV data if included.
+    if (isset($pane_values['credit_card']['code'])) {
+      $request->card->cvNumber = $pane_values['credit_card']['code'];
+    }
 
-  // Do not update the profile if card type is unavailable:
-  if (!isset($request->card->cardType) || empty($request->card->cardType)) {
-    return FALSE;
+    // Do not update the profile if card type is unavailable:
+    if (!isset($request->card->cardType) || empty($request->card->cardType)) {
+      return FALSE;
+    }
   }
 
   return commerce_cybersource_soap_api_request($payment_method, $request);
@@ -1879,37 +1886,37 @@ function commerce_cybersource_delete_customer_profile_request($payment_method, $
 }
 
 /**
- * Implements hook_fundraiser_donation_success().
+ * Implements hook_form_FORM_ID_alter().
  */
-function commerce_cybersource_fundraiser_donation_success($donation) {
-  // If this donor made another donation prior to this one, check for updated address field values and trigger an
-  // update of the donor's Cybersource profile if any field is different:
-  if (isset($donation->did) && isset($donation->donation) && is_array($donation->donation))  {
-    $previous_did = db_query("SELECT did FROM {fundraiser_donation} WHERE uid = :uid AND did != :current_did ORDER BY did DESC LIMIT 1",
-      array(':uid' => $donation->uid, ':current_did' => $donation->did))
-      ->fetchField();
-    if ($previous_did) {
-      $previous_donation = fundraiser_donation_load($previous_did);
-      if (isset($previous_donation->donation) && is_array($previous_donation->donation)) {
-        $address_fields = array(
-          'first_name',
-          'last_name',
-          'address',
-          'address_line_2',
-          'city',
-          'country',
-          'state', 
-          'zip',
-        );
-        foreach ($address_fields as $address_field) {
-          $current_field_val = isset($donation->donation[$address_field]) ? $donation->donation[$address_field] : '';
-          $previous_field_val = isset($previous_donation->donation[$address_field]) ? $previous_donation->donation[$address_field] : '';
-          if ($current_field_val != $previous_field_val) {
-            $donation->update_payment = TRUE;
-            break;
-          }
-        }
-      }
+function commerce_cybersource_form_fundraiser_update_billing_form_alter(&$form, $form_state) {
+  if (!empty($form['#fundraiser_data']['donation']->gateway['id'])) {
+    list($method_id, $rule_name) = explode('|', $form['#fundraiser_data']['donation']->gateway['id']);
+
+    if ($method_id == 'cybersource_soap_cc') {
+      // Add an additional submit handler to update the Cybersource profile.
+      $form['billing_information']['address_update']['#submit'][] = 'commerce_cybersource_form_fundraiser_update_billing_form_address';
+    }
+  }
+}
+
+/**
+ * Submit handler to update the Cybersource profile during an address update.
+ */
+function commerce_cybersource_form_fundraiser_update_billing_form_address($form, $form_state) {
+  // Everything has been updated, load it all up and save the remote profile.
+  if (!empty($form['#donation'])) {
+    $card = _fundraiser_donation_cardonfile_card($form['#donation']);
+    $pane_form = [];
+    $order = commerce_order_load($form['#donation']->did);
+
+    // We only need to include the billto data in the update.
+    $pane_values['values']['billto'] = commerce_cybersource_address('billing', $order, 'commerce_customer_billing');
+
+    // Send the update request, set the last var to FALSE to send only billing.
+    $method = $form['#donation']->gateway['gateway_details'];
+    $success = commerce_cybersource_cardonfile_update($pane_form, $pane_values, $method, $card, FALSE);
+    if ($success === FALSE) {
+      drupal_set_message(t("There was an error saving the remote profile. Please try again."));
     }
   }
 }
