@@ -872,3 +872,14 @@ function springboard_group_user_can_access_type_in_group($type, $account = NULL)
 }
 
 
+/**
+ * Implements hook_form_node_type_form_alter().
+ */
+function springboard_group_form_node_type_form_alter(&$form, &$form_state) {
+  // Don't allow group settings visible on node type forms because it
+  // doesn't set the correct handler or field name for springboard groups.
+  if (isset($form['og'])) {
+    $form['og']['#access'] = FALSE;
+  }
+}
+
