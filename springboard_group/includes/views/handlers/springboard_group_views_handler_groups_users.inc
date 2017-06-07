@@ -21,10 +21,8 @@ class springboard_group_views_handler_groups_users extends views_handler_field {
 
     if (!empty($user)) {
       $groups = array();
-      dpm(springboard_group_get_contact_group_gids($user->uid));
       foreach (springboard_group_get_contact_group_gids($user->uid) as $gid) {
         $group_node = node_load($gid);
-        dpm('dfd');
         if ($group_node->type == 'springboard_group') {
           $groups[] = l($group_node->title, 'node/' . $group_node->nid);
         }
