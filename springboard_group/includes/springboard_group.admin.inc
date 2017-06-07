@@ -339,7 +339,7 @@ function springboard_group_add_group_reference_field($bundle, $type) {
     $entity_reference_field['field']['module'] = 'entityreference';
     $entity_reference_field['field']['type'] = 'entityreference';
     $entity_reference_field['field']['cardinality'] = -1;
-    $entity_reference_field['field']['settings']['target_bundles'] = array('springboard_group' => 'springboard_group');
+    $entity_reference_field['field']['settings']['handler_settings']['target_bundles'] = array('springboard_group' => 'springboard_group');
     $entity_reference_field['field']['settings']['handler'] = 'base';
     $entity_reference_field['field']['settings']['handler_settings']['behaviors']['views-select-list']['status'] = 0;
     $entity_reference_field['field']['settings']['handler_settings']['sort'] = array(
