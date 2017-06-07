@@ -307,9 +307,14 @@ function springboard_group_entities_settings_form_submit($form, $form_state) {
 function springboard_group_add_group_reference_field($bundle, $type) {
 
   $og_field = og_fields_info('og_group_ref');
-  $og_field['field']['settings']['target_bundles'] = array('springboard_group' => 'springboard_group');
   $og_field['instance']['settings']['behaviors']['og_widget']['admin']['widget_type'] = 'options_select';
   $og_field['field']['settings']['handler'] = 'og_springboard_og';
+  $og_field['field']['settings']['handler_settings']['target_bundles'] = array('springboard_group' => 'springboard_group');
+  $og_field['field']['settings']['handler_settings']['sort'] = array(
+    'direction' => 'ASC',
+    'property' => 'title',
+    'type' => 'property',
+  );
   $og_field['instance']['display']['default']['type'] = 'hidden';
   $og_field['instance']['display']['default']['label'] = 'hidden';
   $og_field['instance']['display']['teaser']['type'] = 'hidden';
