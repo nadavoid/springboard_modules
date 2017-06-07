@@ -40,14 +40,6 @@ function _springboard_group_install_permissions_default() {
 
   $permissions = array();
 
-  if (module_exists('clone')) {
-    $permissions['clone node'] = array(
-      'roles' => array(
-        'Affiliate editor' => 'Affiliate editor',
-      ),
-    );
-  }
-
   if (module_exists('contextual')) {
     $permissions['access contextual links'] = array(
       'roles' => array(
