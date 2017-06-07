@@ -359,7 +359,7 @@ function springboard_group_load_ajax_validation_handlers(&$form, &$form_state) {
       springboard_group_fundraiser_node_form__alter($form, $form_state, $callback);
     }
     if (module_exists('page_wrappers')
-      && springboard_group_node_type_is_grouped('page_wrappers')
+      && springboard_group_node_type_is_grouped('page_wrapper')
       && (_page_wrappers_enabled_type($form['#node']) || $type == 'page_wrapper')) {
       springboard_group_page_wrappers_node_form__alter($form, $form_state, $callback);
     }
@@ -371,7 +371,7 @@ function springboard_group_load_ajax_validation_handlers(&$form, &$form_state) {
       $webform_types = variable_get('webform_node_types');
       if (module_exists('email_wrappers')
         && in_array($type, $webform_types)
-        && springboard_group_node_type_is_grouped('email_wrappers')) {
+        && springboard_group_node_type_is_grouped('email_wrapper')) {
         springboard_group_email_wrappers_node_form__alter($form, $form_state);
       }
       if (module_exists('webform_ab')
