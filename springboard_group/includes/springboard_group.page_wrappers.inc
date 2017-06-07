@@ -159,6 +159,12 @@ function springboard_group_page_wrappers_filter(&$wrappers, $form, $form_state) 
           $gids = $node_groups['node'];
         }
       }
+      else {
+        // There's no default value, we're on the node/add page.
+        $language = $form['og_group_ref_' . substr($form['#node']->type, 0, 19)]['#language'];
+        $option = $form['og_group_ref_' . substr($form['#node']->type, 0, 19)][$language][0]['default'];
+        $gids = array_keys($option['#options']);
+      }
       // Alter the form options.
       $wrappers = springboard_group_page_wrappers_list_wrappers_by_group($gids);
     }
