@@ -123,10 +123,9 @@ function springboard_group_page_wrappers_filter(&$wrappers, $form, $form_state) 
   if ($wrappers_are_grouped) {
 
     $trigger = NULL;
-    if (!empty($form_state['triggering_element'])) {
+    if (!empty($form_state['triggering_element']['#ajax']['callback'])) {
       $trigger = $form_state['triggering_element']['#ajax']['callback'];
     }
-
     // If a group has been selected limit available wrappers to
     // ones assigned to the selected group.
     // @see springboard_group_ajax_callback().

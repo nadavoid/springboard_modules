@@ -233,7 +233,7 @@ function springboard_group_form_node_form_alter(&$form, &$form_state) {
     // Not currently used, but would be required for p2p or any other
     // content type that uses entity reference fields (apart from actions
     // and wrappers) to reference grouped content.
-    springboard_group_context_entityreference($form, $form_state);
+    //springboard_group_context_entityreference($form, $form_state);
 
     // Set up the validation modal window parameters.
     springboard_group_prepare_validation_modal($form, $form_state);
