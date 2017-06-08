@@ -66,7 +66,6 @@ function springboard_group_node_settings_form() {
     'p2p_campaign',
     'p2p_campaign_landing',
     'p2p_category',
-    'p2p_donation_form',
     'p2p_personal_campaign',
   );
 
