@@ -113,43 +113,69 @@ function springboard_group_enable() {
 /**
  * Implements hook_update_N().
  *
- * Update Springboard Groups field instances to be displayed on teaser node view.
+ * Update Springboard Groups field instances to be
+ * displayed on teaser node view.
  */
 
 function springboard_group_update_7001() {
   module_load_include('inc', 'springboard_group', 'includes/install/springboard_group.install_fields');
   $instances = springboard_group_field_default_field_instances();
-  foreach($instances as $instance) {
+  foreach ($instances as $instance) {
     field_update_instance($instance);
+  }
+}
+
+/*
+ * Add a sort to existing group fields. Set the bundle target correctly.
+ */
+function springboard_group_update_7002() {
+  foreach (field_info_fields() as $field_name => $field) {
+    if ($field['type'] == 'entityreference'
+      && $field['settings']['handler'] == 'og_springboard_og'
+      && strpos($field_name, 'og_group_ref_') !== FALSE) {
+      $base = field_info_field($field_name);
+      $base['settings']['handler_settings']['target_bundles'] = array('springboard_group' => 'springboard_group');
+      $base['settings']['handler_settings']['sort'] = array(
+        'direction' => 'ASC',
+        'property' => 'title',
+        'type' => 'property',
+      );
+      field_update_field($base);
+    }
   }
 }
 
 /**
  * Update permissions to be under purview of their respective module.
  */
-
-function springboard_group_update_7002() {
+function springboard_group_update_7003() {
   $old_webform_perms = db_query('
     SELECT * FROM {og_role_permission}
     WHERE module = :mod
     AND permission LIKE :webform',
-      array(':mod' => 'springboard_group', ':webform' => '%' . db_like('webform') . '%')
-    );
-   foreach ($old_webform_perms as $perm) {
-     db_update('og_role_permission')
-       ->fields(array(
-         'module' => 'webform',
-       ))
-       ->condition('rid', $perm->rid)
-       ->condition('permission', $perm->permission)
-       ->execute();
-   }
+    array(
+      ':mod' => 'springboard_group',
+      ':webform' => '%' . db_like('webform') . '%'
+    )
+  );
+  foreach ($old_webform_perms as $perm) {
+    db_update('og_role_permission')
+      ->fields(array(
+        'module' => 'webform',
+      ))
+      ->condition('rid', $perm->rid)
+      ->condition('permission', $perm->permission)
+      ->execute();
+  }
 
   $old_payment_perms = db_query('
     SELECT * FROM {og_role_permission}
     WHERE module = :mod
     AND permission LIKE :payment',
-    array(':mod' => 'springboard_group', ':payment' => '%' . db_like('payment') . '%')
+    array(
+      ':mod' => 'springboard_group',
+      ':payment' => '%' . db_like('payment') . '%'
+    )
   );
   foreach ($old_payment_perms as $perm) {
     db_update('og_role_permission')

@@ -100,15 +100,6 @@ function page_wrappers_settings_form($form, $form_state) {
     // Add a flag to the page wrapper fieldset that we have rulesets
     $form['page_wrappers_settings']['page_wrapper_default_node_config']['#has_rulesets'] = TRUE;
   }
-
-  if (module_exists('og')) {
-    $form['page_wrappers_filter_by_og'] = array(
-      '#type' => 'checkbox',
-      '#title' => t('Filter available Page Wrappers by group'),
-      '#description' => t('When checked, the list of available page wrappers displayed on node edit forms will be limited to page wrappers that are assigned to one or more groups the user is enrolled in.'),
-      '#default_value' => variable_get('page_wrappers_filter_by_og', FALSE),
-    );
-  }
   
   // Settings for caching on page wrapper node operations.
   $form['page_wrappers_cache_settings'] = array(

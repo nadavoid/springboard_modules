@@ -43,14 +43,27 @@ function springboard_group_fundraiser_node_form_gateway_validate_gateway($form, 
  */
 function springboard_group_fundraiser_check_gateways($form, $form_state) {
   // Get the group ID from the form values.
-  $language = $form['og_group_ref_' . $form['#node']->type]['#language'];
+  $language = $form['og_group_ref_' . substr($form['#node']->type, 0, 19)]['#language'];
   if (!empty($form_state['values'])) {
     $option = $form_state['values']['og_group_ref_' . substr($form['#node']->type, 0, 19)][$language];
     $gid = isset($option[0]['target_id']) ? $option[0]['target_id'] : '_none';
   }
   else {
     $option = $form['og_group_ref_' . substr($form['#node']->type, 0, 19)][$language][0]['default'];
-    $gid = !empty($option['#default_value'][0]) ? $option['#default_value'][0] : '_none';
+    if (!empty($option['#default_value'][0])) {
+      $gid = $option['#default_value'][0];
+    }
+    // There's no default value, we're on the node/add page.
+    elseif (!user_access('administer group')) {
+      // If the user is not an admin
+      // grab the first group.
+      $groups = array_keys($option['#options']);
+      $gid = reset($groups);
+    }
+    else {
+      // The user is an admin, default to "none".
+      $gid = '_none';
+    }
   }
   // Get the gateways and filter them by group ownership.
   $all_gateways = _fundraiser_gateway_info();
