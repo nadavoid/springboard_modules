@@ -195,7 +195,6 @@ function springboard_group_entity_settings_form() {
     'taxonomy_term:sba_organization_issues',
     'commerce_cardonfile:commerce_cardonfile',
     'commerce_customer_profile:billing',
-    'commerce_order:commerce_order',
     'commerce_product',
     'commerce_product:product',
     'commerce_product:fundraiser_ticket',
