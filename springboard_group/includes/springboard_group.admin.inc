@@ -186,19 +186,23 @@ function springboard_group_entity_settings_form() {
   }
 
   $disallowed = array(
+    'sba_message',
     'sba_message:sba_message_action_message',
     'sba_message:sba_social_action_twitter_message',
+    'taxonomy_term',
     'taxonomy_term:tags',
     'taxonomy_term:sba_legislative_issues',
     'taxonomy_term:sba_organization_issues',
     'commerce_cardonfile:commerce_cardonfile',
     'commerce_customer_profile:billing',
     'commerce_order:commerce_order',
+    'commerce_product',
     'commerce_product:product',
+    'commerce_product:fundraiser_ticket',
   );
 
   foreach ($entity_type_options as $type => $name) {
-    if (!in_array($type, $disallowed)) {
+    if (!in_array($type, $disallowed) && !in_array($disallowed, substr($type, 0, strpos($type, ':')))) {
       $name = str_replace('Rules configuration', 'Payment Gateways', $name);
       $form['springboard_group_entities'][$type] = array(
         '#type' => 'container',
