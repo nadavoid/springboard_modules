@@ -194,6 +194,7 @@ function springboard_group_entity_settings_form() {
     'commerce_cardonfile:commerce_cardonfile',
     'commerce_customer_profile:billing',
     'commerce_order:commerce_order',
+    'commerce_product:product',
   );
 
   foreach ($entity_type_options as $type => $name) {
