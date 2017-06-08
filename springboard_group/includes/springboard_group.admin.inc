@@ -66,7 +66,6 @@ function springboard_group_node_settings_form() {
     'p2p_campaign',
     'p2p_campaign_landing',
     'p2p_category',
-    'p2p_donation_form',
     'p2p_personal_campaign',
   );
 
@@ -194,6 +193,7 @@ function springboard_group_entity_settings_form() {
     'taxonomy_term:sba_organization_issues',
     'commerce_cardonfile:commerce_cardonfile',
     'commerce_customer_profile:billing',
+    'commerce_product:product',
   );
 
   foreach ($entity_type_options as $type => $name) {
