@@ -37,13 +37,14 @@ function springboard_group__commerce_order__og_permissions(&$items) {
   $orders_grouped = springboard_group_commerce_orders_are_grouped();
   if (!empty($orders_grouped)) {
 
-    $items['create orders in springboard group'] = array(
-      'title' => t('Create  orders in Springboard Group'),
-      'description' => '',
-      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
-      'default role' => array(),
-      'module' => 'commerce_order',
-    );
+//    $items['create orders in springboard group'] = array(
+//      'title' => t('Create  orders in Springboard Group'),
+//      'description' => '',
+//      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+//      'default role' => array(),
+//      'module' => 'commerce_order',
+//    );
+
     $items['edit any order in springboard group'] = array(
       'title' => t('Edit any order in Springboard Group'),
       'description' => '',
@@ -52,13 +53,13 @@ function springboard_group__commerce_order__og_permissions(&$items) {
       'module' => 'commerce_order',
     );
 
-    $items['administer orders in springboard group'] = array(
-      'title' => t('Administer orders in Springboard Group'),
-      'description' => '',
-      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
-      'default role' => array(),
-      'module' => 'commerce_order',
-    );
+//    $items['administer orders in springboard group'] = array(
+//      'title' => t('Administer orders in Springboard Group'),
+//      'description' => '',
+//      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+//      'default role' => array(),
+//      'module' => 'commerce_order',
+//    );
 
     $items['view any order in springboard group'] = array(
       'title' => t('View any order in Springboard Group'),
@@ -100,14 +101,6 @@ function springboard_group__commerce_order__og_permissions(&$items) {
       'module' => 'commerce_payment',
     );
 
-    $items['edit any card data in springboard group'] = array(
-      'title' => t('Edit any card data in Springboard Group'),
-      'description' => '',
-      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
-      'default role' => array(),
-      'module' => 'commerce_cardonfile',
-    );
-
     $items['view any card data in springboard group'] = array(
       'title' => t('View any card data in Springboard Group'),
       'description' => '',
@@ -116,21 +109,6 @@ function springboard_group__commerce_order__og_permissions(&$items) {
       'module' => 'commerce_cardonfile',
     );
 
-    $items['create card data in springboard group'] = array(
-      'title' => t('Create card data  in Springboard Group'),
-      'description' => '',
-      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
-      'default role' => array(),
-      'module' => 'commerce_cardonfile',
-    );
-
-    $items['delete any card data in springboard group'] = array(
-      'title' => t('Delete any card data in Springboard Group'),
-      'description' => '',
-      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
-      'default role' => array(),
-      'module' => 'commerce_cardonfile',
-    );
   }
 }
 

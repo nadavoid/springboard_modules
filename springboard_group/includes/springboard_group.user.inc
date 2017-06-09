@@ -227,13 +227,14 @@ function springboard_group_get_contact_group_gids($uid) {
 function springboard_group__user__og_permissions(&$items) {
   if (springboard_group_users_are_grouped()) {
 
-    $items['cancel account in springboard group'] = array(
-      'title' => t('Cancel accounts in Springboard Group'),
-      'description' => '',
-      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
-      'default role' => array(),
-      'module' => 'user',
-    );
+//    $items['cancel account in springboard group'] = array(
+//      'title' => t('Cancel accounts in Springboard Group'),
+//      'description' => '',
+//      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+//      'default role' => array(),
+//      'module' => 'user',
+//    );
+
     $items['administer users in springboard group'] = array(
       'title' => t('Administer users in Springboard Group'),
       'description' => '',
