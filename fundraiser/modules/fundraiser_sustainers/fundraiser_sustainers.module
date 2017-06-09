@@ -144,7 +144,8 @@ function fundraiser_sustainers_menu() {
     'title' => 'Charge recurring donation now',
     'page callback' => 'fundraiser_sustainers_charge_now',
     'page arguments' => array(2),
-    'access arguments' => array('fastforward recurring donations'),
+    'access callback' => 'fundraiser_sustainers_fastforward_access',
+    'access arguments' =>  array(2),
     'type' => MENU_CALLBACK,
   );
   $items['sustainer-series/%fundraiser_donation/billing'] = array(
@@ -269,6 +270,26 @@ function fundraiser_sustainers_menu() {
   );
 
   return $items;
+}
+
+
+function fundraiser_sustainers_fastforward_access($did) {
+  $access = FALSE;
+
+  if (user_access('fastforward recurring donations')) {
+    $access = TRUE;
+  }
+
+  $access_opinion = module_invoke_all('fundraiser_sustainers_fastforward_access', $did);
+
+  if (in_array(FALSE, $access_opinion, TRUE)) {
+    $access = FALSE;
+  }
+  elseif (in_array(TRUE, $access_opinion, TRUE)) {
+    $access = TRUE;
+  }
+
+  return $access;
 }
 
 /**
@@ -2231,7 +2252,7 @@ function fundraiser_sustainers_edit_form($did) {
     $donations_header[] = t('Attempts');
   }
 
-  if (user_access('fastforward recurring donations')) {
+  if (fundraiser_sustainers_fastforward_access($donation->did)) {
     // Add a button to fastforward this particular donation
     $donations_header[] = t('Advance Charge to Today');
   }
@@ -2260,7 +2281,7 @@ function fundraiser_sustainers_edit_form($did) {
         $donations_row['attempts'] = $attempts;
       }
 
-      if (user_access('fastforward recurring donations')) {
+      if (fundraiser_sustainers_fastforward_access($donation->did)) {
         if (isset($this_donation->status_charged) && !$this_donation->status_charged && ($this_donation->status != 'auto_canceled')) {
           // Add a button to fastforward this particular donation
           $donations_row['ffwd'] = l(t('advance charge'), 'fundraiser_sustainers/ffwd/' . $this_donation->did,
@@ -2359,14 +2380,7 @@ function fundraiser_sustainers_edit_form($did) {
     $cancel_form = t('This recurring donation has been canceled. Your reason given was: %reason', array('%reason' => $canceled));
   }
 
-  // Allow other modules to determine access to this form.
-  $group_access = module_invoke_all('fundraiser_sustainers_cancel_future_donation_access', $donation);
-  $cancel_future_donation_access = NULL;
-  if (in_array(TRUE, $group_access, TRUE)) {
-    $cancel_future_donation_access = TRUE;
-  }
-
-  if ($cancel_future_donation_access) {
+  if (fundraisers_sustainers_cancel_access($donation)) {
     $cancel_form = '<div id="donation-cancel-form"><h2>Cancel Future Donations</h2>' . $cancel_form . '</div>';
   }
   else {
@@ -3212,15 +3226,7 @@ function fundraiser_sustainers_add_order_to_series($donation, $next_charge) {
  * Creates form to cancel donations.
  */
 function fundraiser_sustainers_cancel_form($form, &$form_state, $donation) {
-
-  // Allow other modules to determine access to this form.
-  $cancel_future_donation_access = NULL;
-  $group_access = module_invoke_all('fundraiser_sustainers_cancel_future_donation_access', $donation);
-  if (in_array(TRUE, $group_access, TRUE)) {
-    $cancel_future_donation_access = TRUE;
-  }
-
-  $form['#access'] = user_access('cancel future donations') || $cancel_future_donation_access;
+  $form['#access'] = fundraisers_sustainers_cancel_access($donation);
   // Otherwise, provide cancel button.
   $form['master_did'] = array(
     '#type' => 'hidden',
@@ -3243,6 +3249,20 @@ function fundraiser_sustainers_cancel_form($form, &$form_state, $donation) {
   );
   $form['#donation'] = $donation;
   return $form;
+}
+
+function fundraisers_sustainers_cancel_access($donation) {
+  $cancel_access = user_access('cancel future donations');
+  // Allow other modules to determine access to this form.
+  $access_alter = module_invoke_all('fundraiser_sustainers_cancel_future_donation_access', $donation);
+  if (in_array(FALSE, $access_alter, TRUE)) {
+    $cancel_access = FALSE;
+  }
+  elseif (in_array(TRUE, $access_alter, TRUE)) {
+    $cancel_access = TRUE;
+  }
+
+  return $cancel_access;
 }
 
 /**
