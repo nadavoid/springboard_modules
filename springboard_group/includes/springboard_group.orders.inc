@@ -565,19 +565,19 @@ function springboard_group_fundraiser_sustainers_check_access($did) {
     $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
     $group = $order_wrapper->og_group_ref_commerce_order->value();
     if (!empty($group[0]->nid)) {
-      if (arg(4) == 'recurring'
-        && empty(arg(5))
-      ) {
-        return springboard_group_check_group_perm($group[0]->nid, 'view any order in springboard group', $GLOBALS['user']->uid);
-      }
-
-      elseif (arg(4) == 'recurring'
-        && empty(arg(5) == 'edit')
-      ) {
-        return springboard_group_check_group_perm($group[0]->nid, 'edit any order in springboard group', $GLOBALS['user']->uid);
+      if (!user_access('administer group') && !user_access('administrate recurring donations')) {
+        if (arg(4) == 'recurring'
+          && empty(arg(5))
+        ) {
+          return springboard_group_check_group_perm($group[0]->nid, 'view any order in springboard group', $GLOBALS['user']->uid);
+        }
+        elseif (arg(4) == 'recurring'
+          && empty(arg(5) == 'edit')
+        ) {
+          return springboard_group_check_group_perm($group[0]->nid, 'edit any order in springboard group', $GLOBALS['user']->uid);
+        }
       }
     }
-
     else {
       if (!user_access('administer group') && !user_access('administrate recurring donations')) {
         return FALSE;
