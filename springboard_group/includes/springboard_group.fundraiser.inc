@@ -244,3 +244,20 @@ function springboard_group__fundraiser__og_permissions(&$items) {
 
   }
 }
+
+function springboard_group_fundraiser_sustainers_cancel_future_donation_access($donation) {
+  $order = commerce_order_load($donation->did);
+  $wrapper = entity_metadata_wrapper('commerce_order', $order);
+  $gids = $wrapper->og_group_ref_commerce_order->raw();
+  dpm($gids);
+  if (!empty($gids)) {
+    foreach ($gids as $gid) {
+      if (springboard_group_check_group_perm($gid, 'cancel future donations in springboard group', $GLOBALS['user']->uid)) {
+        return TRUE;
+      }
+    }
+    if (user_access('administer group')) {
+      return TRUE;
+    }
+  }
+}

@@ -2358,7 +2358,15 @@ function fundraiser_sustainers_edit_form($did) {
   else {
     $cancel_form = t('This recurring donation has been canceled. Your reason given was: %reason', array('%reason' => $canceled));
   }
-  if (user_access('cancel future donations')) {
+
+  // Allow other modules to determine access to this form.
+  $group_access = module_invoke_all('fundraiser_sustainers_cancel_future_donation_access', $donation);
+  $cancel_future_donation_access = NULL;
+  if (in_array(TRUE, $group_access, TRUE)) {
+    $cancel_future_donation_access = TRUE;
+  }
+
+  if ($cancel_future_donation_access) {
     $cancel_form = '<div id="donation-cancel-form"><h2>Cancel Future Donations</h2>' . $cancel_form . '</div>';
   }
   else {
@@ -3204,8 +3212,15 @@ function fundraiser_sustainers_add_order_to_series($donation, $next_charge) {
  * Creates form to cancel donations.
  */
 function fundraiser_sustainers_cancel_form($form, &$form_state, $donation) {
-  // Only allow certain users to cancel future donations.
-  $form['#access'] = user_access('cancel future donations');
+
+  // Allow other modules to determine access to this form.
+  $cancel_future_donation_access = NULL;
+  $group_access = module_invoke_all('fundraiser_sustainers_cancel_future_donation_access', $donation);
+  if (in_array(TRUE, $group_access, TRUE)) {
+    $cancel_future_donation_access = TRUE;
+  }
+
+  $form['#access'] = user_access('cancel future donations') || $cancel_future_donation_access;
   // Otherwise, provide cancel button.
   $form['master_did'] = array(
     '#type' => 'hidden',
