@@ -201,7 +201,7 @@ function springboard_group_entity_settings_form() {
   );
 
   foreach ($entity_type_options as $type => $name) {
-    if (!in_array($type, $disallowed) && !in_array($disallowed, substr($type, 0, strpos($type, ':')))) {
+    if (!in_array($type, $disallowed) && !in_array(substr($type, 0, strpos($type, ':')), $disallowed)) {
       $name = str_replace('Rules configuration', 'Payment Gateways', $name);
       $form['springboard_group_entities'][$type] = array(
         '#type' => 'container',
