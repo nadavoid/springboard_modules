@@ -10,6 +10,21 @@
  * Alter the wrappers options if a node is grouped.
  */
 function springboard_group_page_wrappers_node_settings_form_wrappers_alter(&$wrappers, $form, $form_state) {
+
+  // Don't alter if there's an ajax event unrelated to groups.
+  if (!empty($form_state['values'])) {
+
+    $trigger = NULL;
+    if (!empty($form_state['triggering_element']['#ajax']['callback'])) {
+      $trigger = $form_state['triggering_element']['#ajax']['callback'];
+    }
+
+    if ($trigger != 'springboard_group_og_group_field_ajax_callback'
+      && $trigger != '_page_wrappers_add_js') {
+      return;
+    }
+  }
+
   $wrappers = springboard_group_page_wrappers_filter($wrappers, $form, $form_state);
 }
 
