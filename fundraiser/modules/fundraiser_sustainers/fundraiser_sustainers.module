@@ -273,6 +273,15 @@ function fundraiser_sustainers_menu() {
 }
 
 
+/**
+ * Check access to the fastforward function
+ *
+ * @param int $did
+ *   The donation id.
+ *
+ * @return bool
+ *   Access denied or access allowed.
+ */
 function fundraiser_sustainers_fastforward_access($did) {
   $access = FALSE;
 
@@ -280,8 +289,8 @@ function fundraiser_sustainers_fastforward_access($did) {
     $access = TRUE;
   }
 
+  // Let other modules, e.g., springboard groups, modify access.
   $access_opinion = module_invoke_all('fundraiser_sustainers_fastforward_access', $did);
-
   if (in_array(FALSE, $access_opinion, TRUE)) {
     $access = FALSE;
   }
@@ -352,7 +361,7 @@ function fundraiser_sustainers_check_access($did) {
   // Then check if the user is allowed.
   $access = user_access('administrate recurring donations');
 
-  // Allow other modules to grant / deny access.
+  // Allow other modules to grant / deny access, e.g., springboard groups.
   $access_alter = module_invoke_all('fundraiser_sustainers_check_access', $did);
   if (in_array(FALSE, $access_alter, TRUE)) {
     $access = FALSE;
@@ -3226,6 +3235,7 @@ function fundraiser_sustainers_add_order_to_series($donation, $next_charge) {
  * Creates form to cancel donations.
  */
 function fundraiser_sustainers_cancel_form($form, &$form_state, $donation) {
+  // Only allow certain users to cancel future donations.
   $form['#access'] = fundraisers_sustainers_cancel_access($donation);
   // Otherwise, provide cancel button.
   $form['master_did'] = array(
@@ -3251,6 +3261,14 @@ function fundraiser_sustainers_cancel_form($form, &$form_state, $donation) {
   return $form;
 }
 
+/**
+ * Check access to the sustainers cancel functions.
+ *
+ * @param  object $donation
+ *   The donation object.
+ *
+ * @return bool
+ */
 function fundraisers_sustainers_cancel_access($donation) {
   $cancel_access = user_access('cancel future donations');
   // Allow other modules to determine access to this form.
