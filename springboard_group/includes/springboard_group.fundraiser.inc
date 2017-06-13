@@ -301,3 +301,19 @@ function springboard_group_fundraiser_sustainers_fastforward_access($did) {
     }
   }
 }
+
+function springboard_group_fundraiser_offline_access($node) {
+  $node_wrapper = entity_metadata_wrapper('node', $node);
+  $group_field_name = 'og_group_ref_' . substr($node->type, 0, 19);
+  $gids = $node_wrapper->{$group_field_name}->raw();
+  if (!empty($gids)) {
+    foreach ($gids as $gid) {
+      if (springboard_group_check_group_perm($gid, 'submit springboard group donations offline', $GLOBALS['user']->uid)) {
+        return TRUE;
+      }
+    }
+    if (user_access('administer group') && user_access('submit donations offline')) {
+      return TRUE;
+    }
+  }
+}

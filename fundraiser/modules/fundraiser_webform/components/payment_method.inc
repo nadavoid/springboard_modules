@@ -229,7 +229,8 @@ function _webform_render_payment_method($component, $value = NULL, $filter = TRU
     $payment_methods = array_filter($component['extra']['payment_methods'], '_fundraiser_webform_payment_method_array_filter_enabled');
     // Sort all payment methods by weight.
     uasort($payment_methods, '_fundraiser_webform_payment_method_weight_compare');
-    drupal_alter('fundraiser_webform_payment_method_component_methods', $payment_methods);
+    $node = isset($component['nid']) ? node_load($component['nid']) : NULL;
+    drupal_alter('fundraiser_webform_payment_method_component_methods', $payment_methods, $node);
     // Loop through the payment methods to create our options and find the default
     $default = NULL;
     // If there is only one method this field is hidden

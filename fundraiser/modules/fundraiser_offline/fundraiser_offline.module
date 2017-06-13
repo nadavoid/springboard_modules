@@ -41,7 +41,7 @@ function fundraiser_offline_url_outbound_alter(&$path, &$options, $original_path
  */
 function fundraiser_offline_access_offline($node) {
   $offline_mode = !empty($_GET['offline']) ? $_GET['offline'] : FALSE;
-  if (fundraiser_is_donation_type($node->type) && user_access('submit donations offline') && !$offline_mode) {
+  if (fundraiser_is_donation_type($node->type) && fundraiser_offline_access($node) && !$offline_mode) {
     return TRUE;
   }
 
@@ -71,6 +71,32 @@ function fundraiser_offline_permission() {
 }
 
 /**
+ * Check access to fundraiser offline.
+ *
+ * @param object $node
+ *   The node context.
+ *
+ * @return bool
+ */
+function fundraiser_offline_access($node) {
+
+  // Check user access.
+  $access = user_access('submit donations offline');
+
+  // Ask other modules.
+  $access_opinion = module_invoke_all('fundraiser_offline_access', $node);
+  if (in_array(FALSE, $access_opinion, TRUE)) {
+    $access = FALSE;
+  }
+  elseif (in_array(TRUE, $access_opinion, TRUE)) {
+    $access = TRUE;
+  }
+
+  return $access;
+}
+
+
+/**
  * Implements hook_mail_alter(). We want to intercept any email comfirmations coming out to the user.
  */
 function fundraiser_offline_mail_alter(&$message) {
@@ -96,7 +122,7 @@ function fundraiser_offline_form_alter(&$form, $form_state, $form_id) {
         $offline_mode = TRUE;
       }
       // .. and Offline mode is enabled.
-      if ($offline_mode && user_access('submit donations offline')) {
+      if ($offline_mode && fundraiser_offline_access($node)) {
         $form['offline_mode'] = array(
           '#type' => 'value',
           '#value' => TRUE,
@@ -218,12 +244,11 @@ function fundraiser_offline_donation_form_validate(&$form, &$form_state) {
  * Implements hook_node_load().
  */
 function fundraiser_offline_node_load($nodes, $types) {
-  global $user;
   $offline = isset($_GET['offline']) ? $_GET['offline'] : FALSE;
-  $can_offline = user_access('submit donations offline', $user);
   foreach ($nodes as $node) {
     // If this isn't a fundraiser type, ignore it.
     if (fundraiser_is_donation_type($node->type)) {
+      $can_offline = fundraiser_offline_access($node);
       $nodes[$node->nid]->fundraiser_offline = $offline && $can_offline;
     }
   }
@@ -408,10 +433,9 @@ function _fundraiser_offline_fundraiser_donation_form_submit($form, &$form_state
  *
  * Limits available payment method radio button values.
  */
-function fundraiser_offline_fundraiser_webform_payment_component_payment_methods_alter(&$payment_methods) {
-  global $user;
+function fundraiser_offline_fundraiser_webform_payment_component_payment_methods_alter(&$payment_methods, $node) {
   $offline = isset($_GET['offline']) ? $_GET['offline'] : FALSE;
-  $user_may_offline = user_access('submit donations offline', $user);
+  $user_may_offline = fundraiser_offline_access($node);
   foreach ($payment_methods as $type => $method) {
     if (isset($method['offline_only']) && $method['offline_only']) {
       if (!$offline || !$user_may_offline) {
@@ -427,8 +451,8 @@ function fundraiser_offline_fundraiser_webform_payment_component_payment_methods
  * Modify available payment methods when individual payment method components
  * are rendered.
  */
-function fundraiser_offline_fundraiser_webform_payment_method_component_methods_alter(&$payment_methods) {
-  fundraiser_offline_fundraiser_webform_payment_component_payment_methods_alter($payment_methods);
+function fundraiser_offline_fundraiser_webform_payment_method_component_methods_alter(&$payment_methods, $node) {
+  fundraiser_offline_fundraiser_webform_payment_component_payment_methods_alter($payment_methods, $node);
 }
 /**
  * Hooks to handle a donation as an offline donation.

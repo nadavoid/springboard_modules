@@ -50,7 +50,7 @@ function _webform_render_payment_fields($component, $value = NULL, $filter = TRU
   // Use the enabled payment methods to create the payment fields
   if (!empty($payment_method_field['extra']['payment_methods'])) {
     $payment_methods = array_filter($payment_method_field['extra']['payment_methods'], '_fundraiser_webform_payment_method_array_filter_enabled');
-    drupal_alter('fundraiser_webform_payment_component_payment_methods', $payment_methods);
+    drupal_alter('fundraiser_webform_payment_component_payment_methods', $payment_methods, $node);
   }
   if (!empty($payment_methods)) {
     $element['#type'] = 'container';
