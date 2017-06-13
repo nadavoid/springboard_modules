@@ -584,3 +584,19 @@ function hook_fundraiser_get_donation_gateway($did, $gateway) {
 function hook_fundraiser_get_total_donations_by_nids($nids, $start, $end) {
 
 }
+
+/**
+ * For modules which need to alter the fundraiser node edit form immediately
+ * after fundraiser has altered it, this hook can be used, rather than
+ * relying on Drupal's internal hook order sequencing for hook_form_alter().
+ * Intended for use by Springboard Groups - any other implementation should
+ * check to to see if it impacts the groups integration.
+ *
+ * @param array $form
+ *   A donation node type's edit form array.
+ * @param array $form_state
+ *   A donation node type's edit form state array.
+ */
+function hook_fundraiser_donation_form_node_edit_form_alter(&$form, &$form_state) {
+
+}

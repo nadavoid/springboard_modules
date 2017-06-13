@@ -5,23 +5,38 @@
  */
 
 /**
- * Update the gateway form after AJAX reload triggered by group selection.
+ * Implements hook_fundraiser_donation_form_node_edit_form_alter().
  *
- * Called from springboard_group_node_form_alter().
+ * This hook was created for springboard groups specifically, so that the
+ * alterations to the payment gateway form don't disrupt other modules'
+ * attempts to alter the gateway element - e.g., ocd and fundraiser offline.
+ *
+ * For modules which need to alter the fundraiser node edit form immediately
+ * after fundraiser has altered it, this hook can be used, rather than
+ * relying on Drupal's internal hook order sequencing for hook_form_alter().
+ * Intended for use by Springboard Groups - any other implementation should
+ * check to to see if it impacts the groups integration.
  */
-function springboard_group_fundraiser_node_form__alter(&$form, &$form_state, $callback) {
-  // An ajax reload has occurred.
-  if (!empty($form_state['values'])) {
-    if ($callback != 'springboard_group_og_group_field_ajax_callback' && !empty($callback)) {
-      return;
+function springboard_group_fundraiser_donation_form_node_edit_form_alter(&$form, &$form_state) {
+  if (springboard_group_rules_config_are_grouped()) {
+    $callback = !empty($form_state['triggering_element']['#ajax']['callback']) ? $form_state['triggering_element']['#ajax']['callback'] : '';
+    if (isset($form['#node']->type)) {
+      $type = $form['#node']->type;
+      if (fundraiser_is_donation_type($type)) {
+        if (!empty($form_state['values'])) {
+          if ($callback != 'springboard_group_og_group_field_ajax_callback' && !empty($callback)) {
+            return;
+          }
+        }
+        // Add the ajax wrapper to the form prior to Ajax reload.
+        $form['payment_methods']['gateways']['#prefix'] = '<div id = "springboard-groups-payment-ajax-wrapper">';
+        $form['payment_methods']['gateways']['#suffix'] = '</div>';
+        $form['#validate'][] = 'springboard_group_fundraiser_node_form_gateway_validate_gateway';
+        springboard_group_fundraiser_rebuild_form($form, $form_state);
+        $form['#validate'][] = 'springboard_group_node_form_validate';
+      }
     }
   }
-  // Add the ajax wrapper to the form prior to Ajax reload.
-  $form['payment_methods']['gateways']['#prefix'] = '<div id = "springboard-groups-payment-ajax-wrapper">';
-  $form['payment_methods']['gateways']['#suffix'] = '</div>';
-  $form['#validate'][] = 'springboard_group_fundraiser_node_form_gateway_validate_gateway';
-  springboard_group_fundraiser_rebuild_form($form, $form_state);
-
 }
 
 /**
@@ -72,7 +87,12 @@ function springboard_group_fundraiser_check_gateways($form, $form_state) {
   return $gateways;
 }
 
+/**
+ * Rebuild the payment gateway element on page load or after group selection.
+ */
 function springboard_group_fundraiser_rebuild_form(&$form, &$form_state) {
+  $form_state['group_ajax_messages'] = [];
+
   $gateways = springboard_group_fundraiser_check_gateways($form, $form_state);
   $node = $form['#node'];
   $lost_gateways = [];
@@ -120,6 +140,7 @@ function springboard_group_fundraiser_rebuild_form(&$form, &$form_state) {
       ));
       $form_state['group_ajax_messages'][] = $message;
     }
+
     $fieldset = array(
       '#type' => 'fieldset',
       '#title' => t('Payment methods'),
