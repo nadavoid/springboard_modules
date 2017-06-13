@@ -120,7 +120,6 @@ function springboard_group_og_permission_alter(&$perms) {
  */
 function springboard_group_og_user_access_alter(&$perm, $context) {
   if (user_access('administer group')) {
-    // @todo don't need this probably.
     $perm['administer group'] = TRUE;
   }
 }

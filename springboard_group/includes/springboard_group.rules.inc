@@ -334,8 +334,6 @@ function springboard_group_rules_config_form__validate(&$form, &$form_state, $ca
         ->fields('n', array('nid', 'title'))
         ->execute();
       while ($matching_node = $matching_nodes->fetchAssoc()) {
-        // Get the wrapped node so we can get its groups.
-        // @todo can we fold this into the common functions that wrappers use?
         $donation_form_node = node_load($matching_node['nid']);
         $donation_form_node_groups = og_get_entity_groups('node', $donation_form_node);
         if (!empty($this_rule_old_gids)) {

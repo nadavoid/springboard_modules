@@ -195,7 +195,6 @@ function springboard_group_commerce_order_form__validate(&$form, &$form_state, $
   if ($callback != 'springboard_group_og_group_field_ajax_callback') {
     return;
   }
-  // @todo, if any.
 }
 
 /**
@@ -322,8 +321,6 @@ function springboard_group_query_commerce_order_access_alter(&$query) {
  */
 function springboard_group_commerce_entity_access_condition_commerce_order_alter(&$conditions, $context) {
 
-  // @todo is $context[account'] always the current user?
-  // if so pass it to check_group_perm
   if (!isset($context['entity'])) {
 
     $allowed_order_ids = springboard_group_orders_get_allowed_order_ids('view any order in springboard group');
@@ -420,11 +417,6 @@ function springboard_group_commerce_payment_transaction_order_access($op, $order
     case 'create':
       $access = springboard_group_check_group_perm($gid, 'create payments in springboard group', $account->uid);
       if ($access) {
-        // We currently allow any user to create any payment transaction,
-        // regardless of the order, because entity_access() doesn't give us a
-        // way to discriminate on the order.
-        // @todo: find a way to prevent creating a payment transaction if the
-        // user doesn't have access to the order.
         if (!isset($order) || commerce_order_access('update', $order, $account)) {
           return TRUE;
         }

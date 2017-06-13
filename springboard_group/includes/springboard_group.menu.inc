@@ -144,14 +144,6 @@ function springboard_group_menu() {
     'type' => MENU_LOCAL_TASK,
   );
 
-
-  // OG module doesn't define a default tab. We help it here.
-  //@todo remve.
-  $items['group/%/%/admin/people/all'] = array(
-    'title' => 'People',
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-  );
-
   return $items;
 }
 
