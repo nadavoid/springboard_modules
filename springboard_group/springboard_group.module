@@ -327,7 +327,13 @@ function springboard_group_prepare_validation_modal(&$form, &$form_state) {
     'background' => '#ccc',
   );
   drupal_add_js($settings, 'setting');
-  $form_state['group_ajax_messages'] = [];
+
+  if (isset($form['#node']->type)) {
+    $type = $form['#node']->type;
+    if (!fundraiser_is_donation_type($type)) {
+      $form_state['group_ajax_messages'] = [];
+    }
+  }
 }
 
 /**
@@ -341,7 +347,11 @@ function springboard_group_load_ajax_validation_handlers(&$form, &$form_state) {
 
     $type = $form['#node']->type;
     if (fundraiser_is_donation_type($type) && springboard_group_rules_config_are_grouped()) {
-      springboard_group_fundraiser_node_form__alter($form, $form_state, $callback);
+      // Fundraiser forms get a new alter function to handle this alteration,
+      // due to the
+      // need for a particular execution order to prevent groups from
+      // removing alterations by ocd, tickets and fundraiser offline.
+      // hook_fundraiser_donation_form_node_form_alter()
     }
     if (module_exists('page_wrappers')
       && springboard_group_node_type_is_grouped('page_wrapper')

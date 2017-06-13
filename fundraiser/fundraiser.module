@@ -495,6 +495,10 @@ function fundraiser_form_node_form_alter(&$form, &$form_state, $form_id) {
     _fundraiser_donation_settings_form($form, $form_state);
     // Other modules that need to add to the settings form should also implement
     // hook_form_BASE_FORM_ID_alter, or any of the other form alter hooks.
+    // Modules that need to alter elements immediately after this hook should
+    // use this hook, i.e., springboard_groups.
+    drupal_alter('fundraiser_donation_form_node_edit_form', $form, $form_state);
+
   }
 }
 
