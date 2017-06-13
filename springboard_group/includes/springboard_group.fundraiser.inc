@@ -206,6 +206,11 @@ function springboard_group_fundraiser_filter_gateways($gateways, $gid = NULL) {
   return $gateways;
 }
 
+/**
+ * Implements hook_fundraiser_donation_create().
+ *
+ * Create a sub-hook for grouped entity types.
+ */
 function springboard_group_fundraiser_donation_create($donation) {
   $grouped_types = springboard_group_get_grouped_types();
   foreach ($grouped_types as $entity_type => $bundle) {
@@ -266,6 +271,9 @@ function springboard_group__fundraiser__og_permissions(&$items) {
   }
 }
 
+/**
+ * Implements hook_fundraiser_sustainers_cancel_future_donation_access().
+ */
 function springboard_group_fundraiser_sustainers_cancel_future_donation_access($donation) {
   if (springboard_group_commerce_orders_are_grouped()) {
     $order = commerce_order_load($donation->did);
@@ -284,6 +292,9 @@ function springboard_group_fundraiser_sustainers_cancel_future_donation_access($
   }
 }
 
+/**
+ * Implements hook_fundraiser_sustainers_fastforward_access().
+ */
 function springboard_group_fundraiser_sustainers_fastforward_access($did) {
   if (springboard_group_commerce_orders_are_grouped()) {
     $order = commerce_order_load($did);
@@ -302,6 +313,9 @@ function springboard_group_fundraiser_sustainers_fastforward_access($did) {
   }
 }
 
+/**
+ * Implements hook_fundraiser_offline_access().
+ */
 function springboard_group_fundraiser_offline_access($node) {
   $node_wrapper = entity_metadata_wrapper('node', $node);
   $group_field_name = 'og_group_ref_' . substr($node->type, 0, 19);
