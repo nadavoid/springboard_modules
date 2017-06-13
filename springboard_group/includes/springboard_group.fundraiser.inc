@@ -253,8 +253,25 @@ function springboard_group__fundraiser__og_permissions(&$items) {
       'default role' => array(),
       'module' => 'fundraiser',
     );
+
     $items['fastforward recurring donations in springboard group'] = array(
       'title' => t('Fast-forward recurring donations in Springboard Group'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+      'module' => 'fundraiser',
+    );
+
+    $items['skip recurring donations in springboard group'] = array(
+      'title' => t('Skip recurring donations in Springboard Group'),
+      'description' => '',
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'default role' => array(),
+      'module' => 'fundraiser',
+    );
+
+    $items['set new recurring charge date in springboard group'] = array(
+      'title' => t('Set new recurring charge date in Springboard Group'),
       'description' => '',
       'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
       'default role' => array(),
@@ -307,6 +324,48 @@ function springboard_group_fundraiser_sustainers_fastforward_access($did) {
         }
       }
       if (user_access('administer group') && user_access('fastforward recurring donations')) {
+        return TRUE;
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_fundraiser_sustainers_skip_access().
+ */
+function springboard_group_fundraiser_sustainers_skip_access($did) {
+  if (springboard_group_commerce_orders_are_grouped()) {
+    $order = commerce_order_load($did);
+    $wrapper = entity_metadata_wrapper('commerce_order', $order);
+    $gids = $wrapper->og_group_ref_commerce_order->raw();
+    if (!empty($gids)) {
+      foreach ($gids as $gid) {
+        if (springboard_group_check_group_perm($gid, 'skip recurring donations in springboard group', $GLOBALS['user']->uid)) {
+          return TRUE;
+        }
+      }
+      if (user_access('administer group') && user_access('skip recurring donations')) {
+        return TRUE;
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_fundraiser_sustainers_new_charge_date_access().
+ */
+function springboard_group_fundraiser_sustainers_new_charge_date_access($did) {
+  if (springboard_group_commerce_orders_are_grouped()) {
+    $order = commerce_order_load($did);
+    $wrapper = entity_metadata_wrapper('commerce_order', $order);
+    $gids = $wrapper->og_group_ref_commerce_order->raw();
+    if (!empty($gids)) {
+      foreach ($gids as $gid) {
+        if (springboard_group_check_group_perm($gid, 'set new recurring charge date in springboard group', $GLOBALS['user']->uid)) {
+          return TRUE;
+        }
+      }
+      if (user_access('administer group') && user_access('set new recurring charge date')) {
         return TRUE;
       }
     }

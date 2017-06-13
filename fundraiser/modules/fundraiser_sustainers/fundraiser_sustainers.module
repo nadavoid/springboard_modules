@@ -302,6 +302,63 @@ function fundraiser_sustainers_fastforward_access($did) {
 }
 
 /**
+ * Check access to the skip function
+ *
+ * @param int $did
+ *   The donation id.
+ *
+ * @return bool
+ *   Access denied or access allowed.
+ */
+function fundraiser_sustainers_skip_access($did) {
+  $access = FALSE;
+
+  if (user_access('skip recurring donations')) {
+    $access = TRUE;
+  }
+
+  // Let other modules, e.g., springboard groups, modify access.
+  $access_opinion = module_invoke_all('fundraiser_sustainers_skip_access', $did);
+  if (in_array(FALSE, $access_opinion, TRUE)) {
+    $access = FALSE;
+  }
+  elseif (in_array(TRUE, $access_opinion, TRUE)) {
+    $access = TRUE;
+  }
+
+  return $access;
+}
+
+/**
+ * Check access to the skip function
+ *
+ * @param int $did
+ *   The donation id.
+ *
+ * @return bool
+ *   Access denied or access allowed.
+ */
+function fundraiser_sustainers_new_charge_date_access($did) {
+  $access = FALSE;
+
+  if (user_access('set new recurring charge date')) {
+    $access = TRUE;
+  }
+
+  // Let other modules, e.g., springboard groups, modify access.
+  $access_opinion = module_invoke_all('fundraiser_sustainers_new_charge_date_access', $did);
+  if (in_array(FALSE, $access_opinion, TRUE)) {
+    $access = FALSE;
+  }
+  elseif (in_array(TRUE, $access_opinion, TRUE)) {
+    $access = TRUE;
+  }
+
+  return $access;
+}
+
+
+/**
  * Implements hook_theme().
  */
 function fundraiser_sustainers_theme($existing, $type, $theme, $path) {
@@ -2204,7 +2261,7 @@ function fundraiser_sustainers_edit_form($did) {
 
   // Check permissions, we don't want to show this to someone who doesn't have permission.
   global $user;
-  if (($donation->user->uid != $user->uid) && !user_access('administrate recurring donations')) {
+  if (($donation->user->uid != $user->uid) && !fundraiser_sustainers_check_access($did)) {
     return t('You do not have access to this recurring donation.');
   }
 
@@ -2257,7 +2314,7 @@ function fundraiser_sustainers_edit_form($did) {
   $donation_set = _fundraiser_sustainers_get_donations_recurr_by_masterdid($did);
   $donations_header = array('Donation ID', 'Amount', 'Charge Date', 'Processed Status');
 
-  if (user_access('administrate recurring donations')) {
+  if (fundraiser_sustainers_check_access($did)) {
     $donations_header[] = t('Attempts');
   }
 
@@ -2265,7 +2322,7 @@ function fundraiser_sustainers_edit_form($did) {
     // Add a button to fastforward this particular donation
     $donations_header[] = t('Advance Charge to Today');
   }
-  if (user_access('skip recurring donations')) {
+  if (fundraiser_sustainers_skip_access($did)) {
     $donations_header[] = t('Skip Charge');
   }
   $donations_rows = array();
@@ -2286,7 +2343,7 @@ function fundraiser_sustainers_edit_form($did) {
       }
       $donations_row['status'] = !empty($this_donation->status_label) ? $this_donation->status_label : $this_donation->status;
       // Attempts.
-      if (user_access('administrate recurring donations')) {
+      if (fundraiser_sustainers_check_access($did)) {
         $donations_row['attempts'] = $attempts;
       }
 
@@ -2300,7 +2357,7 @@ function fundraiser_sustainers_edit_form($did) {
           $donations_row['ffwd'] = t('cannot update');
         }
       }
-      if (user_access('skip recurring donations')) {
+      if (fundraiser_sustainers_skip_access($did)) {
         if (isset($this_donation->status_charged) && !$this_donation->status_charged && ($this_donation->status != 'auto_canceled')) {
           // Add a button to fastforward this particular donation
           $donations_row['skip'] = l(t('skip charge'), 'fundraiser_sustainers/' . $did . '/skip/' . $this_donation->did,
@@ -2327,7 +2384,7 @@ function fundraiser_sustainers_edit_form($did) {
   if ($remaining_donation_count > 0 && empty($canceled)) {
     $donation_amount_form_array = drupal_get_form('fundraiser_sustainers_donation_amount_form', $donation, $next_donation);
     $donation_amount_form = drupal_render($donation_amount_form_array);
-    if (user_access('set new recurring charge date')) {
+    if (fundraiser_sustainers_new_charge_date_access($did)) {
       // If date mode is enabled and on, do not support changing the payment date.
       if (module_exists('fundraiser_date_mode') && variable_get('fundraiser_date_mode_set_date_mode', 0) == 1) {
         $donation_date_form = '';
