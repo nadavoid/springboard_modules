@@ -47,15 +47,25 @@ function springboard_group_webform_submission_access($node, $submission, $op = '
           if (og_user_access($group_type, $gid, 'access all webform results', $account)) {
             $access_all = TRUE;
           }
+          if (og_user_access($group_type, $gid, 'access all ' . $node->type . ' webform results', $account)) {
+            $access_all = TRUE;
+          }
         }
 
         if (!$edit_submission && $access_all && $op == 'edit') {
           if (og_user_access($group_type, $gid, 'edit all webform submissions', $account)) {
             $edit_submission = TRUE;
           }
+          if (og_user_access($group_type, $gid, 'edit all ' . $node->type . ' webform submissions', $account)) {
+            $edit_submission = TRUE;
+          }
         }
+
         if (!$delete_submission && $access_all && $op == 'delete') {
           if (og_user_access($group_type, $gid, 'delete all webform submissions', $account)) {
+            $delete_submission = TRUE;
+          }
+          if (og_user_access($group_type, $gid, 'delete all ' . $node->type . ' webform submissions', $account)) {
             $delete_submission = TRUE;
           }
         }
@@ -89,7 +99,10 @@ function springboard_group_webform_results_access($node, $account = NULL) {
   if (og_is_group_content_type('node', $node->type) && $groups = og_get_entity_groups('node', $node)) {
     foreach ($groups as $group_type => $gids) {
       foreach ($gids as $gid) {
-        if ((user_access('administer group') && user_access('access all webform results')) || og_user_access($group_type, $gid, 'access all webform results', $account)) {
+        if ((user_access('administer group') && user_access('access all webform results'))
+          || og_user_access($group_type, $gid, 'access all webform results', $account)
+          || og_user_access($group_type, $gid, 'access all ' . $node->type . ' webform results', $account)
+        ) {
           return TRUE;
         }
       }
@@ -108,7 +121,9 @@ function springboard_group_webform_results_clear_access($node, $account = NULL) 
   if (og_is_group_content_type('node', $node->type) && $groups = og_get_entity_groups('node', $node)) {
     foreach ($groups as $group_type => $gids) {
       foreach ($gids as $gid) {
-        if ((user_access('administer group') && user_access('delete all webform submissions')) || og_user_access($group_type, $gid, 'delete all webform submissions', $account)) {
+        if ((user_access('administer group') && user_access('delete all webform submissions'))
+          || og_user_access($group_type, $gid, 'delete all webform submissions', $account)
+          || og_user_access($group_type, $gid, 'delete all ' .$node->type . ' webform submissions', $account)) {
           return springboard_group_webform_results_access($node, $account);
         }
       }

@@ -37,7 +37,6 @@ function springboard_group_permission() {
  * Implements hook_og_permission().
  */
 function springboard_group_og_permission() {
-
   $items = array();
 
   $items['edit payment method'] = array(
@@ -45,28 +44,63 @@ function springboard_group_og_permission() {
     'description' => t("Edit a group's payments methods."),
     'roles' => array(OG_AUTHENTICATED_ROLE),
     'default role' => array(),
+    'module' => 'commerce_payment',
   );
 
   $items['access all webform results'] = array(
     'title' => t('Access all webform results in group'),
     'description' => t('Grants access to the "Results" tab on all webforms in this group.'),
     'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+    'module' => 'webform',
   );
 
   $items['edit all webform submissions'] = array(
     'title' => t('Edit all webform submissions in group'),
     'description' => t('Allows editing of any webform submission in this group.'),
     'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+    'module' => 'webform',
   );
 
   $items['delete all webform submissions'] = array(
     'title' => t('Delete all webform submissions in group'),
     'description' => t('Allows deleting of any webform submission in this group.'),
     'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+    'module' => 'webform',
   );
 
-  return $items;
 
+  $group_types = springboard_group_get_grouped_types();
+
+  foreach ($group_types as $type => $bundles) {
+    if ($type == 'node') {
+      $types = node_type_get_types();
+      foreach ($bundles as $node_type => $field) {
+        if (in_array($node_type, array_filter(variable_get('webform_node_types', [])))) {
+          $items['access all ' . $node_type . ' webform results'] = array(
+            'title' => t('Access all @type webform results in group', array('@type' => $types[$node_type]->name)),
+            'description' => t('Grants access to the "Results" tab on all @type webforms in this group.', array('@type' => $types[$node_type]->name)),
+            'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+            'module' => 'webform',
+          );
+
+          $items['edit all ' . $node_type . ' webform submissions'] = array(
+            'title' => t('Edit all @type webform submissions in group', array('@type' => $types[$node_type]->name)),
+            'description' => t('Allows editing of any @type webform submission in this group.', array('@type' => $types[$node_type]->name)),
+            'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+            'module' => 'webform',
+          );
+
+          $items['delete all ' . $node_type . ' webform submissions'] = array(
+            'title' => t('Delete all @type webform submissions in group', array('@type' => $types[$node_type]->name)),
+            'description' => t('Allows deleting of any @type webform submission in this group.', array('@type' => $types[$node_type]->name)),
+            'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+            'module' => 'webform',
+          );
+        }
+      }
+    }
+  }
+  return $items;
 }
 
 /**
@@ -139,7 +173,7 @@ function springboard_group_preprocess_og_ui_admin_permissions(&$vars) {
             break;
 
           case 'springboard_group':
-            $vars['form']['permission'][$key]['#markup'] = t('Other');
+            unset($vars['form']['permission'][$key]);
             break;
 
           case 'springboard_group_advocacy':
