@@ -144,3 +144,47 @@ function springboard_group_update_7002() {
     }
   }
 }
+
+/**
+ * Update permissions to be under purview of their respective module.
+ */
+function springboard_group_update_7003() {
+  $old_webform_perms = db_query('
+    SELECT * FROM {og_role_permission}
+    WHERE module = :mod
+    AND permission LIKE :webform',
+    array(
+      ':mod' => 'springboard_group',
+      ':webform' => '%' . db_like('webform') . '%'
+    )
+  );
+  foreach ($old_webform_perms as $perm) {
+    db_update('og_role_permission')
+      ->fields(array(
+        'module' => 'webform',
+      ))
+      ->condition('rid', $perm->rid)
+      ->condition('permission', $perm->permission)
+      ->execute();
+  }
+
+  $old_payment_perms = db_query('
+    SELECT * FROM {og_role_permission}
+    WHERE module = :mod
+    AND permission LIKE :payment',
+    array(
+      ':mod' => 'springboard_group',
+      ':payment' => '%' . db_like('payment') . '%'
+    )
+  );
+  foreach ($old_payment_perms as $perm) {
+    db_update('og_role_permission')
+      ->fields(array(
+        'permission' => 'edit payment method in springboard group',
+        'module' => 'commerce_payment',
+      ))
+      ->condition('rid', $perm->rid)
+      ->condition('permission', $perm->permission)
+      ->execute();
+  }
+}
