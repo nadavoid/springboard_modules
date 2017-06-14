@@ -49,21 +49,21 @@ function springboard_group_og_permission() {
 
   $items['access all webform results'] = array(
     'title' => t('Access all webform results in group'),
-    'description' => t('Grants access to the "Results" tab on all webforms in this group.'),
+    'description' => t('Grants access to the "Results" tab on all webforms in a group.'),
     'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
     'module' => 'webform',
   );
 
   $items['edit all webform submissions'] = array(
     'title' => t('Edit all webform submissions in group'),
-    'description' => t('Allows editing of any webform submission in this group.'),
+    'description' => t('Allows editing of any webform submission in a group.'),
     'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
     'module' => 'webform',
   );
 
   $items['delete all webform submissions'] = array(
     'title' => t('Delete all webform submissions in group'),
-    'description' => t('Allows deleting of any webform submission in this group.'),
+    'description' => t('Allows deleting of any webform submission in a group.'),
     'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
     'module' => 'webform',
   );
@@ -78,21 +78,21 @@ function springboard_group_og_permission() {
         if (in_array($node_type, array_filter(variable_get('webform_node_types', [])))) {
           $items['access all ' . $node_type . ' webform results'] = array(
             'title' => t('Access all @type webform results in group', array('@type' => $types[$node_type]->name)),
-            'description' => t('Grants access to the "Results" tab on all @type webforms in this group.', array('@type' => $types[$node_type]->name)),
+            'description' => t('Grants access to the "Results" tab on all @type webforms in a group.', array('@type' => $types[$node_type]->name)),
             'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
             'module' => 'webform',
           );
 
           $items['edit all ' . $node_type . ' webform submissions'] = array(
             'title' => t('Edit all @type webform submissions in group', array('@type' => $types[$node_type]->name)),
-            'description' => t('Allows editing of any @type webform submission in this group.', array('@type' => $types[$node_type]->name)),
+            'description' => t('Allows editing of any @type webform submission in a group.', array('@type' => $types[$node_type]->name)),
             'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
             'module' => 'webform',
           );
 
           $items['delete all ' . $node_type . ' webform submissions'] = array(
             'title' => t('Delete all @type webform submissions in group', array('@type' => $types[$node_type]->name)),
-            'description' => t('Allows deleting of any @type webform submission in this group.', array('@type' => $types[$node_type]->name)),
+            'description' => t('Allows deleting of any @type webform submission in a group.', array('@type' => $types[$node_type]->name)),
             'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
             'module' => 'webform',
           );
