@@ -203,6 +203,7 @@ function springboard_group_preprocess_og_ui_admin_permissions(&$vars) {
 
           case 'commerce_cardonfile':
             $vars['form']['permission'][$key]['#markup'] = t('Commerce Card On File');
+            break;
 
           case 'commerce_payment':
             $vars['form']['permission'][$key]['#markup'] = t('Commerce Payment');
