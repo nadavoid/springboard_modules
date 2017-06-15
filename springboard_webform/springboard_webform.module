@@ -47,9 +47,123 @@ function _springboard_webform_log_webform_submission(&$form, &$form_state) {
     '%type' => isset($node->type) ? $node->type : 'N/A',
     '%nid' => isset($node->nid) ? $node->nid : 'N/A',
     '%sid' => isset($form_state['values']['details']['sid']) ? $form_state['values']['details']['sid'] : 'N/A',
-    '%duration' => isset($duration) ? round($duration, 4) : 'N/A', 
+    '%duration' => isset($duration) ? round($duration, 4) : 'N/A',
     '%title' => isset($node->title) ? str_replace('"', '\'', $node->title) : '',
   );
   $message = 'Webform submitted: type=%type, nid=%nid, sid=%sid, duration=%duration, title="%title"';
   watchdog('springboard_webform', $message, $vars);
+}
+
+/**
+ * Implements hook_webform_submission_access().
+ *
+ * @see webform_submission_access()
+ */
+function springboard_webform_webform_submission_access($node, $submission, $op = 'view', $account = NULL) {
+  global $user;
+  $account = isset($account) ? $account : $user;
+
+  // Ensure a full node object, as Views handlers may not load the entire node.
+  if (empty($node->vid) && !empty($node->nid)) {
+    $node = node_load($node->nid);
+  }
+
+  $edit_submission = FALSE;
+  $delete_submission = FALSE;
+  $access_all = FALSE;
+
+  // Global group admins.
+  if (user_access('access all webform results')) {
+    $access_all = TRUE;
+  }
+  if (user_access('delete all webform submissions')) {
+    $delete_submission = TRUE;
+  }
+  if (user_access('edit all webform submissions')) {
+    $edit_submission = TRUE;
+  }
+
+  if (!$access_all) {
+    if (user_access('access all ' . $node->type . ' webform results', $account)) {
+      $access_all = TRUE;
+    }
+  }
+
+  if (!$edit_submission && $access_all && $op == 'edit') {
+    if (user_access('edit all ' . $node->type . ' webform submissions', $account)) {
+      $edit_submission = TRUE;
+    }
+  }
+
+  if (!$delete_submission && $access_all && $op == 'delete') {
+    if (user_access('delete all ' . $node->type . ' webform submissions', $account)) {
+      $delete_submission = TRUE;
+    }
+  }
+
+  switch ($op) {
+    case 'view':
+      return $access_all;
+
+    case 'list':
+      return $access_all && ($account->uid || isset($_SESSION['webform_submission']));
+
+    case 'edit':
+      return $edit_submission;
+
+    case 'delete':
+      return $delete_submission;
+  }
+}
+
+/**
+ * Implements hook_webform_results_access().
+ */
+function springboard_webform_webform_results_access($node, $account = NULL) {
+
+  if (user_access('access all ' . $node->type . ' webform results', $account))
+  {
+    return TRUE;
+  }
+}
+
+/**
+ * Implements hook_webform_results_clear_access().
+ */
+function springboard_webform_webform_results_clear_access($node, $account = NULL) {
+  if (user_access('delete all ' . $node->type . ' webform submissions', $account)) {
+    return springboard_webform_webform_results_access($node, $account);
+  }
+}
+
+
+/**
+ * Implements hook_permission().
+ */
+function springboard_webform_permission() {
+  $types = node_type_get_types();
+  $webform_types = array_filter(variable_get('webform_node_types', []));
+  foreach ($webform_types as $node_type) {
+    $items['access all ' . $node_type . ' webform results'] = array(
+      'title' => t('Access all webform results of type @type', array('@type' => $types[$node_type]->name)),
+      'description' => t('Grants access to the "Results" tab on all @type webforms.', array('@type' => $types[$node_type]->name)),
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'module' => 'webform',
+    );
+
+    $items['edit all ' . $node_type . ' webform submissions'] = array(
+      'title' => t('Edit all webform submissions of type @type', array('@type' => $types[$node_type]->name)),
+      'description' => t('Allows editing of any @type webform submission.', array('@type' => $types[$node_type]->name)),
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'module' => 'webform',
+    );
+
+    $items['delete all ' . $node_type . ' webform submissions'] = array(
+      'title' => t('Delete all webform submissions of type @type', array('@type' => $types[$node_type]->name)),
+      'description' => t('Allows deleting of any @type webform submission.', array('@type' => $types[$node_type]->name)),
+      'roles' => array(OG_AUTHENTICATED_ROLE, OG_ADMINISTRATOR_ROLE),
+      'module' => 'webform',
+    );
+  }
+   return $items;
 }
