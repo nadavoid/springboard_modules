@@ -834,16 +834,27 @@ function springboard_admin_page_build(&$page) {
  *   Boolean to indicate if access is allowed.
  */
 function springboard_admin_menu_access($path) {
+  $access = FALSE;
   switch ($path) {
     case 'admin/springboard/asset-library':
       if (user_access('edit any page_wrapper content') || user_access('edit any email_wrapper content')) {
-        return TRUE;
-      }
-      else {
-        return FALSE;
+        $access = TRUE;
       }
       break;
+
   }
+
+  // Allow modules to grant / deny access.
+  $access = module_invoke_all('springboard_admin_menu_access', $path, $access);
+  // Only grant access if at least one module granted access and no one denied
+  // access.
+  if (in_array(FALSE, $access, TRUE)) {
+    $access = FALSE;
+  }
+  elseif (in_array(TRUE, $access, TRUE)) {
+    $access = TRUE;
+  }
+  return $access;
 }
 
 /**
