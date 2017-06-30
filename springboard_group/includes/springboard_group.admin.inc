@@ -343,43 +343,51 @@ function springboard_group_add_group_reference_field($bundle, $type) {
 function springboard_group_advanced_settings() {
   $form = array();
 
-  $form['access'] = array(
+  $form['advanced'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Advanced options',
+    '#description' => '',
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+
+  $form['advanced']['access'] = array(
     '#type' => 'fieldset',
     '#title' => 'Access control',
     '#description' => '',
     '#collapsible' => TRUE,
   );
 
-  $form['access']['og_node_access_strict'] = array(
+  $form['advanced']['access']['og_node_access_strict'] = array(
     '#type' => 'checkbox',
     '#title' => t('Strict node access permissions'),
     '#default_value' => variable_get('og_node_access_strict', TRUE),
   );
-  $form['access']['help'] = array(
+  $form['advanced']['access']['help'] = array(
     '#markup' => '<p>' . t('Allow groups permissions to override Springboard Permissions.'),
   );
 
-  $form['roles'] = array(
+  $form['advanced']['roles'] = array(
     '#type' => 'fieldset',
     '#title' => 'Roles',
     '#description' => '',
     '#collapsible' => TRUE,
   );
 
-  $form['roles']['springboard_group_show_non_member'] = array(
+  $form['advanced']['roles']['springboard_group_show_non_member'] = array(
     '#type' => 'checkbox',
     '#title' => t('Show the "non member" role on the groups permissions page.'),
     '#default_value' => variable_get('springboard_group_show_non_member', NULL),
   );
 
-  $form['debug'] = array(
+  $form['advanced']['debug'] = array(
     '#type' => 'fieldset',
     '#title' => 'Debug group context.',
     '#description' => t('Show a message with current group context on every group-relevant page.'),
     '#collapsible' => TRUE,
   );
 
-  $form['debug']['springboard_group_debug_context'] = array(
+  $form['advanced']['debug']['springboard_group_debug_context'] = array(
     '#type' => 'checkbox',
     '#title' => t('Show debug message'),
     '#default_value' => variable_get('springboard_group_debug_context', NULL),
@@ -388,7 +396,7 @@ function springboard_group_advanced_settings() {
   $form['altered_views'] = array(
     '#type' => 'fieldset',
     '#title' => 'Groups-enabled Springboard views',
-    '#description' => t("Restrict results for these views based on group context. Enabling this option will cause the view query to be altered, filtering the result based on the value of the groups context selector. For users who only belong to one group, the context selector is not displayed and the group ID is pulled directly from the user session. These options will be updated automatically when new content types are made groupable."),
+    '#description' => t("Restrict results for these views based on group context. Enabling this option will cause the view query to be altered, filtering the result based on the value of the groups context selector. For users who only belong to one group, the context selector is not displayed and the group ID is pulled directly from the user session."),
     '#collapsible' => TRUE,
   );
 
@@ -403,10 +411,76 @@ function springboard_group_advanced_settings() {
     'sbv_email_templates',
   );
 
-  $form['altered_views']['group_restricted_views'] = array(
+  $all_views = views_get_all_views();
+  $omit = array('og_all_user_group_content', 'og_nodes', 'springboard_group', 'donation_forms');
+  foreach ($all_views as $key => $view) {
+    if (in_array($view->name, $alter)) {
+      unset($all_views[$key]);
+    }
+    if (in_array($view->name, $omit)) {
+      unset($all_views[$key]);
+    }
+    if ($view->base_table != 'node') {
+      unset($all_views[$key]);
+    }
+  }
+  $optional_views = array();
+  foreach ($all_views as $key => $opt) {
+    $optional_views[$key] = $opt->human_name;
+  }
+
+  $form['altered_views']['standard'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Standard views',
+    '#description' => t("This views are part of Springboard Core, and are automatically integrated with groups when their associated contents types are made groupable. You can disable them here if you need to debug."),
+    '#collapsible' => TRUE,
+  );
+
+  $form['altered_views']['standard']['group_restricted_views'] = array(
     '#type' => 'checkboxes',
     '#options' => drupal_map_assoc($alter),
     '#default_value' => variable_get('group_restricted_views', array()),
+  );
+
+  $form['altered_views']['standard']['force'] = array(
+    '#type' => 'fieldset',
+    '#title' => '',
+    '#description' => "",
+    '#collapsible' => FALSE,
+  );
+
+  $form['altered_views']['standard']['force']['force_group_restricted_views'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Force group ownership field on overidden views.'),
+    '#description' => t("By default the group ownership field won't display on overridden springboard core views. Check this box to force the field to display. Alternatively, you can add the springboard group field manually in the views UI, which would give you control of its order in the columns"),
+    '#default_value' => variable_get('force_group_restricted_views', 0),
+  );
+
+  $form['altered_views']['optional'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Optional views',
+    '#description' => t("These views are not automatically integrated with groups, and require configuration to become groups-aware. Check the checkbox below to insert the group ownership field into the view display and to limit the results for the view by group. Then add the display's menu path to the textarea below."),
+    '#collapsible' => TRUE,
+  );
+
+  $form['altered_views']['optional']['optional_group_restricted_views'] = array(
+    '#type' => 'checkboxes',
+    '#options' => $optional_views,
+    '#default_value' => variable_get('optional_group_restricted_views', array()),
+  );
+
+  $form['altered_views']['paths'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Additional group context filter display paths.',
+    '#description' => '',
+    '#collapsible' => TRUE,
+  );
+
+  $form['altered_views']['paths']['optional_group_menu_paths'] = array(
+    '#title' => t('Add additional paths, one per line.'),
+    '#description' => t('By default, the groups context filter automatically appears on a pre-determined set of pages. To add additional pages, enter the paths, one per line, where you want the groups context filter to display. These paths should match the paths for the optional views you selected above. Example: admin/content/donation-forms'),
+    '#type' => 'textarea',
+    '#default_value' => variable_get('optional_group_menu_paths', ''),
   );
 
   return system_settings_form($form);

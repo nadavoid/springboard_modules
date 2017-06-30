@@ -29,6 +29,7 @@ class springboard_group_views_handler_groups extends views_handler_field {
         }
       }
       if (count($groups) > 1) {
+        asort($groups);
         return theme('item_list', array('items' => $groups));
       }
       else {
