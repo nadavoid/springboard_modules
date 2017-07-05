@@ -47,7 +47,9 @@ function springboard_group_views_query_alter(&$view, &$query) {
 
   // Array of alterable views.
   $alter = array_filter(variable_get('group_restricted_views', []));
-  if (in_array($view->name, $alter)) {
+  $optional_alter = array_filter(variable_get('optional_group_restricted_views', []));
+
+  if (in_array($view->name, $alter) || in_array($view->name, $optional_alter)) {
 
     // First check if the query is selecting a groupable entity. If it isn't,
     // we skip the query alteration.
@@ -166,7 +168,7 @@ function springboard_group_views_query_check_content_type($query) {
         }
         else {
           if (user_access('administer content')) {
-            drupal_set_message('multipe node types in views query', 'error');
+            drupal_set_message('multiple node types in views query', 'error');
           }
           return TRUE;
         }
@@ -317,6 +319,77 @@ function springboard_group_views_pre_view(&$view, &$display_id, &$args) {
       $view->attachment_before = $content;
     }
   }
+  if (variable_get('force_group_restricted_views', FALSE)) {
+    springboard_group_force_group_field($view);
+  }
+  $optional_alter = array_filter(variable_get('optional_group_restricted_views', []));
+
+  if (in_array($view->name, $optional_alter)) {
+    springboard_group_force_group_field($view);
+  }
+}
+
+/**
+ * Force the springboard group ownership field into views that have been
+ * group enabled.
+ *
+ * @param $view.
+ */
+function springboard_group_force_group_field(&$view) {
+
+  $settings = springboard_group_sort_fields($view, $view->current_display);
+  $options = array(
+    'label' => $settings['label'],
+    'id' => 'title_sb_group',
+    'table' => $settings['table'],
+    'field' => 'springboard_groups',
+  );
+  $types = views_object_types();
+  $display = &$view->display[$view->current_display];
+  $old_fields = $display->handler->get_option($types['field']['plural']);
+
+  if (!isset($old_fields['title_sb_group']) && !isset($old_fields['springboard_groups'])) {
+    $view->add_item($view->current_display, 'field', 'node', 'springboard_groups', $options, 'title_sb_group');
+    $old_fields = $display->handler->get_option($types['field']['plural']);
+
+    $new_fields = $order = array();
+    $x = 0;
+    foreach ($old_fields as $field => $info) {
+      if ($field != 'title_sb_group') {
+        if ($x == $settings['index']) {
+          $x++;
+        }
+        $order[$field] = $x;
+        $x++;
+      }
+      else {
+        $order[$field] = $settings['index'];
+      }
+    }
+    asort($order);
+    foreach (array_keys($order) as $field) {
+      $new_fields[$field] = $old_fields[$field];
+    }
+    $display->handler->set_option($types['field']['plural'], $new_fields);
+  }
+}
+
+/**
+ * Provide default values for the group owner field we force into views.
+ *
+ * This function gets built out more in the orders/users integration.
+ *
+ * @param $view
+ * @param $display_name
+ * @return array
+ */
+function springboard_group_sort_fields($view, $display_name) {
+
+  $label = t('Owner');
+  $index = 2;
+  $table = 'node';
+
+  return array('label' => $label, 'table' => $table, 'index' => $index);
 }
 
 /**
@@ -344,8 +417,8 @@ function springboard_group_views_pre_render(&$view) {
 function springboard_group_views_data_alter(&$data) {
 
   $data['node']['springboard_groups'] = array(
-    'title' => t('Node Groups'),
-    'help' => t('Show all the Springboard groups a node belongs to, with a link back to the group.'),
+    'title' => t('Owner'),
+    'help' => t('Show all the springboard groups a node belongs to, with a link back to the group.'),
     'real field' => 'nid',
     'field' => array(
       'handler' => 'springboard_group_views_handler_groups',

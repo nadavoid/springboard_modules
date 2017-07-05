@@ -816,16 +816,22 @@ EOT;
 }
 
 
+/**
+ * Implements hook_springboard_advocacy_user_can_access_type().
+ */
 function springboard_group_springboard_advocacy_user_can_access_type($type) {
   $access = springboard_group_user_can_access_type_in_group($type);
   return $access;
 }
 
+/**
+ * Implements hook_springboard_admin_access_donation_form_pages().
+ */
 function springboard_group_springboard_admin_access_donation_form_pages($types) {
   if (is_array($types)) {
     foreach ($types as $type) {
       if (fundraiser_is_donation_type($type)) {
-        if(springboard_group_user_can_access_type_in_group($type)) {
+        if (springboard_group_user_can_access_type_in_group($type)) {
           return TRUE;
         }
       }
@@ -840,11 +846,14 @@ function springboard_group_springboard_admin_access_donation_form_pages($types) 
   }
 }
 
+/**
+ * Implements hook_springboard_admin_access_form_pages().
+ */
 function springboard_group_springboard_admin_access_form_pages($types) {
   if (is_array($types)) {
     foreach ($types as $type) {
       if (!fundraiser_is_donation_type($type)) {
-        if(springboard_group_user_can_access_type_in_group($type)) {
+        if (springboard_group_user_can_access_type_in_group($type)) {
           return TRUE;
         }
       }
@@ -852,21 +861,48 @@ function springboard_group_springboard_admin_access_form_pages($types) {
   }
   else {
     if (!fundraiser_is_donation_type($types)) {
-      if(springboard_group_user_can_access_type_in_group($types)) {
+      if (springboard_group_user_can_access_type_in_group($types)) {
         return TRUE;
       }
     }
   }
 }
 
+/**
+ * Implements hook_springboard_admin_access_marketing_overview().
+ */
 function springboard_group_springboard_admin_access_marketing_overview() {
 
 }
 
+/**
+ * Implements hook_springboard_admin_access_integration_overview().
+ */
 function springboard_group_springboard_admin_access_integration_overview() {
 
 }
 
+/**
+ * Implements hook_springboard_admin_menu_access().
+ */
+function springboard_group_springboard_admin_menu_access($path, $access) {
+  switch ($path) {
+    case 'admin/springboard/asset-library':
+      if (springboard_group_user_can_access_type_in_group('page_wrapper') || springboard_group_user_can_access_type_in_group('email_wrapper')) {
+        $access = TRUE;
+      }
+      break;
+  }
+  return $access;
+}
+
+/**
+ * Check CRUD access to node type in any group for user.
+ *
+ * @param $type
+ * @param null $account
+ * @return bool
+ */
 function springboard_group_user_can_access_type_in_group($type, $account = NULL) {
   $access = FALSE;
   global $user;

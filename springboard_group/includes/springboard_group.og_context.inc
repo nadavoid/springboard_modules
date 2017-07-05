@@ -253,6 +253,15 @@ function springboard_group_context_menu_paths() {
         }
       }
     }
+
+    // Add paths configured in groups settings.
+    $optional_paths = explode("\n", variable_get('optional_group_menu_paths', ''));
+    if (is_array($optional_paths)) {
+      foreach ($optional_paths as $opt) {
+        array_push($paths, $opt);
+      }
+    }
+
     $paths = array_merge($paths, module_invoke_all('springboard_group_context_menu_paths'));
 
   }
