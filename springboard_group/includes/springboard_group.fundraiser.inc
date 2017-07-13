@@ -378,6 +378,9 @@ function springboard_group_fundraiser_sustainers_new_charge_date_access($did) {
 function springboard_group_fundraiser_offline_access($node) {
   $node_wrapper = entity_metadata_wrapper('node', $node);
   $group_field_name = 'og_group_ref_' . substr($node->type, 0, 19);
+  if (empty($node_wrapper->{$group_field_name})) {
+    return NULL;
+  }
   $gids = $node_wrapper->{$group_field_name}->raw();
   if (!empty($gids)) {
     foreach ($gids as $gid) {
